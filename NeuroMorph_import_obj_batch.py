@@ -14,11 +14,11 @@
 #    along with this program.  If not, see http://www.gnu.org/licenses/
 
 bl_info = {  
-    "name": "Object (.obj) batch import",
+    "name": "Object (.obj) Batch Import",
     "author": "Diego Marcos, Corrado Cali, Biagio Nigro, Anne Jorstad",
-    "version": (1, 1, 0),
+    "version": (1, 2, 0),
     "blender": (2, 7, 0),
-    "location": "Scene > Wavefront batch import",  
+    "location": "Scene > Wavefront (.obj) Batch Import",
     "description": "Imports .obj files in batch, with option of applying a Remesh modifier",  
     "warning": "",  
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/import",  

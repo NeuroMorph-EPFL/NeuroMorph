@@ -14,11 +14,11 @@
 #    along with this program.  If not, see http://www.gnu.org/licenses/
 
 bl_info = {  
-    "name": "Object-Image superposition",
+    "name": "Object-Image Superposition",
     "author": "Biagio Nigro, Anne Jorstad",
-    "version": (1, 1, 0),
+    "version": (1, 2, 0),
     "blender": (2, 7, 0),
-    "location": "View3D > Obj Image superposition",  
+    "location": "View3D > Object Image Superposition",
     "description": "Superimposes image files over 3D objects interactively",
     "warning": "",  
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/visualization",  
@@ -643,7 +643,7 @@ def ShowBoundingBox(obname):
 #count numeber of files within a folder          
 def countFiles(path, exte):
   count=0
-  minim=sys.maxsize
+  minim=2**31-1
   dirs = os.listdir( path )
   for item in dirs:
     if os.path.isfile(os.path.join(path, item)):

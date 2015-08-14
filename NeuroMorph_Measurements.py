@@ -15,9 +15,9 @@
 
 bl_info = {
     "name": "Submesh Volume, Surface Area, and Length",
-    "description": "Calculates the surface area, volume, and length of user-determined subregions of meshes.",
+    "description": "Calculates the surface area, volume, and length of user-determined subregions of meshes",
     "author": "Anne Jorstad, Biagio Nigro, Diego Marcos",
-    "version": (1, 1, 0),
+    "version": (1, 2, 0),
     "blender": (2, 7, 0),
     "location": "View3D > Add > Mesh",
     "warning": "",
@@ -34,6 +34,7 @@ import os
 import re
 from os.path import expanduser
 #import inspect
+import bmesh
     
 
 # get signed volume contribution from single triangle
@@ -125,6 +126,7 @@ class GetVertex(bpy.types.Operator):
     """Add selected vertex to point list"""
     bl_idname = "get.vert"
     bl_label = "Get Vertex"
+    bl_options = {"REGISTER", "UNDO"}
     def execute(self, context):
         obj = context.object
         sel_before = GetSelVert(obj)
@@ -154,7 +156,7 @@ class ClearAllVertices(bpy.types.Operator):
     """Remove all points from list"""
     bl_idname = "clear.vert"
     bl_label = "Clear Vertices"
-    
+    bl_options = {"REGISTER", "UNDO"}
     def execute(self, context):
         obj = context.object
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -167,56 +169,58 @@ class ClearAllVertices(bpy.types.Operator):
             
         return{'FINISHED'}  
 
-def SortPath(mt, vert_vector):
-          buf_vector = []
-          edge_vector=[]
+def SortPath(mt):
+# sort vertices of highlighted edges into ordered list
+          buf_vector = []  # unsorted edges
+          edge_vector=[]   # sorted edges
           vert_index_vector=[]
-          flag_vector=[]
+          flag_vector=[]   # mark used edges
+          vert_vector=[]
 
-          for e in mt.data.edges:
-            if e.select==True:
-             buf_vector.append(e) 
-             flag_vector.append(0)   
+          for e in mt.data.edges:  # populate vector with selected edges
+             if e.select==True:
+               buf_vector.append(e)
+               flag_vector.append(0)
              
           edge_vector.append(buf_vector[0])
           flag_vector[0]=1       
-          for i in range(len(buf_vector)):
-             start=edge_vector[0].vertices[0]
-             start1=edge_vector[0].vertices[1]
-             end=edge_vector[len(edge_vector)-1].vertices[1]
-             end1=edge_vector[len(edge_vector)-1].vertices[0]
+          for i in range(len(buf_vector)):  # loop over edges, prepend/append next edge in path
+             start=edge_vector[0].vertices[0]  # first vertex of current path
+             end=edge_vector[len(edge_vector)-1].vertices[1]  # last vertex of current path
              
-             for j in range(len(buf_vector)):
+             for j in range(len(buf_vector)):  # find next edge
                  
                  if flag_vector[j]==0 :
                    
-                   if start==buf_vector[j].vertices[1]:
+                   if start==buf_vector[j].vertices[1]:  # add to start of list
 
                      edge_vector.insert(0,buf_vector[j])
                      flag_vector[j]=1 
                      
-                   elif start==buf_vector[j].vertices[0]:
-                      a=buf_vector[j].vertices[0]
-                      buf_vector[j].vertices[0]=buf_vector[j].vertices[1]
-                      buf_vector[j].vertices[1]=a
+                   elif start==buf_vector[j].vertices[0]:  # flip and add to start of list
+                     a=buf_vector[j].vertices[0]
+                     buf_vector[j].vertices[0]=buf_vector[j].vertices[1]
+                     buf_vector[j].vertices[1]=a
                       
-                      edge_vector.insert(0,buf_vector[j])
-                      flag_vector[j]=1 
+                     edge_vector.insert(0,buf_vector[j])
+                     flag_vector[j]=1
                       
                   
-                   elif end==buf_vector[j].vertices[0]:
+                   elif end==buf_vector[j].vertices[0]:  # add to end of list
                      edge_vector.append(buf_vector[j])
                      flag_vector[j]=1
                    
-                   elif end==buf_vector[j].vertices[1]:
-                    a=buf_vector[j].vertices[0]
-                    buf_vector[j].vertices[0]=buf_vector[j].vertices[1]
-                    buf_vector[j].vertices[1]=a    
+                   elif end==buf_vector[j].vertices[1]:  # flip and add to end of list
+                     a=buf_vector[j].vertices[0]
+                     buf_vector[j].vertices[0]=buf_vector[j].vertices[1]
+                     buf_vector[j].vertices[1]=a
                     
-                    edge_vector.append(buf_vector[j])
-                    flag_vector[j]=1    
+                     edge_vector.append(buf_vector[j])
+                     flag_vector[j]=1
                    
-          vert_index_vector.append(edge_vector[0].vertices[0])  
+          # fill vertex list with ordered vertices
+          vert_index_vector.append(edge_vector[0].vertices[0])
+          vert_vector.append(mt.data.vertices[edge_vector[0].vertices[0]].co[:])
           for v in edge_vector:     
                  vert_index_vector.append(v.vertices[1])
                  a=v.vertices[1]
@@ -224,12 +228,86 @@ def SortPath(mt, vert_vector):
 
           return vert_vector
 
+def add_face_edges(obj):
+# add edges to connect vertices on each face across the face:
+# for each quadrilateral face, add the two diagonals,
+# for each n>4-sided face, add the centroid and edges connecting
+# it to each original vertex,
+# leave triangular faces as they are
+
+    bpy.ops.object.mode_set(mode='EDIT')
+    obj = bpy.context.object
+    data = obj.data
+    bm = bmesh.new()   # create an empty BMesh
+    bm.from_mesh(data)   # fill it in from a Mesh
+
+    # find shortest path using centroids of all faces;
+    # only add diagonal edges to quad faces that include
+    # vertices from this shortest path
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.poke()  # adds the centroid to each face and radial edges connecting it each vertex
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    for v in obj.vertex_collection:
+        data.vertices[v.index].select=True
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.shortest_path_select()
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # store the indices of these vertices, then undo, then proceed
+    poke_path_inds = []
+    for v in data.vertices:
+        if v.select:
+            poke_path_inds.append(v.index)
+    # undo poke
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.ed.undo()
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # handle quad faces
+    for face in data.polygons:
+        if len(face.vertices) == 4:
+            on_path_flag = 0
+            for vert in face.vertices:
+                if vert in poke_path_inds:
+                    on_path_flag = 1
+                    break
+            if on_path_flag:
+                v0bm = bm.verts[face.vertices[0]]
+                v1bm = bm.verts[face.vertices[1]]
+                v2bm = bm.verts[face.vertices[2]]
+                v3bm = bm.verts[face.vertices[3]]
+                e1 = [v0bm, v2bm]
+                e2 = [v1bm, v3bm]
+                bm.edges.new(e1)
+                bm.edges.new(e2)
+    bm.edges.index_update()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bm.to_mesh(data)
+    bpy.ops.object.mode_set(mode='EDIT')
+
+    # handle non-quad faces  (leave triangular faces as they are)
+    # if many faces with >4 sides might be slow
+    for face in bm.faces:  # use the bmesh data structure: pointers don't go away after context change
+        if len(face.verts) > 4:
+            bpy.ops.mesh.select_all(action='DESELECT')
+            face.select = True
+            bpy.ops.object.mode_set(mode='OBJECT')
+            bm.to_mesh(data)
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.poke()
+
+    bm.edges.index_update()
+    bmesh.update_edit_mesh(data, destructive=True)  # to update mesh in scene
+    bm.free()
+
 
 class CreateCurve(bpy.types.Operator):
-    """Length of path through multiple points"""
+    """Length of line segments connecting multiple points"""
     bl_idname = "create.meas"
     bl_label = "Create Curve from at least two selected vertices"
-    
+    bl_options = {"REGISTER", "UNDO"}
     def execute(self, context):
         obj = context.object
         
@@ -263,10 +341,10 @@ class CreateCurve(bpy.types.Operator):
 
 
 class CreatePath(bpy.types.Operator):
-    """Shortest path between two points through mesh vertices"""
+    """Shortest path between two points through vertices on the mesh"""
     bl_idname = "create.path"
-    bl_label = "Create Shortest Path from two selected vertices"
-
+    bl_label = "Create Shortest Path connecting two selected vertices"
+    bl_options = {"REGISTER", "UNDO"}
     def execute(self, context):
         obj = context.object
         mt = bpy.context.active_object
@@ -274,22 +352,30 @@ class CreatePath(bpy.types.Operator):
 
         if len(obj.vertex_collection)==2:
 
-            # triangulate mesh, temporarily
+            # temporarily add edges to connect vertices across each face
+            add_face_edges(obj)
+
             bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.select_all(action='SELECT')
-            bpy.ops.mesh.quads_convert_to_tris()
             bpy.ops.mesh.select_all(action='DESELECT')
             bpy.ops.object.mode_set(mode='OBJECT')
-
             for v in obj.vertex_collection:
                 mt.data.vertices[v.index].select=True
 
             bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.shortest_path_select()
+            err = bpy.ops.mesh.shortest_path_select()
             bpy.ops.object.mode_set(mode='OBJECT')
 
-            vert_vector = []
-            vert_vector = SortPath(mt, vert_vector)
+            if "CANCELLED" in err:
+                self.report({'INFO'},"Cannot calculate path: points are from disconnected parts of the mesh")
+                bpy.ops.object.mode_set(mode='EDIT')
+                bpy.ops.ed.undo()
+                bpy.ops.object.mode_set(mode='OBJECT')
+                obj.select=True
+                bpy.context.scene.objects.active = obj
+                bpy.ops.object.mode_set(mode='EDIT')
+                return{'FINISHED'}
+
+            vert_vector = SortPath(mt)
 
             # construct shortest path through vertices
             new_name = obj.string_name + "_2pt_dist"
@@ -304,6 +390,10 @@ class CreatePath(bpy.types.Operator):
             curve.select=True
             bpy.context.scene.objects.active = curve
 
+            # show curve on top of mesh for better display
+            curve.show_x_ray = True
+            curve.show_wire = True
+
             # assign curve to be child of parent object
             curve.parent = obj
             curve.hide=True
@@ -317,6 +407,7 @@ class CreatePath(bpy.types.Operator):
             bpy.context.scene.objects.active = obj
             bpy.ops.object.mode_set(mode='EDIT')
         return{'FINISHED'}
+
 
 
 #Define a collection property associated to each object to contain the selected vertices
@@ -400,6 +491,7 @@ class PropertyPanel_geometry(bpy.types.Panel):
     bl_space_type = "PROPERTIES"
     bl_region_type = "WINDOW"
     bl_context = "object"
+
     def draw(self, context):
         layout = self.layout
         display_split(layout, 'Object Name:  ', str(bpy.context.active_object.name))
@@ -1093,6 +1185,7 @@ class GetComputePanel(bpy.types.Panel):
     bl_label = "Measurement Tools"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
+
 #    bl_region_type = "UI"
     def draw(self, context):
         global global_name  #, global_axon_index
