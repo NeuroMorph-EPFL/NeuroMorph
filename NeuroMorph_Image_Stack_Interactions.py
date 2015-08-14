@@ -16,8 +16,8 @@
 bl_info = {  
     "name": "NeuroMorph Image Stack Interactions",
     "author": "Biagio Nigro, Anne Jorstad",
-    "version": (1, 2, 3),
-    "blender": (2, 7, 0),
+    "version": (1, 2, 4),
+    "blender": (2, 7, 5),
     "location": "View3D > Object Image Superposition",
     "description": "Superimposes image files over 3D objects interactively",
     "warning": "",  
@@ -198,7 +198,10 @@ def LoadImageFilenames(path):
                     if os.path.splitext(f)[1].lower() == os.path.extsep+extension]
                     for extension in image_file_extensions}
     largest_group = max(grouped.values(), key=len)
-    the_filepaths = sort_nicely([os.path.join(path, f) for f in largest_group])
+
+    # sort only the filenames, then add the full path
+    sorted_filenames = sort_nicely([f for f in largest_group])
+    the_filepaths = [os.path.join(path, f) for f in sorted_filenames]
 
     # make sure imagefilepaths is empty
     for ind in range(len(bpy.context.scene.imagefilepaths)):
@@ -208,11 +211,9 @@ def LoadImageFilenames(path):
     for f in the_filepaths:
         bpy.context.scene.imagefilepaths.add().name = f
 
-    # store minimum image index (now handles numbers in folder names)
-    min_im_path = the_filepaths[0]
-    path_split = min_im_path.rsplit('/',1)  # if no folders, returns filename as expected
-    min_im_name = path_split[-1]  # just the filename
-    id_string = re.search('([0-9]+)', min_im_name)
+    # store minimum image index
+    min_im_name = sorted_filenames[0]
+    id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
     bpy.context.scene.file_min = int(id_string.group())
 
 
