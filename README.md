@@ -7,3 +7,9 @@ NeuroMorph Documentation, with installation instructions and detailed descriptio
 Video Tutorial:  https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720
 
 Installation Note: In the most recent versions of Blender, the panel tools are found in the "Misc" tab on the far left.
+
+
+
+If you find our tool useful, please cite our paper:  http://link.springer.com/article/10.1007%2Fs12021-014-9242-5
+
+A. Jorstad, B. Nigro, C. Cali, M. Wawrzyniak, P. Fua, G. Knott.  "NeuroMorph: A Toolset for the Morphometric Analysis and Visualization of 3D Models Derived from Electron Microscopy Image Stacks." Neuroinformatics, 2014.
