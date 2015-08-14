@@ -16,7 +16,7 @@
 bl_info = {  
     "name": "NeuroMorph Image Stack Interactions",
     "author": "Biagio Nigro, Anne Jorstad",
-    "version": (1, 2, 2),
+    "version": (1, 2, 3),
     "blender": (2, 7, 0),
     "location": "View3D > Object Image Superposition",
     "description": "Superimposes image files over 3D objects interactively",
@@ -208,8 +208,10 @@ def LoadImageFilenames(path):
     for f in the_filepaths:
         bpy.context.scene.imagefilepaths.add().name = f
 
-    # store minimum image index
-    min_im_name = the_filepaths[0]
+    # store minimum image index (now handles numbers in folder names)
+    min_im_path = the_filepaths[0]
+    path_split = min_im_path.rsplit('/',1)  # if no folders, returns filename as expected
+    min_im_name = path_split[-1]  # just the filename
     id_string = re.search('([0-9]+)', min_im_name)
     bpy.context.scene.file_min = int(id_string.group())
 

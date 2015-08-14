@@ -16,7 +16,7 @@
 bl_info = {  
     "name": "NeuroMorph Import Objects (.obj)",
     "author": "Diego Marcos, Corrado Cali, Biagio Nigro, Anne Jorstad",
-    "version": (1, 2, 2),
+    "version": (1, 2, 3),
     "blender": (2, 7, 0),
     "location": "Scene > Wavefront (.obj) Batch Import",
     "description": "Imports .obj files in batch, with option of applying a Remesh modifier",  

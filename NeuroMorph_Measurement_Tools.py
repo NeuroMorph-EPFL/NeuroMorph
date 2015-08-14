@@ -17,7 +17,7 @@ bl_info = {
     "name": "NeuroMorph Measurement Tools:  Submesh Volume, Surface Area, and Length",
     "description": "Calculates the surface area, volume, and length of user-determined subregions of meshes",
     "author": "Anne Jorstad, Biagio Nigro, Diego Marcos",
-    "version": (1, 2, 2),
+    "version": (1, 2, 3),
     "blender": (2, 7, 0),
     "location": "View3D > Add > Mesh",
     "warning": "",
