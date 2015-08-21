@@ -1,5 +1,9 @@
 ### NeuroMorph Toolkit
 
+<p align="center">
+<img src="https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_screenshot.png" alt="NeuroMorph screenshot" height="400px"/>
+</p>
+
 Download the lastest version of the Blender add-ons from the [**NeuroMorph_Toolkit**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Toolkit) folder.
 
 Example meshes, objects, and image files for use with the add-ons are available in the [**NeuroMorph_Samples**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Samples) folder.
@@ -11,9 +15,7 @@ Example meshes, objects, and image files for use with the add-ons are available 
 [**Video Tutorial**](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
 *(Installation Note: In the most recent versions of Blender, the panel tools are found in the "Misc" tab on the far left.)*
 
-<p align="center">
-<img src="https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_screenshot.png" alt="NeuroMorph screenshot" height="400px"/>
-</p>
+
 
 
 ### Description
