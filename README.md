@@ -13,15 +13,17 @@ A. Jorstad, B. Nigro, C. Cali, M. Wawrzyniak, P. Fua, G. Knott.  (2014).  "Neuro
 
 Download the lastest version of the Blender add-ons from the [**NeuroMorph_Toolkit**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Toolkit) folder.
 
+Instatllation instructions [**here**](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool).
+
 Example meshes, objects, and image files for use with the add-ons are available in the [**NeuroMorph_Samples**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Samples) folder.
 
 
-### Documentation
+#### Documentation
 [**Blender Wiki**](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool)
 
 [**Video Tutorial**](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
 *(Installation Note: In the most recent versions of Blender, the panel tools are found in the "Misc" tab on the far left.)*
 
 
-### Measuring Synapse-Vesicle Density *(new)*
+#### Measuring Synapse-Vesicle Density *(new)*
 Given a 3D mesh representation of a synapse and balls marking the synaptic vesicles, this plug-in computes and outputs the closest distance from each vesicle to the synapse.  See the [**NeuroMorph_Density_Measurements**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Density_Measurements) folder.
