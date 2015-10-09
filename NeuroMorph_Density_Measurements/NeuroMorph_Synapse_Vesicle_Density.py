@@ -15,9 +15,9 @@
 
 bl_info = {  
     "name": "NeuroMorph Synapse Vesicle Density",
-    "author": "Anne Jorstad",
-    "version": (1, 0, 0),
-    "blender": (2, 7, 3),
+    "author": "Anne Jorstad, Csaba Botos",
+    "version": (1, 1, 0),
+    "blender": (2, 7, 5),
     "location": "View3D > Vesicle to Synapse Distances",
     "description": "Calculate distances from vesicles to a synapse",
     "warning": "",  
@@ -139,13 +139,13 @@ class CalculateVesicleDistances(bpy.types.Operator):
 
         # Calculate center coordinates of each vesicle
         vesicle_centers = []
-        mat = all_vesicles[0].matrix_world
         for vscl in all_vesicles:
+            mat_vscl = vscl.matrix_world
             these_verts = vscl.data.vertices
             nverts = len(these_verts)
             v_sum = Vector([0,0,0])
             for vert in these_verts:
-                these_global_coords = mat * vert.co
+                these_global_coords = mat_vscl * vert.co
                 v_sum += these_global_coords
             this_mean = v_sum / nverts
             vesicle_centers.append(this_mean)
@@ -153,16 +153,17 @@ class CalculateVesicleDistances(bpy.types.Operator):
         # Calculate distance from each vesicle center to each vertex on synapse
         dists = []
         inds = []
-        mat_syn = all_vesicles[0].matrix_world
-        for v_ctr in vesicle_centers:
+        mat_syn = the_synapse.matrix_world
+        for v_ind, v_ctr in enumerate(vesicle_centers):
             this_min = sys.maxsize
             this_ind = -1
-            for ind, s_vrt in enumerate(the_synapse.data.vertices):
-                this_dist = get_dist(v_ctr, mat_syn*s_vrt.co)
+            for s_ind, s_vrt in enumerate(the_synapse.data.vertices):
+                this_dist = get_dist_sq(v_ctr, mat_syn*s_vrt.co)
                 if this_dist < this_min:
                     this_min = this_dist
-                    this_ind = ind
-            dists.append(this_min)
+                    this_ind = s_ind
+                    
+            dists.append(math.sqrt(this_min))
             inds.append(this_ind)
 
         mean_dist = sum(dists) / len(dists)
@@ -175,9 +176,8 @@ class CalculateVesicleDistances(bpy.types.Operator):
 
 
 
-def get_dist(coord1, coord2):
-    d = math.sqrt((coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2 + \
-        (coord1[2] - coord2[2])**2)
+def get_dist_sq(coord1, coord2):  # distance is monotonic, take square root at end for efficiency
+    d = (coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2 + (coord1[2] - coord2[2])**2
     return d
 
 
