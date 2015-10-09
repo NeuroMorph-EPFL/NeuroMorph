@@ -17,8 +17,8 @@ bl_info = {
     "name": "NeuroMorph Measurement Tools:  Submesh Volume, Surface Area, and Length",
     "description": "Calculates the surface area, volume, and length of user-determined subregions of meshes",
     "author": "Anne Jorstad, Biagio Nigro, Diego Marcos",
-    "version": (1, 2, 3),
-    "blender": (2, 7, 0),
+    "version": (1, 2, 4),
+    "blender": (2, 7, 5),
     "location": "View3D > Add > Mesh",
     "warning": "",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/Measurement",
@@ -266,6 +266,7 @@ def add_face_edges(obj):
     bpy.ops.object.mode_set(mode='OBJECT')
 
     # handle quad faces
+    bm.verts.ensure_lookup_table()
     for face in data.polygons:
         if len(face.vertices) == 4:
             on_path_flag = 0
