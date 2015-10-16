@@ -11,9 +11,9 @@ A. Jorstad, B. Nigro, C. Cali, M. Wawrzyniak, P. Fua, G. Knott.  (2014).  "Neuro
 
 #### Download
 
-Download the lastest version of the Blender add-ons from the [**NeuroMorph_Toolkit**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Toolkit) folder.
+Download the latest version of the Blender add-ons from the [**NeuroMorph_Toolkit**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Toolkit) folder.
 
-Instatllation instructions [**here**](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool).
+Installation instructions [**here**](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool).
 
 Example meshes, objects, and image files for use with the add-ons are available in the [**NeuroMorph_Samples**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Samples) folder.
 
