@@ -26,4 +26,8 @@ Example meshes, objects, and image files for use with the add-ons are available 
 
 
 #### Measuring Synapse-Vesicle Density *(new)*
-Given a 3D mesh representation of a synapse and balls marking the synaptic vesicles, this plug-in computes and outputs the closest distance from each vesicle to the synapse.  See the [**NeuroMorph_Density_Measurements**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Density_Measurements) folder.
+The Synaptic Vesicle Density Measure add-on computes and outputs the closest distance from each vesicle to a synapse, given a 3D mesh representation of a synapse and balls marking the synaptic vesicles.  See the [**NeuroMorph_Density_Measurements**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Density_Measurements) folder.
+
+
+#### Contact
+<anne.jorstad@epfl.ch>, <corrado.cali@epfl.ch>, <graham.knott@epfl.ch>
