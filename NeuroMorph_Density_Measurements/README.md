@@ -1,5 +1,5 @@
-#### NeuroMorph_Synapse_Vesicle_Density.py  ([download](http://dstats.net/download/http://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Density_Measurements/NeuroMorph_Synapse_Vesicle_Density.py))
-The Synaptic Vesicle Density Measure add-on computes and outputs the closest distance from each vesicle to a synapse, given a 3D mesh representation of a synapse and balls marking the synaptic vesicles.
+#### NeuroMorph Synapse Vesicle Density   ([download](http://dstats.net/download/http://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Density_Measurements/NeuroMorph_Synapse_Vesicle_Density.py))
+The Synaptic Vesicle Density Measure add-on computes and outputs the closest distance from the center of each vesicle to a synapse, given a 3D mesh representation of a synapse and balls marking the synaptic vesicles.
 
 *Developed to provide analysis for the [paper](http://www.jneurosci.org/content/35/24/9024):*
 
