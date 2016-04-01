@@ -320,7 +320,7 @@ def LoadImageFilenamesZ(path):
 
     # make sure imagefilepaths_z is empty
     for ind in range(len(bpy.context.scene.imagefilepaths_z)):
-        bpy.context.scene.imagefilepaths_z.remove(ind)  # CHANGE HERE IF PROBLEM   replace ind by 0
+        bpy.context.scene.imagefilepaths_z.remove(ind - 1)  # CHANGE HERE IF PROBLEM   replace ind by 0
 
     # insert into CollectionProperty
     for f in the_filepaths:
@@ -329,7 +329,7 @@ def LoadImageFilenamesZ(path):
     # store minimum image index
     min_im_name = sorted_filenames[0]
     id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
-    bpy.context.scene.file_min_Z = int(id_string.group())
+    bpy.context.scene.file_min_Z = int(id_string.group()) - 1
 
 def LoadImageFilenamesY(path):
     image_file_extensions = ["png", "tif", "tiff", "bmp", "jpg", "jpeg", "tga"]  # can add others as needed
@@ -347,7 +347,7 @@ def LoadImageFilenamesY(path):
 
     # make sure imagefilepaths_z is empty
     for ind in range(len(bpy.context.scene.imagefilepaths_z)):
-        bpy.context.scene.imagefilepaths_y.remove(ind)  # CHANGE HERE IF PROBLEM   replace ind by 0
+        bpy.context.scene.imagefilepaths_y.remove(ind - 1)  # CHANGE HERE IF PROBLEM   replace ind by 0
 
     # insert into CollectionProperty
     for f in the_filepaths:
@@ -356,7 +356,7 @@ def LoadImageFilenamesY(path):
     # store minimum image index
     min_im_name = sorted_filenames[0]
     id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
-    bpy.context.scene.file_min_Y = int(id_string.group())
+    bpy.context.scene.file_min_Y = int(id_string.group()) - 1
 
 def LoadImageFilenamesX(path):
     image_file_extensions = ["png", "tif", "tiff", "bmp", "jpg", "jpeg", "tga"]  # can add others as needed
@@ -374,7 +374,7 @@ def LoadImageFilenamesX(path):
 
     # make sure imagefilepaths_x is empty
     for ind in range(len(bpy.context.scene.imagefilepaths_x)):
-        bpy.context.scene.imagefilepaths_x.remove(ind)  # CHANGE HERE IF PROBLEM   replace ind by 0
+        bpy.context.scene.imagefilepaths_x.remove(ind - 1)  # CHANGE HERE IF PROBLEM   replace ind by 0
 
     # insert into CollectionProperty
     for f in the_filepaths:
@@ -383,7 +383,7 @@ def LoadImageFilenamesX(path):
     # store minimum image index
     min_im_name = sorted_filenames[0]
     id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
-    bpy.context.scene.file_min_X = int(id_string.group())
+    bpy.context.scene.file_min_X = int(id_string.group()) - 1
 
 
 def sort_nicely( filenames ):
@@ -441,15 +441,15 @@ def DisplayImageFunctionZ():
    myob = bpy.context.active_object
    bpy.ops.object.mode_set(mode = 'OBJECT')
 
-   #all_obj = [item.name for item in bpy.data.objects]      #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Comment the next 10 line because it remove my others plane
-   #for object_name in all_obj:
-   #   bpy.data.objects[object_name].select = False
+   all_obj = [item.name for item in bpy.data.objects]
+   for object_name in all_obj:
+      bpy.data.objects[object_name].select = False
 
    # remove previous empty objects
-   #candidate_list = [item.name for item in bpy.data.objects if item.type == "EMPTY"]
-   #for object_name in candidate_list:
-   #   bpy.data.objects[object_name].select = True
-   #bpy.ops.object.delete()
+   candidate_list = [item.name for item in bpy.data.objects if item.name == "Image Z"]
+   for object_name in candidate_list:
+      bpy.data.objects[object_name].select = True
+   bpy.ops.object.delete()
 
    delta_z = (z_max-z_min)/(N-1)
    z_locs = [delta_z*n for n in range(N)]  # the z locations of each image in space
@@ -511,15 +511,15 @@ def DisplayImageFunctionX():
    myob = bpy.context.active_object
    bpy.ops.object.mode_set(mode='OBJECT')
 
-   #all_obj = [item.name for item in bpy.data.objects] #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Comment the next 10 line because it remove my others plane
-   #for object_name in all_obj:
-   #    bpy.data.objects[object_name].select = False
+   all_obj = [item.name for item in bpy.data.objects]
+   for object_name in all_obj:
+       bpy.data.objects[object_name].select = False
 
    # remove previous empty objects
-   #candidate_list = [item.name for item in bpy.data.objects if item.type == "EMPTY"]
-   #for object_name in candidate_list:
-   #    bpy.data.objects[object_name].select = True
-   #bpy.ops.object.delete()
+   candidate_list = [item.name for item in bpy.data.objects if item.name == "Image X"]
+   for object_name in candidate_list:
+       bpy.data.objects[object_name].select = True
+   bpy.ops.object.delete()
 
    delta_x = (x_max - x_min) / (N - 1)
    x_locs = [delta_x * n for n in range(N)]  # the x locations of each image in space
@@ -581,15 +581,15 @@ def DisplayImageFunctionY():
    myob = bpy.context.active_object
    bpy.ops.object.mode_set(mode='OBJECT')
 
-   # all_obj = [item.name for item in bpy.data.objects] #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Comment the next 10 line because it remove my others plane
-   # for object_name in all_obj:
-   #    bpy.data.objects[object_name].select = False
+   all_obj = [item.name for item in bpy.data.objects]
+   for object_name in all_obj:
+       bpy.data.objects[object_name].select = False
 
-   # remove previous empty objects
-   # candidate_list = [item.name for item in bpy.data.objects if item.type == "EMPTY"]
-   # for object_name in candidate_list:
-   #    bpy.data.objects[object_name].select = True
-   # bpy.ops.object.delete()
+   #remove previous empty objects
+   candidate_list = [item.name for item in bpy.data.objects if item.name == "Image Y"]
+   for object_name in candidate_list:
+       bpy.data.objects[object_name].select = True
+   bpy.ops.object.delete()
 
    delta_y = (y_max - y_min) / (N - 1)
    y_locs = [delta_y * n for n in range(N)]  # the y locations of each image in space
@@ -613,7 +613,7 @@ def DisplayImageFunctionY():
        im_ob.name = "Image Y"
 
        # find closest image slice to x-coord of vertex
-       point_y = vert_coordinate[0]
+       point_y = vert_coordinate[1]
        min_dist = float('inf')
        for ii in range(len(y_locs)):
            if abs(y_locs[ii] - point_y) < min_dist:
@@ -661,7 +661,7 @@ class ImageScrollOperator(bpy.types.Operator):
 
                 z_max=bpy.context.scene.z_side
                 z_min=0
-                delta_z = (z_max-z_min)/(N-1)
+                delta_z = (z_max-z_min)/(N - 1)
                 z_locs = [delta_z*n for n in range(N)]  # the z locations of each image in space
 
                 # find closest image slice to z-coord of vertex
@@ -673,28 +673,28 @@ class ImageScrollOperator(bpy.types.Operator):
                        ind = ii
 
                 if event.type == 'WHEELDOWNMOUSE':  # Apply
-                  ind = ind - 1
-                  if ind >= 0:
+                  if ind >= 0 + 1:
+                     ind = ind - 1
                      load_imZ(ind, image_files, im_ob)
                      im_ob.location.z = im_ob.location.z - delta_z
 
                 elif event.type == 'WHEELUPMOUSE':  # Apply
-                   ind = ind + 1
-                   if ind <= N-1:
+                   if ind < N-1:
+                     ind = ind + 1
                      load_imZ(ind, image_files, im_ob)
                      im_ob.location.z = im_ob.location.z + delta_z
 
                 elif event.type == 'NUMPAD_PLUS':  # Apply
-                    ind = ind + 10
-                    if ind <= N - 1:
+                    if ind < N + 10:
+                         ind = ind + 10
                          load_imZ(ind, image_files, im_ob)
-                         im_ob.location.z = im_ob.location.z + delta_z
+                         im_ob.location.z = im_ob.location.z + (delta_z * 10)
 
                 elif event.type == 'NUMPAD_MINUS':  # Apply
-                     ind = ind - 10
-                     if ind >= 0:
+                    if ind >= 0 + 10:
+                         ind = ind - 10
                          load_imZ(ind, image_files, im_ob)
-                         im_ob.location.z = im_ob.location.z - delta_z
+                         im_ob.location.z = im_ob.location.z - (delta_z * 10)
 
                 elif event.type == 'LEFTMOUSE':  # Confirm
                     return {'FINISHED'}
@@ -722,28 +722,28 @@ class ImageScrollOperator(bpy.types.Operator):
                         ind = ii
 
                 if event.type == 'WHEELDOWNMOUSE':  # Apply
-                    ind = ind - 1
-                    if ind >= 0:
+                    if ind >= 0 - 1:
+                        ind = ind - 1
                         load_imX(ind, image_files, im_ob)
                         im_ob.location.x = im_ob.location.x - delta_x
 
                 elif event.type == 'WHEELUPMOUSE':  # Apply
-                    ind = ind + 1
-                    if ind <= N - 1:
+                    if ind < N-1:
+                        ind = ind + 1
                         load_imX(ind, image_files, im_ob)
                         im_ob.location.x = im_ob.location.x + delta_x
 
                 elif event.type == 'NUMPAD_PLUS':  # Apply
-                    ind = ind + 10
-                    if ind <= N - 1:
+                    if ind < N - 10:
+                         ind = ind + 10
                          load_imX(ind, image_files, im_ob)
-                         im_ob.location.x = im_ob.location.x + delta_x
+                         im_ob.location.x = im_ob.location.x + (delta_x * 10)
 
                 elif event.type == 'NUMPAD_MINUS':  # Apply
-                     ind = ind - 10
-                     if ind >= 0:
+                     if ind >= 0 + 10:
+                         ind = ind - 10
                          load_imX(ind, image_files, im_ob)
-                         im_ob.location.x = im_ob.location.x - delta_x
+                         im_ob.location.x = im_ob.location.x - (delta_x * 10)
 
                 elif event.type == 'LEFTMOUSE':  # Confirm
                     return {'FINISHED'}
@@ -771,28 +771,28 @@ class ImageScrollOperator(bpy.types.Operator):
                         ind = ii
 
                 if event.type == 'WHEELDOWNMOUSE':  # Apply
-                    ind = ind - 1
-                    if ind >= 0:
+                    if ind >= 0 + 1:
+                        ind = ind - 1
                         load_imY(ind, image_files, im_ob)
                         im_ob.location.y = im_ob.location.y - delta_y
 
                 elif event.type == 'WHEELUPMOUSE':  # Apply
-                    ind = ind + 1
-                    if ind <= N - 1:
+                    if ind < N-1:
+                        ind = ind + 1
                         load_imY(ind, image_files, im_ob)
                         im_ob.location.y = im_ob.location.y + delta_y
                 
                 elif event.type == 'NUMPAD_PLUS':  # Apply
-                    ind = ind + 10
-                    if ind <= N - 1:
+                    if ind < N - 10:
+                         ind = ind + 10
                          load_imY(ind, image_files, im_ob)
-                         im_ob.location.y = im_ob.location.y + delta_y
+                         im_ob.location.y = im_ob.location.y + (delta_y * 10)
 
                 elif event.type == 'NUMPAD_MINUS':  # Apply
-                     ind = ind - 10
-                     if ind >= 0:
+                     if ind >= 0 + 10:
+                         ind = ind - 10
                          load_imY(ind, image_files, im_ob)
-                         im_ob.location.y = im_ob.location.y - delta_y
+                         im_ob.location.y = im_ob.location.y - (delta_y * 10)
 
                 elif event.type == 'LEFTMOUSE':  # Confirm
                     return {'FINISHED'}
