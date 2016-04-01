@@ -685,7 +685,7 @@ class ImageScrollOperator(bpy.types.Operator):
                      im_ob.location.z = im_ob.location.z + delta_z
 
                 elif event.type == 'NUMPAD_PLUS':  # Apply
-                    if ind < N + 10:
+                    if ind < N - 10:
                          ind = ind + 10
                          load_imZ(ind, image_files, im_ob)
                          im_ob.location.z = im_ob.location.z + (delta_z * 10)
@@ -722,7 +722,7 @@ class ImageScrollOperator(bpy.types.Operator):
                         ind = ii
 
                 if event.type == 'WHEELDOWNMOUSE':  # Apply
-                    if ind >= 0 - 1:
+                    if ind >= 0 + 1:
                         ind = ind - 1
                         load_imX(ind, image_files, im_ob)
                         im_ob.location.x = im_ob.location.x - delta_x
