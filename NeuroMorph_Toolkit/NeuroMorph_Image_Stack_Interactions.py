@@ -320,7 +320,7 @@ def LoadImageFilenamesZ(path):
 
     # make sure imagefilepaths_z is empty
     for ind in range(len(bpy.context.scene.imagefilepaths_z)):
-        bpy.context.scene.imagefilepaths_z.remove(ind - 1)  # CHANGE HERE IF PROBLEM   replace ind by 0
+        bpy.context.scene.imagefilepaths_z.remove(ind)
 
     # insert into CollectionProperty
     for f in the_filepaths:
@@ -329,7 +329,7 @@ def LoadImageFilenamesZ(path):
     # store minimum image index
     min_im_name = sorted_filenames[0]
     id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
-    bpy.context.scene.file_min_Z = int(id_string.group()) - 1
+    bpy.context.scene.file_min_Z = int(id_string.group())
 
 def LoadImageFilenamesY(path):
     image_file_extensions = ["png", "tif", "tiff", "bmp", "jpg", "jpeg", "tga"]  # can add others as needed
@@ -347,7 +347,7 @@ def LoadImageFilenamesY(path):
 
     # make sure imagefilepaths_z is empty
     for ind in range(len(bpy.context.scene.imagefilepaths_z)):
-        bpy.context.scene.imagefilepaths_y.remove(ind - 1)  # CHANGE HERE IF PROBLEM   replace ind by 0
+        bpy.context.scene.imagefilepaths_y.remove(ind)
 
     # insert into CollectionProperty
     for f in the_filepaths:
@@ -356,7 +356,7 @@ def LoadImageFilenamesY(path):
     # store minimum image index
     min_im_name = sorted_filenames[0]
     id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
-    bpy.context.scene.file_min_Y = int(id_string.group()) - 1
+    bpy.context.scene.file_min_Y = int(id_string.group())
 
 def LoadImageFilenamesX(path):
     image_file_extensions = ["png", "tif", "tiff", "bmp", "jpg", "jpeg", "tga"]  # can add others as needed
@@ -374,7 +374,7 @@ def LoadImageFilenamesX(path):
 
     # make sure imagefilepaths_x is empty
     for ind in range(len(bpy.context.scene.imagefilepaths_x)):
-        bpy.context.scene.imagefilepaths_x.remove(ind - 1)  # CHANGE HERE IF PROBLEM   replace ind by 0
+        bpy.context.scene.imagefilepaths_x.remove(ind)
 
     # insert into CollectionProperty
     for f in the_filepaths:
@@ -383,7 +383,7 @@ def LoadImageFilenamesX(path):
     # store minimum image index
     min_im_name = sorted_filenames[0]
     id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
-    bpy.context.scene.file_min_X = int(id_string.group()) - 1
+    bpy.context.scene.file_min_X = int(id_string.group())
 
 
 def sort_nicely( filenames ):
@@ -658,6 +658,7 @@ class ImageScrollOperator(bpy.types.Operator):
                 exte = bpy.context.scene.image_ext_Z
                 image_files = bpy.context.scene.imagefilepaths_z
                 N = len(image_files)
+                self.report({'INFO'}, image_files[0].name)
 
                 z_max=bpy.context.scene.z_side
                 z_min=0
@@ -815,6 +816,7 @@ def load_imZ(ind, image_files, im_ob):
 # check if image already loaded, only load new image if not
     newid = ind+bpy.context.scene.file_min_Z
     full_path = image_files[newid].name
+    print(full_path)
     filename_only = os.path.split(full_path)[1]
     if filename_only not in bpy.data.images:
         bpy.data.images.load(full_path)  # often produces TIFFReadDirectory: Warning, can ignore
