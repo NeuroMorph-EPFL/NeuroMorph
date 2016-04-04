@@ -130,6 +130,13 @@ bpy.types.Scene.file_min_Y = bpy.props.IntProperty \
         default=0
     )
 
+bpy.types.Scene.shift_step = bpy.props.IntProperty \
+        (
+        name="Shift step",
+        description="Step for scrolling through image stack",
+        default=10
+    )
+
 bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
@@ -168,11 +175,12 @@ class SuperimposePanel(bpy.types.Panel):
 
         row = self.layout.row()
         row.operator("object.modal_operator", text='Scroll Through Image Stack')
+        row.prop(context.scene , "shift_step")
         
         self.layout.label("--Retrieve Object from Image--")
         
         row = self.layout.row()
-        row.operator("object.point_operator", text='Display Grid')
+        row.operator("object.point_operator", text='Display Grid on Z')
         row.prop(context.scene , "x_grid") 
         row.prop(context.scene , "y_grid") 
         
@@ -224,7 +232,7 @@ class SelectStackFolderZ(bpy.types.Operator):  # adjusted
             bpy.data.images.remove(f)
 
         # load image filenames and extract file extension
-        LoadImageFilenamesZ(bpy.context.scene.image_path_Z)
+        LoadImageFilenames('Z')
         if len(bpy.context.scene.imagefilepaths_z) < 1:
             self.report({'INFO'},"No image files found in selected directory")
         else:
@@ -256,7 +264,7 @@ class SelectStackFolderX(bpy.types.Operator):  # adjusted
             bpy.data.images.remove(f)
 
         # load image filenames and extract file extension
-        LoadImageFilenamesX(bpy.context.scene.image_path_X)
+        LoadImageFilenames('X')
         if len(bpy.context.scene.imagefilepaths_x) < 1:
             self.report({'INFO'}, "No image files found in selected directory")
         else:
@@ -288,7 +296,7 @@ class SelectStackFolderY(bpy.types.Operator):  # adjusted
             bpy.data.images.remove(f)
 
         # load image filenames and extract file extension
-        LoadImageFilenamesY(bpy.context.scene.image_path_Y)
+        LoadImageFilenames('Y')
         if len(bpy.context.scene.imagefilepaths_y) < 1:
             self.report({'INFO'}, "No image files found in selected directory")
         else:
@@ -304,8 +312,20 @@ class SelectStackFolderY(bpy.types.Operator):  # adjusted
         return {"RUNNING_MODAL"}
 
 
-def LoadImageFilenamesZ(path):
+def LoadImageFilenames(orientation) :
     image_file_extensions = ["png", "tif", "tiff", "bmp", "jpg", "jpeg", "tga"]  # can add others as needed
+    if(orientation == 'Z'):
+        imagefilepaths = bpy.context.scene.imagefilepaths_z
+        file_min = bpy.context.scene.file_min_Z
+        path = bpy.context.scene.image_path_Z
+    elif (orientation == 'X'):
+        imagefilepaths = bpy.context.scene.imagefilepaths_x
+        file_min = bpy.context.scene.file_min_X
+        path = bpy.context.scene.image_path_X
+    elif (orientation == 'Y'):
+        imagefilepaths = bpy.context.scene.imagefilepaths_y
+        file_min = bpy.context.scene.file_min_Y
+        path = bpy.context.scene.image_path_Y
 
     # get filenames at image_path, extract filenames of type (image extension with most elements) in correct order
     filenames = [f for f in listdir(path) if os.path.isfile(os.path.join(path, f))]
@@ -318,72 +338,18 @@ def LoadImageFilenamesZ(path):
     sorted_filenames = sort_nicely([f for f in largest_group])
     the_filepaths = [os.path.join(path, f) for f in sorted_filenames]
 
-    # make sure imagefilepaths_z is empty
-    for ind in range(len(bpy.context.scene.imagefilepaths_z)):
-        bpy.context.scene.imagefilepaths_z.remove(ind)
+    # make sure imagefilepaths is empty
+    for ind in range(len(imagefilepaths)):
+        imagefilepaths.remove(ind)
 
     # insert into CollectionProperty
     for f in the_filepaths:
-        bpy.context.scene.imagefilepaths_z.add().name = f
+        imagefilepaths.add().name = f
 
     # store minimum image index
     min_im_name = sorted_filenames[0]
     id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
-    bpy.context.scene.file_min_Z = int(id_string.group())
-
-def LoadImageFilenamesY(path):
-    image_file_extensions = ["png", "tif", "tiff", "bmp", "jpg", "jpeg", "tga"]  # can add others as needed
-
-    # get filenames at image_path, extract filenames of type (image extension with most elements) in correct order
-    filenames = [f for f in listdir(path) if os.path.isfile(os.path.join(path, f))]
-    grouped = {extension: [f for f in filenames
-                           if os.path.splitext(f)[1].lower() == os.path.extsep + extension]
-               for extension in image_file_extensions}
-    largest_group = max(grouped.values(), key=len)
-
-    # sort only the filenames, then add the full path
-    sorted_filenames = sort_nicely([f for f in largest_group])
-    the_filepaths = [os.path.join(path, f) for f in sorted_filenames]
-
-    # make sure imagefilepaths_z is empty
-    for ind in range(len(bpy.context.scene.imagefilepaths_z)):
-        bpy.context.scene.imagefilepaths_y.remove(ind)
-
-    # insert into CollectionProperty
-    for f in the_filepaths:
-        bpy.context.scene.imagefilepaths_y.add().name = f
-
-    # store minimum image index
-    min_im_name = sorted_filenames[0]
-    id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
-    bpy.context.scene.file_min_Y = int(id_string.group())
-
-def LoadImageFilenamesX(path):
-    image_file_extensions = ["png", "tif", "tiff", "bmp", "jpg", "jpeg", "tga"]  # can add others as needed
-
-    # get filenames at image_path, extract filenames of type (image extension with most elements) in correct order
-    filenames = [f for f in listdir(path) if os.path.isfile(os.path.join(path, f))]
-    grouped = {extension: [f for f in filenames
-                           if os.path.splitext(f)[1].lower() == os.path.extsep + extension]
-               for extension in image_file_extensions}
-    largest_group = max(grouped.values(), key=len)
-
-    # sort only the filenames, then add the full path
-    sorted_filenames = sort_nicely([f for f in largest_group])
-    the_filepaths = [os.path.join(path, f) for f in sorted_filenames]
-
-    # make sure imagefilepaths_x is empty
-    for ind in range(len(bpy.context.scene.imagefilepaths_x)):
-        bpy.context.scene.imagefilepaths_x.remove(ind)
-
-    # insert into CollectionProperty
-    for f in the_filepaths:
-        bpy.context.scene.imagefilepaths_x.add().name = f
-
-    # store minimum image index
-    min_im_name = sorted_filenames[0]
-    id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
-    bpy.context.scene.file_min_X = int(id_string.group())
+    file_min = int(id_string.group())
 
 
 def sort_nicely( filenames ):
@@ -397,138 +363,98 @@ def sort_nicely( filenames ):
 class DisplayImageButton(bpy.types.Operator):  # adjusted
     """Display image plane at selected vertex"""
     bl_idname = "superimpose.tif"
-    bl_label = "Superimpose Z image"
+    bl_label = "Superimpose images"
     
     def execute(self, context):
         if bpy.context.mode == 'EDIT_MESH':
             Nz = len(bpy.context.scene.imagefilepaths_z)
             if Nz > 0:
                 if (bpy.context.active_object.type=='MESH'):
-                    DisplayImageFunctionZ()
+                    DisplayImageFunction('Z')
                 else:
                     self.report({'INFO'},"Select a vertex on a mesh object")
             Nx = len(bpy.context.scene.imagefilepaths_x)
             if Nx > 0:
                 if (bpy.context.active_object.type == 'MESH'):
-                    DisplayImageFunctionX()
+                    DisplayImageFunction('X')
                 else:
                     self.report({'INFO'}, "Select a vertex on a mesh object")
             Ny = len(bpy.context.scene.imagefilepaths_y)
             if Ny > 0:
                 if (bpy.context.active_object.type == 'MESH'):
-                    DisplayImageFunctionY()
+                    DisplayImageFunction('Y')
                 else:
                     self.report({'INFO'}, "Select a vertex on a mesh object")
             if (Ny <= 0 & Nz <=0 & Nx <=0):
                 self.report({'INFO'},"No image files found in the selected directories")
         return {'FINISHED'}
   
+def DisplayImageFunction(orientation):
+        
+    x_max = bpy.context.scene.x_side
+    y_max = bpy.context.scene.y_side
+    z_max = bpy.context.scene.z_side
+    x_min = 0.0
+    y_min = 0.0
+    z_min = 0.0
+    scale_here = max(x_max, y_max)  # image is loaded with max dimension = 1
+    scale_vec = [scale_here, scale_here, scale_here]
 
-# create an empty and upload an image according to the vertical height field (z-axis)
-def DisplayImageFunctionZ():
-   image_files = bpy.context.scene.imagefilepaths_z
-   exte = bpy.context.scene.image_ext_Z
-   N = len(image_files)
-   x_max = bpy.context.scene.x_side
-   y_max = bpy.context.scene.y_side
-   z_max = bpy.context.scene.z_side
-   x_min = 0.0
-   y_min = 0.0
-   z_min = 0.0
-   scale_here = max(x_max, y_max)  # image is loaded with max dimension = 1
-   scale_vec = [scale_here, scale_here, scale_here]
+    if(orientation == 'Z'):
+        scale_here = max(x_max, y_max)  # image is loaded with max dimension = 1
+        scale_vec = [scale_here, scale_here, scale_here]
+        image_files = bpy.context.scene.imagefilepaths_z
+        exte = bpy.context.scene.image_ext_Z
+        N = len(image_files)
+        delta = (z_max-z_min)/(N-1)
+        locs = [delta*n for n in range(N)]  # the z locations of each image in space
+        newName = "Image Z"
+        rotX = 3.141592653
+        rotY = 0
+        rotZ = 0
+    elif (orientation == 'X'):
+        scale_here = max(y_max, z_max)  # image is loaded with max dimension = 1
+        scale_vec = [scale_here, scale_here, scale_here]
+        image_files = bpy.context.scene.imagefilepaths_x
+        exte = bpy.context.scene.image_ext_X
+        N = len(image_files)
+        delta = (x_max-x_min)/(N-1)
+        locs = [delta*n for n in range(N)]  # the x locations of each image in space
+        newName = "Image X"
+        rotX = 0
+        rotY = -3.141592653/2
+        rotZ = 3.141592653
+    elif (orientation == 'Y'):
+        scale_here = max(x_max, z_max)  # image is loaded with max dimension = 1
+        scale_vec = [scale_here, scale_here, scale_here]
+        image_files = bpy.context.scene.imagefilepaths_y
+        exte = bpy.context.scene.image_ext_Y
+        N = len(image_files)
+        delta = (y_max-y_min)/(N-1)
+        locs = [delta*n for n in range(N)]  # the y locations of each image in space
+        newName = "Image Y"
+        rotX = -3.141592653/2
+        rotY = 0
+        rotZ = 0
 
-   myob = bpy.context.active_object
-   bpy.ops.object.mode_set(mode = 'OBJECT')
+    myob = bpy.context.active_object
+    bpy.ops.object.mode_set(mode = 'OBJECT')
 
-   all_obj = [item.name for item in bpy.data.objects]
-   for object_name in all_obj:
-      bpy.data.objects[object_name].select = False
-
-   # remove previous empty objects
-   candidate_list = [item.name for item in bpy.data.objects if item.name == "Image Z"]
-   for object_name in candidate_list:
-      bpy.data.objects[object_name].select = True
-   bpy.ops.object.delete()
-
-   delta_z = (z_max-z_min)/(N-1)
-   z_locs = [delta_z*n for n in range(N)]  # the z locations of each image in space
-
-   # collect selected verts
-   selected_idx = [i.index for i in myob.data.vertices if i.select]
-   original_object = myob.name
-
-   for v_index in selected_idx:
-      # get local coordinate, turn into word coordinate
-      vert_coordinate = myob.data.vertices[v_index].co
-      vert_coordinate = myob.matrix_world * vert_coordinate
-
-      # unselect all
-      for item in bpy.context.selectable_objects:
-          item.select = False
-
-      # this deals with adding the empty
-      bpy.ops.object.empty_add(type='IMAGE', location=vert_coordinate, rotation=(3.141592653,0,0))
-      im_ob = bpy.context.active_object
-      im_ob.name = "Image Z"
-
-      # find closest image slice to z-coord of vertex
-      point_z = vert_coordinate[2]
-      min_dist = float('inf')
-      for ii in range(len(z_locs)):
-        if abs(z_locs[ii]-point_z) < min_dist:
-            min_dist = abs(z_locs[ii]-point_z)
-            ind = ii
-
-      load_imZ(ind, image_files, im_ob)
-
-      im_ob.scale = scale_vec
-      z_coord = z_locs[ind]
-      im_ob.location = (0, y_max, z_coord)  # this is correct
-
-      bpy.ops.object.select_all(action='TOGGLE')
-      bpy.ops.object.select_all(action='DESELECT')
-
-   # set original object to active, selects it, place back into editmode
-   bpy.context.scene.objects.active = myob
-   myob.select = True
-   bpy.ops.object.mode_set(mode = 'OBJECT')
-
-# create an empty and upload an image according to the vertical height field (z-axis)
-def DisplayImageFunctionX():
-   image_files = bpy.context.scene.imagefilepaths_x
-   exte = bpy.context.scene.image_ext_X
-   N = len(image_files)
-   x_max = bpy.context.scene.x_side
-   y_max = bpy.context.scene.y_side
-   z_max = bpy.context.scene.z_side
-   x_min = 0.0
-   y_min = 0.0
-   z_min = 0.0
-   scale_here = max(y_max, z_max)  # image is loaded with max dimension = 1
-   scale_vec = [scale_here, scale_here, scale_here]
-
-   myob = bpy.context.active_object
-   bpy.ops.object.mode_set(mode='OBJECT')
-
-   all_obj = [item.name for item in bpy.data.objects]
-   for object_name in all_obj:
+    all_obj = [item.name for item in bpy.data.objects]
+    for object_name in all_obj:
        bpy.data.objects[object_name].select = False
 
-   # remove previous empty objects
-   candidate_list = [item.name for item in bpy.data.objects if item.name == "Image X"]
-   for object_name in candidate_list:
+    # remove previous empty objects
+    candidate_list = [item.name for item in bpy.data.objects if item.name == newName]
+    for object_name in candidate_list:
        bpy.data.objects[object_name].select = True
-   bpy.ops.object.delete()
+    bpy.ops.object.delete()
 
-   delta_x = (x_max - x_min) / (N - 1)
-   x_locs = [delta_x * n for n in range(N)]  # the x locations of each image in space
+    # collect selected verts
+    selected_id = [i.index for i in myob.data.vertices if i.select]
+    original_object = myob.name
 
-   # collect selected verts
-   selected_idx = [i.index for i in myob.data.vertices if i.select]
-   original_object = myob.name
-
-   for v_index in selected_idx:
+    for v_index in selected_id:
        # get local coordinate, turn into word coordinate
        vert_coordinate = myob.data.vertices[v_index].co
        vert_coordinate = myob.matrix_world * vert_coordinate
@@ -538,101 +464,49 @@ def DisplayImageFunctionX():
            item.select = False
 
        # this deals with adding the empty
-       bpy.ops.object.empty_add(type='IMAGE', location=vert_coordinate, rotation=(0,-3.141592653/2,3.141592653))
+       bpy.ops.object.empty_add(type='IMAGE', location=vert_coordinate, rotation=(rotX,rotY,rotZ))
        im_ob = bpy.context.active_object
-       im_ob.name = "Image X"
+       im_ob.name = newName
 
-       # find closest image slice to x-coord of vertex
-       point_x = vert_coordinate[0]
+       # find closest image slice to orientation-coord of vertex
+       if(orientation == 'Z'):
+            point = vert_coordinate[2]
+       elif(orientation == 'X'):
+            point = vert_coordinate[0]
+       elif(orientation == 'Y'):
+            point = vert_coordinate[1]
+          
        min_dist = float('inf')
-       for ii in range(len(x_locs)):
-           if abs(x_locs[ii] - point_x) < min_dist:
-               min_dist = abs(x_locs[ii] - point_x)
-               ind = ii
+       for ii in range(len(locs)):
+         if abs(locs[ii]-point) < min_dist:
+             min_dist = abs(locs[ii]-point)
+             ind = ii
 
-       load_imX(ind, image_files, im_ob)
+       load_im(ind, image_files, im_ob, orientation)
 
        im_ob.scale = scale_vec
-       x_coord = x_locs[ind]
-       im_ob.location = (x_coord, y_max, 0)  # this is correct
+       coord = locs[ind]
+       if(orientation == 'Z'):
+            locX = 0
+            locY = y_max
+            locZ = coord
+       elif(orientation == 'X'):
+            locX = coord
+            locY = y_max
+            locZ = 0
+       elif(orientation == 'Y'):
+            locX = 0
+            locY = coord
+            locZ = z_max
+       im_ob.location = (locX, locY, locZ)  # this is correct
 
        bpy.ops.object.select_all(action='TOGGLE')
        bpy.ops.object.select_all(action='DESELECT')
 
-   # set original object to active, selects it, place back into editmode
-   bpy.context.scene.objects.active = myob
-   myob.select = True
-   bpy.ops.object.mode_set(mode='OBJECT')
-
-# create an empty and upload an image according to the vertical height field (z-axis)
-def DisplayImageFunctionY():
-   image_files = bpy.context.scene.imagefilepaths_y
-   exte = bpy.context.scene.image_ext_Y
-   N = len(image_files)
-   x_max = bpy.context.scene.x_side
-   y_max = bpy.context.scene.y_side
-   z_max = bpy.context.scene.z_side
-   x_min = 0.0
-   y_min = 0.0
-   z_min = 0.0
-   scale_here = max(x_max, z_max)  # image is loaded with max dimension = 1
-   scale_vec = [scale_here, scale_here, scale_here]
-
-   myob = bpy.context.active_object
-   bpy.ops.object.mode_set(mode='OBJECT')
-
-   all_obj = [item.name for item in bpy.data.objects]
-   for object_name in all_obj:
-       bpy.data.objects[object_name].select = False
-
-   #remove previous empty objects
-   candidate_list = [item.name for item in bpy.data.objects if item.name == "Image Y"]
-   for object_name in candidate_list:
-       bpy.data.objects[object_name].select = True
-   bpy.ops.object.delete()
-
-   delta_y = (y_max - y_min) / (N - 1)
-   y_locs = [delta_y * n for n in range(N)]  # the y locations of each image in space
-
-   # collect selected verts
-   selected_id = [i.index for i in myob.data.vertices if i.select]
-   original_object = myob.name
-
-   for v_index in selected_id:
-       # get local coordinate, turn into word coordinate
-       vert_coordinate = myob.data.vertices[v_index].co
-       vert_coordinate = myob.matrix_world * vert_coordinate
-
-       # unselect all
-       for item in bpy.context.selectable_objects:
-           item.select = False
-
-       # this deals with adding the empty
-       bpy.ops.object.empty_add(type='IMAGE', location=vert_coordinate, rotation=(-3.141592653/2, 0, 0))
-       im_ob = bpy.context.active_object
-       im_ob.name = "Image Y"
-
-       # find closest image slice to x-coord of vertex
-       point_y = vert_coordinate[1]
-       min_dist = float('inf')
-       for ii in range(len(y_locs)):
-           if abs(y_locs[ii] - point_y) < min_dist:
-               min_dist = abs(y_locs[ii] - point_y)
-               ind = ii
-
-       load_imY(ind, image_files, im_ob)
-
-       im_ob.scale = scale_vec
-       y_coord = y_locs[ind]
-       im_ob.location = (0, y_coord, z_max)  # this is correct
-
-       bpy.ops.object.select_all(action='TOGGLE')
-       bpy.ops.object.select_all(action='DESELECT')
-
-   # set original object to active, selects it, place back into editmode
-   bpy.context.scene.objects.active = myob
-   myob.select = True
-   bpy.ops.object.mode_set(mode='OBJECT')
+    # set original object to active, selects it, place back into editmode
+    bpy.context.scene.objects.active = myob
+    myob.select = True
+    bpy.ops.object.mode_set(mode = 'OBJECT')
 
 class ImageScrollOperator(bpy.types.Operator):
     """Scroll through image stack from selected image with mouse scroll wheel"""
@@ -658,149 +532,79 @@ class ImageScrollOperator(bpy.types.Operator):
                 exte = bpy.context.scene.image_ext_Z
                 image_files = bpy.context.scene.imagefilepaths_z
                 N = len(image_files)
-                self.report({'INFO'}, image_files[0].name)
-
-                z_max=bpy.context.scene.z_side
-                z_min=0
-                delta_z = (z_max-z_min)/(N - 1)
-                z_locs = [delta_z*n for n in range(N)]  # the z locations of each image in space
-
-                # find closest image slice to z-coord of vertex
-                point_z = im_ob.location.z
-                min_dist=float('inf')
-                for ii in range(len(z_locs)):
-                   if abs(z_locs[ii]-point_z) < min_dist:
-                       min_dist = abs(z_locs[ii]-point_z)
-                       ind = ii
-
-                if event.type == 'WHEELDOWNMOUSE':  # Apply
-                  if ind >= 0 + 1:
-                     ind = ind - 1
-                     load_imZ(ind, image_files, im_ob)
-                     im_ob.location.z = im_ob.location.z - delta_z
-
-                elif event.type == 'WHEELUPMOUSE':  # Apply
-                   if ind < N-1:
-                     ind = ind + 1
-                     load_imZ(ind, image_files, im_ob)
-                     im_ob.location.z = im_ob.location.z + delta_z
-
-                elif event.type == 'NUMPAD_PLUS':  # Apply
-                    if ind < N - 10:
-                         ind = ind + 10
-                         load_imZ(ind, image_files, im_ob)
-                         im_ob.location.z = im_ob.location.z + (delta_z * 10)
-
-                elif event.type == 'NUMPAD_MINUS':  # Apply
-                    if ind >= 0 + 10:
-                         ind = ind - 10
-                         load_imZ(ind, image_files, im_ob)
-                         im_ob.location.z = im_ob.location.z - (delta_z * 10)
-
-                elif event.type == 'LEFTMOUSE':  # Confirm
-                    return {'FINISHED'}
-                elif event.type in ('RIGHTMOUSE', 'ESC'):  # Cancel
-                    return {'CANCELLED'}
-                return {'RUNNING_MODAL'}
-
+                max=bpy.context.scene.z_side
+                orientation = 'Z'
             elif (imageName == "Image X"):
                 directory = bpy.context.scene.image_path_X
                 exte = bpy.context.scene.image_ext_X
                 image_files = bpy.context.scene.imagefilepaths_x
                 N = len(image_files)
-
-                x_max = bpy.context.scene.x_side
-                x_min = 0
-                delta_x = (x_max - x_min) / (N - 1)
-                x_locs = [delta_x * n for n in range(N)]  # the z locations of each image in space
-
-                # find closest image slice to z-coord of vertex
-                point_x = im_ob.location.x
-                min_dist = float('inf')
-                for ii in range(len(x_locs)):
-                    if abs(x_locs[ii] - point_x) < min_dist:
-                        min_dist = abs(x_locs[ii] - point_x)
-                        ind = ii
-
-                if event.type == 'WHEELDOWNMOUSE':  # Apply
-                    if ind >= 0 + 1:
-                        ind = ind - 1
-                        load_imX(ind, image_files, im_ob)
-                        im_ob.location.x = im_ob.location.x - delta_x
-
-                elif event.type == 'WHEELUPMOUSE':  # Apply
-                    if ind < N-1:
-                        ind = ind + 1
-                        load_imX(ind, image_files, im_ob)
-                        im_ob.location.x = im_ob.location.x + delta_x
-
-                elif event.type == 'NUMPAD_PLUS':  # Apply
-                    if ind < N - 10:
-                         ind = ind + 10
-                         load_imX(ind, image_files, im_ob)
-                         im_ob.location.x = im_ob.location.x + (delta_x * 10)
-
-                elif event.type == 'NUMPAD_MINUS':  # Apply
-                     if ind >= 0 + 10:
-                         ind = ind - 10
-                         load_imX(ind, image_files, im_ob)
-                         im_ob.location.x = im_ob.location.x - (delta_x * 10)
-
-                elif event.type == 'LEFTMOUSE':  # Confirm
-                    return {'FINISHED'}
-                elif event.type in ('RIGHTMOUSE', 'ESC'):  # Cancel
-                    return {'CANCELLED'}
-                return {'RUNNING_MODAL'}
-
+                max=bpy.context.scene.x_side
+                orientation = 'X'
             elif (imageName == "Image Y"):
                 directory = bpy.context.scene.image_path_Y
                 exte = bpy.context.scene.image_ext_Y
                 image_files = bpy.context.scene.imagefilepaths_y
                 N = len(image_files)
+                max=bpy.context.scene.y_side
+                orientation = 'Y'
+            min=0
+            movement = 1
+            delta = (max-min)/(N - 1)
+            locs = [delta*n for n in range(N)]
+            self.report({'INFO'}, image_files[0].name)
+            
+            im_ob = bpy.context.active_object
+            imageName = im_ob.name
 
-                y_max = bpy.context.scene.y_side
-                y_min = 0
-                delta_y = (y_max - y_min) / (N - 1)
-                y_locs = [delta_y * n for n in range(N)]  # the z locations of each image in space
+            if (imageName == "Image Z"):
+                point_location = im_ob.location.z
+            elif (imageName == "Image X"):
+                point_location = im_ob.location.x
+            elif (imageName == "Image Y"):
+                point_location = im_ob.location.y
+            
+            min_dist=float('inf')
+            for ii in range(len(locs)):
+               if abs(locs[ii]-point_location) < min_dist:
+                   min_dist = abs(locs[ii]-point_location)
+                   ind = ii  
+                   
+            if event.shift:
+                movement = bpy.context.scene.shift_step
+                if (movement <= 0):
+                    movement = 1;
 
-                # find closest image slice to z-coord of vertex
-                point_y = im_ob.location.y
-                min_dist = float('inf')
-                for ii in range(len(y_locs)):
-                    if abs(y_locs[ii] - point_y) < min_dist:
-                        min_dist = abs(y_locs[ii] - point_y)
-                        ind = ii
+            if event.type == 'WHEELDOWNMOUSE':  # Apply
+              if ind >= movement:
+                 ind = ind - movement
+                 load_im(ind, image_files, im_ob, orientation)
+                 moveImage(im_ob, -delta*movement, orientation)
 
-                if event.type == 'WHEELDOWNMOUSE':  # Apply
-                    if ind >= 0 + 1:
-                        ind = ind - 1
-                        load_imY(ind, image_files, im_ob)
-                        im_ob.location.y = im_ob.location.y - delta_y
+            elif event.type == 'WHEELUPMOUSE':  # Apply
+               if ind < N-movement:
+                 ind = ind + movement
+                 load_im(ind, image_files, im_ob, orientation)
+                 moveImage(im_ob, delta*movement, orientation)
 
-                elif event.type == 'WHEELUPMOUSE':  # Apply
-                    if ind < N-1:
-                        ind = ind + 1
-                        load_imY(ind, image_files, im_ob)
-                        im_ob.location.y = im_ob.location.y + delta_y
-                
-                elif event.type == 'NUMPAD_PLUS':  # Apply
-                    if ind < N - 10:
-                         ind = ind + 10
-                         load_imY(ind, image_files, im_ob)
-                         im_ob.location.y = im_ob.location.y + (delta_y * 10)
+            elif event.type == 'NUMPAD_MINUS':  # Apply
+               if ind >= 0 + movement:
+                 ind = ind - movement
+                 load_im(ind, image_files, im_ob, orientation)
+                 moveImage(im_ob, -delta*movement, orientation)
 
-                elif event.type == 'NUMPAD_MINUS':  # Apply
-                     if ind >= 0 + 10:
-                         ind = ind - 10
-                         load_imY(ind, image_files, im_ob)
-                         im_ob.location.y = im_ob.location.y - (delta_y * 10)
+            elif event.type == 'NUMPAD_PLUS':  # Apply
+                if ind < N - movement:
+                 ind = ind + movement
+                 load_im(ind, image_files, im_ob, orientation)
+                 moveImage(im_ob, delta*movement, orientation)
 
-                elif event.type == 'LEFTMOUSE':  # Confirm
-                    return {'FINISHED'}
-                elif event.type in ('RIGHTMOUSE', 'ESC'):  # Cancel
-                    return {'CANCELLED'}
-                return {'RUNNING_MODAL'}
 
+            elif event.type == 'LEFTMOUSE':  # Confirm
+                return {'FINISHED'}
+            elif event.type in ('RIGHTMOUSE', 'ESC'):  # Cancel
+                return {'CANCELLED'}
+            return {'RUNNING_MODAL'}
 
     def invoke(self, context, event):
         if bpy.ops.object.mode_set.poll():
@@ -811,29 +615,22 @@ class ImageScrollOperator(bpy.types.Operator):
           else:
              return {'FINISHED'}
 
+def moveImage(im_ob, delta, orientation):
+    if (orientation == 'Z'):
+        im_ob.location.z = im_ob.location.z + delta
+    elif (orientation == 'X'):
+        im_ob.location.x = im_ob.location.x + delta
+    elif (orientation == 'Y'):
+        im_ob.location.y = im_ob.location.y + delta
 
-def load_imZ(ind, image_files, im_ob):
+def load_im(ind, image_files, im_ob, orientation):
 # check if image already loaded, only load new image if not
-    newid = ind+bpy.context.scene.file_min_Z
-    full_path = image_files[newid].name
-    print(full_path)
-    filename_only = os.path.split(full_path)[1]
-    if filename_only not in bpy.data.images:
-        bpy.data.images.load(full_path)  # often produces TIFFReadDirectory: Warning, can ignore
-    im_ob.data = bpy.data.images[filename_only]
-
-def load_imX(ind, image_files, im_ob):
-# check if image already loaded, only load new image if not
-    newid = ind+bpy.context.scene.file_min_X
-    full_path = image_files[newid].name
-    filename_only = os.path.split(full_path)[1]
-    if filename_only not in bpy.data.images:
-        bpy.data.images.load(full_path)  # often produces TIFFReadDirectory: Warning, can ignore
-    im_ob.data = bpy.data.images[filename_only]
-
-def load_imY(ind, image_files, im_ob):
-# check if image already loaded, only load new image if not
-    newid = ind+bpy.context.scene.file_min_Y
+    if (orientation == 'Z'):
+        newid = ind+bpy.context.scene.file_min_Z
+    elif (orientation == 'X'):
+        newid = ind+bpy.context.scene.file_min_X
+    elif (orientation == 'Y'):
+        newid = ind+bpy.context.scene.file_min_Y
     full_path = image_files[newid].name
     filename_only = os.path.split(full_path)[1]
     if filename_only not in bpy.data.images:
@@ -851,7 +648,7 @@ class PointOperator(bpy.types.Operator):
      if bpy.context.mode == 'OBJECT': 
       if bpy.context.active_object is not None:  
              
-       if (bpy.context.active_object.type=='EMPTY'):    
+       if (bpy.context.active_object.name=='Image Z'):    
           mt = bpy.context.active_object
          
           #delete previous grids
