@@ -111,6 +111,13 @@ bpy.types.Scene.y_grid = bpy.props.IntProperty \
         default = 50
       )
 
+bpy.types.Scene.z_grid = bpy.props.IntProperty \
+      (
+        name = "nz",
+        description = "Number of grid points in z",
+        default = 50
+      )
+
 bpy.types.Scene.file_min_Z = bpy.props.IntProperty \
       (
         name = "file_min_Z",
@@ -183,6 +190,7 @@ class SuperimposePanel(bpy.types.Panel):
         row.operator("object.point_operator", text='Display Grid on Z')
         row.prop(context.scene , "x_grid") 
         row.prop(context.scene , "y_grid") 
+        row.prop(context.scene , "z_grid")
         
         row = self.layout.row()
         row.operator("object.pickup_operator", text='Display Object at Selected Vertex')
@@ -648,31 +656,54 @@ class PointOperator(bpy.types.Operator):
      if bpy.context.mode == 'OBJECT': 
       if bpy.context.active_object is not None:  
              
-       if (bpy.context.active_object.name=='Image Z'):    
-          mt = bpy.context.active_object
-         
-          #delete previous grids
-          all_obj = [item.name for item in bpy.data.objects]
-          for object_name in all_obj:
-            bpy.data.objects[object_name].select = False  
-            if object_name[0:4]=='Grid':
-              delThisObj(bpy.data.objects[object_name]) 
+        if (bpy.context.active_object.name=='Image Z'): 
+            mt = bpy.context.active_object
+            zlattice=mt.location.z
+            x_off=bpy.context.scene.x_side
+            y_off=bpy.context.scene.y_side
+            xg=bpy.context.scene.x_grid
+            yg=bpy.context.scene.y_grid
+        elif (bpy.context.active_object.name=='Image X'):
+            mt = bpy.context.active_object
+            zlattice=mt.location.x
+            x_off=bpy.context.scene.z_side
+            y_off=bpy.context.scene.y_side
+            xg=bpy.context.scene.z_grid
+            yg=bpy.context.scene.y_grid
+        elif (bpy.context.active_object.name=='Image Y'): 
+            mt = bpy.context.active_object
+            zlattice=mt.location.y
+            x_off=bpy.context.scene.x_side
+            y_off=bpy.context.scene.z_side
+            xg=bpy.context.scene.x_grid
+            yg=bpy.context.scene.z_grid
+        else :
+            return {"FINISHED"}
+ 
+        #delete previous grids
+        all_obj = [item.name for item in bpy.data.objects]
+        for object_name in all_obj:
+          bpy.data.objects[object_name].select = False  
+          if object_name[0:4]=='Grid':
+            delThisObj(bpy.data.objects[object_name]) 
            
-          zlattice=mt.location.z
-          x_off=bpy.context.scene.x_side
-          y_off=bpy.context.scene.y_side
           
-          xg=bpy.context.scene.x_grid
-          yg=bpy.context.scene.y_grid
-       
-          bpy.ops.mesh.primitive_grid_add(x_subdivisions=xg, y_subdivisions=yg, location=(0.0+x_off/2,0.0+y_off/2, zlattice-0.0001))
-          grid = bpy.context.active_object
-          grid.scale.x=x_off/2
-          grid.scale.y=y_off/2
-          grid.draw_type = 'WIRE'  # don't display opaque grey on the reverse side
+          
+          
+        if (bpy.context.active_object.name=='Image Z'): 
+            bpy.ops.mesh.primitive_grid_add(x_subdivisions=xg, y_subdivisions=yg, location=(0.0+x_off/2,0.0+y_off/2, zlattice-0.0001))
+        elif (bpy.context.active_object.name=='Image X'):
+            bpy.ops.mesh.primitive_grid_add(x_subdivisions=xg, y_subdivisions=yg, location=(zlattice-0.0001,0.0+y_off/2, 0.0+x_off/2), rotation=(0,3.141592/2,0)) 
+        elif (bpy.context.active_object.name=='Image Y'): 
+            bpy.ops.mesh.primitive_grid_add(x_subdivisions=xg, y_subdivisions=yg, location=(0.0+x_off/2, zlattice-0.0001, 0.0+y_off/2), rotation=(3.141592/2,0,0)) 
+        
+        grid = bpy.context.active_object
+        grid.scale.x=x_off/2
+        grid.scale.y=y_off/2
+        grid.draw_type = 'WIRE'  # don't display opaque grey on the reverse side
 
-          bpy.ops.object.mode_set(mode = 'EDIT')
-          bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.object.mode_set(mode = 'EDIT')
+        bpy.ops.mesh.select_all(action='DESELECT')
           
      return {"FINISHED"}
 
@@ -721,7 +752,7 @@ class PickupOperator(bpy.types.Operator):
            for object_name in all_obj:
              bpy.data.objects[object_name].select = False  
              if object_name[0:4]=='Grid':
-                delThisObj(bpy.data.objects[object_name]) 
+                delThisObj(bpy.data.objects[object_name])
              
      return {"FINISHED"}
 
