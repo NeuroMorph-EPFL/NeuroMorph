@@ -680,15 +680,15 @@ class PointOperator(bpy.types.Operator):
         else :
             return {"FINISHED"}
  
+        tmpActiveObject = bpy.context.active_object
+        bpy.ops.object.select_all(action='DESELECT')
         #delete previous grids
         all_obj = [item.name for item in bpy.data.objects]
         for object_name in all_obj:
-          bpy.data.objects[object_name].select = False  
           if object_name[0:4]=='Grid':
-            delThisObj(bpy.data.objects[object_name]) 
-           
-          
-          
+            delThisObj(bpy.data.objects[object_name])
+
+        bpy.context.scene.objects.active = tmpActiveObject          
           
         if (bpy.context.active_object.name=='Image Z'): 
             bpy.ops.mesh.primitive_grid_add(x_subdivisions=xg, y_subdivisions=yg, location=(0.0+x_off/2,0.0+y_off/2, zlattice-0.0001))
