@@ -15,7 +15,7 @@
 
 bl_info = {  
     "name": "NeuroMorph Image Stack Interactions",
-    "author": "Biagio Nigro, Anne Jorstad",
+    "author": "Biagio Nigro, Anne Jorstad, Tom Boissonnet",
     "version": (1, 2, 4),
     "blender": (2, 7, 5),
     "location": "View3D > Object Image Superposition",
@@ -27,6 +27,7 @@ bl_info = {
   
 import bpy
 from bpy.props import *
+from bpy.app.handlers import persistent
 from mathutils import Vector  
 import mathutils
 import math
@@ -490,8 +491,6 @@ def DisplayImageFunction(orientation):
              min_dist = abs(locs[ii]-point)
              ind = ii
 
-       load_im(ind, image_files, im_ob, orientation)
-
        im_ob.scale = scale_vec
        coord = locs[ind]
        if(orientation == 'Z'):
@@ -506,7 +505,18 @@ def DisplayImageFunction(orientation):
             locX = 0
             locY = coord
             locZ = z_max
+
        im_ob.location = (locX, locY, locZ)  # this is correct
+
+       if(orientation == 'Z'):
+            im_ob.lock_location[0] = True # x
+            im_ob.lock_location[1] = True # y
+       elif(orientation == 'X'):
+            im_ob.lock_location[2] = True # z
+            im_ob.lock_location[1] = True # y
+       elif(orientation == 'Y'):
+            im_ob.lock_location[0] = True # x
+            im_ob.lock_location[2] = True # z
 
        bpy.ops.object.select_all(action='TOGGLE')
        bpy.ops.object.select_all(action='DESELECT')
@@ -534,79 +544,23 @@ class ImageScrollOperator(bpy.types.Operator):
      if bpy.context.mode == 'OBJECT':
        if (bpy.context.active_object.type=='EMPTY'):
             im_ob = bpy.context.active_object
-            imageName = im_ob.name
-            if (imageName == "Image Z"):
-                directory = bpy.context.scene.image_path_Z
-                exte = bpy.context.scene.image_ext_Z
-                image_files = bpy.context.scene.imagefilepaths_z
-                N = len(image_files)
-                max=bpy.context.scene.z_side
-                orientation = 'Z'
-            elif (imageName == "Image X"):
-                directory = bpy.context.scene.image_path_X
-                exte = bpy.context.scene.image_ext_X
-                image_files = bpy.context.scene.imagefilepaths_x
-                N = len(image_files)
-                max=bpy.context.scene.x_side
-                orientation = 'X'
-            elif (imageName == "Image Y"):
-                directory = bpy.context.scene.image_path_Y
-                exte = bpy.context.scene.image_ext_Y
-                image_files = bpy.context.scene.imagefilepaths_y
-                N = len(image_files)
-                max=bpy.context.scene.y_side
-                orientation = 'Y'
-            min=0
-            movement = 1
-            delta = (max-min)/(N - 1)
-            locs = [delta*n for n in range(N)]
-            self.report({'INFO'}, image_files[0].name)
-            
-            im_ob = bpy.context.active_object
-            imageName = im_ob.name
+            (ind, N, delta, orientation, image_files) = getIndex(im_ob)
 
-            if (imageName == "Image Z"):
-                point_location = im_ob.location.z
-            elif (imageName == "Image X"):
-                point_location = im_ob.location.x
-            elif (imageName == "Image Y"):
-                point_location = im_ob.location.y
-            
-            min_dist=float('inf')
-            for ii in range(len(locs)):
-               if abs(locs[ii]-point_location) < min_dist:
-                   min_dist = abs(locs[ii]-point_location)
-                   ind = ii  
-                   
+            movement = 1
             if event.shift:
                 movement = bpy.context.scene.shift_step
                 if (movement <= 0):
                     movement = 1;
 
-            if event.type == 'WHEELDOWNMOUSE':  # Apply
+            if event.type == 'WHEELDOWNMOUSE' or event.type == 'NUMPAD_MINUS':  # Apply
               if ind >= movement:
                  ind = ind - movement
-                 load_im(ind, image_files, im_ob, orientation)
                  moveImage(im_ob, -delta*movement, orientation)
 
-            elif event.type == 'WHEELUPMOUSE':  # Apply
+            elif event.type == 'WHEELUPMOUSE' or event.type == 'NUMPAD_PLUS':  # Apply
                if ind < N-movement:
                  ind = ind + movement
-                 load_im(ind, image_files, im_ob, orientation)
                  moveImage(im_ob, delta*movement, orientation)
-
-            elif event.type == 'NUMPAD_MINUS':  # Apply
-               if ind >= 0 + movement:
-                 ind = ind - movement
-                 load_im(ind, image_files, im_ob, orientation)
-                 moveImage(im_ob, -delta*movement, orientation)
-
-            elif event.type == 'NUMPAD_PLUS':  # Apply
-                if ind < N - movement:
-                 ind = ind + movement
-                 load_im(ind, image_files, im_ob, orientation)
-                 moveImage(im_ob, delta*movement, orientation)
-
 
             elif event.type == 'LEFTMOUSE':  # Confirm
                 return {'FINISHED'}
@@ -645,6 +599,78 @@ def load_im(ind, image_files, im_ob, orientation):
         bpy.data.images.load(full_path)  # often produces TIFFReadDirectory: Warning, can ignore
     im_ob.data = bpy.data.images[filename_only]
 
+def getIndex(im_ob):
+    imageName = im_ob.name
+    if (imageName == "Image Z"):
+        directory = bpy.context.scene.image_path_Z
+        exte = bpy.context.scene.image_ext_Z
+        image_files = bpy.context.scene.imagefilepaths_z
+        N = len(image_files)
+        max=bpy.context.scene.z_side
+        orientation = 'Z'
+    elif (imageName == "Image X"):
+        directory = bpy.context.scene.image_path_X
+        exte = bpy.context.scene.image_ext_X
+        image_files = bpy.context.scene.imagefilepaths_x
+        N = len(image_files)
+        max=bpy.context.scene.x_side
+        orientation = 'X'
+    elif (imageName == "Image Y"):
+        directory = bpy.context.scene.image_path_Y
+        exte = bpy.context.scene.image_ext_Y
+        image_files = bpy.context.scene.imagefilepaths_y
+        N = len(image_files)
+        max=bpy.context.scene.y_side
+        orientation = 'Y'
+    min=0
+    delta = (max-min)/(N - 1)
+    locs = [delta*n for n in range(N)]
+
+    im_ob = bpy.context.active_object
+    imageName = im_ob.name
+
+    if (imageName == "Image Z"):
+        point_location = im_ob.location.z
+    elif (imageName == "Image X"):
+        point_location = im_ob.location.x
+    elif (imageName == "Image Y"):
+        point_location = im_ob.location.y
+
+    min_dist=float('inf')
+    for ii in range(len(locs)):
+       if abs(locs[ii]-point_location) < min_dist:
+           min_dist = abs(locs[ii]-point_location)
+           ind = ii 
+    return (ind, N, delta, orientation, image_files)
+
+
+@persistent
+def print_updated_objects(scene):
+    updated_objects = []
+    for o in scene.objects:
+        if o.is_updated:
+            updated_objects.append(o)
+
+    if(len(updated_objects) > 0):
+        for im_ob in updated_objects :
+            if (im_ob.name in ["Image Z","Image X","Image Y"]):
+
+                (ind, N, delta, orientation, image_files) = getIndex(im_ob)
+
+                load_im(ind, image_files, im_ob, orientation)
+
+                #following code need locs from getIndex to work (add return parameter), but it may be unnecessary
+                # it would forbid the image to go further than the size of the stack and replace it to the exact place every time we move it
+                # otherwise the image is displayed in the in-between locations.
+                #if (im_ob.name == "Image Z"):
+                #    im_ob.location.z = locs[ind]
+                #elif (im_ob.name == "Image X"):
+                #    im_ob.location.x = locs[ind]
+                #elif (im_ob.name == "Image Y"):
+                #    im_ob.location.y = locs[ind]
+
+
+bpy.app.handlers.scene_update_post.append(print_updated_objects)
 
 class PointOperator(bpy.types.Operator):
     """Display grid for object point selection"""
@@ -688,7 +714,7 @@ class PointOperator(bpy.types.Operator):
           if object_name[0:4]=='Grid':
             delThisObj(bpy.data.objects[object_name])
 
-        bpy.context.scene.objects.active = tmpActiveObject          
+        bpy.context.scene.objects.active = tmpActiveObject  
           
         if (bpy.context.active_object.name=='Image Z'): 
             bpy.ops.mesh.primitive_grid_add(x_subdivisions=xg, y_subdivisions=yg, location=(0.0+x_off/2,0.0+y_off/2, zlattice-0.0001))
@@ -1041,8 +1067,8 @@ def register():
     bpy.utils.register_module(__name__)
     km = bpy.context.window_manager.keyconfigs.active.keymaps['3D View']
     kmi = km.keymap_items.new(ImageScrollOperator.bl_idname, 'Y', 'PRESS', ctrl=True)
-
-
+    
+   
 
 def unregister():
     bpy.utils.unregister_module(__name__)
@@ -1053,4 +1079,3 @@ def unregister():
 
 if __name__ == "__main__":
     register()
-
