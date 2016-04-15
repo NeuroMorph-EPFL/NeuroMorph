@@ -144,6 +144,12 @@ bpy.types.Scene.shift_step = bpy.props.IntProperty \
         description="Step for scrolling through image stack",
         default=10
     )
+bpy.types.Scene.limit_to_box = bpy.props.BoolProperty \
+        (
+        name="Limit Images to the Box",
+        description="Limit the display of Images to the Box of the stack",
+        default=True
+    )
 
 bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
@@ -184,7 +190,10 @@ class SuperimposePanel(bpy.types.Panel):
         row = self.layout.row()
         row.operator("object.modal_operator", text='Scroll Through Image Stack')
         row.prop(context.scene , "shift_step")
-        
+
+        row = self.layout.row()
+        row.prop(context.scene, "limit_to_box")
+
         self.layout.label("--Retrieve Object from Image--")
         
         row = self.layout.row()
@@ -223,11 +232,10 @@ def active_node_mat(mat):
             return mat
     return None               
 
-
 class SelectStackFolderZ(bpy.types.Operator):  # adjusted
-    """Select location of images in stack"""
+    """Select location of the Z stack images"""
     bl_idname = "importfolder_z.tif"
-    bl_label = "Select folder of image stack Z"
+    bl_label = "Select folder of the Z stack images"
 
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
 
@@ -257,9 +265,9 @@ class SelectStackFolderZ(bpy.types.Operator):  # adjusted
         return {"RUNNING_MODAL"}
 
 class SelectStackFolderX(bpy.types.Operator):  # adjusted
-    """Select location of images in stack"""
+    """Select location of the X stack images"""
     bl_idname = "importfolder_x.tif"
-    bl_label = "Select folder of image stack X"
+    bl_label = "Select folder of the X stack images"
 
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
 
@@ -289,9 +297,9 @@ class SelectStackFolderX(bpy.types.Operator):  # adjusted
         return {"RUNNING_MODAL"}
 
 class SelectStackFolderY(bpy.types.Operator):  # adjusted
-    """Select location of images in stack"""
+    """Select location of the Y stack images"""
     bl_idname = "importfolder_y.tif"
-    bl_label = "Select folder of image stack Y"
+    bl_label = "Select folder of the Y stack images"
 
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
 
@@ -322,6 +330,7 @@ class SelectStackFolderY(bpy.types.Operator):  # adjusted
 
 
 def LoadImageFilenames(orientation) :
+    """Load the images of the stack indicated by orientation (in 'Z','X','Y')"""
     image_file_extensions = ["png", "tif", "tiff", "bmp", "jpg", "jpeg", "tga"]  # can add others as needed
     if(orientation == 'Z'):
         imagefilepaths = bpy.context.scene.imagefilepaths_z
@@ -370,7 +379,7 @@ def sort_nicely( filenames ):
 
 
 class DisplayImageButton(bpy.types.Operator):  # adjusted
-    """Display image plane at selected vertex"""
+    """Display available image plane at selected vertex"""
     bl_idname = "superimpose.tif"
     bl_label = "Superimpose images"
     
@@ -382,24 +391,31 @@ class DisplayImageButton(bpy.types.Operator):  # adjusted
                     DisplayImageFunction('Z')
                 else:
                     self.report({'INFO'},"Select a vertex on a mesh object")
+            else:
+                self.report({'INFO'},"No image files found in the Z directory")
             Nx = len(bpy.context.scene.imagefilepaths_x)
             if Nx > 0:
                 if (bpy.context.active_object.type == 'MESH'):
                     DisplayImageFunction('X')
                 else:
                     self.report({'INFO'}, "Select a vertex on a mesh object")
+            else:
+                self.report({'INFO'},"No image files found in the X directory")
             Ny = len(bpy.context.scene.imagefilepaths_y)
             if Ny > 0:
                 if (bpy.context.active_object.type == 'MESH'):
                     DisplayImageFunction('Y')
                 else:
                     self.report({'INFO'}, "Select a vertex on a mesh object")
-            if (Ny <= 0 & Nz <=0 & Nx <=0):
+            else:
+                self.report({'INFO'},"No image files found in the X directory")
+            if (Ny <= 0 and Nz <=0 and Nx <=0):
                 self.report({'INFO'},"No image files found in the selected directories")
         return {'FINISHED'}
   
 def DisplayImageFunction(orientation):
-        
+    """For the given orientation, it search for the closest image to the selected
+    vertex. Then it display the image in the good orientation."""
     x_max = bpy.context.scene.x_side
     y_max = bpy.context.scene.y_side
     z_max = bpy.context.scene.z_side
@@ -418,6 +434,7 @@ def DisplayImageFunction(orientation):
         delta = (z_max-z_min)/(N-1)
         locs = [delta*n for n in range(N)]  # the z locations of each image in space
         newName = "Image Z"
+        #The rotation that we need to apply on the image.
         rotX = 3.141592653
         rotY = 0
         rotZ = 0
@@ -430,6 +447,7 @@ def DisplayImageFunction(orientation):
         delta = (x_max-x_min)/(N-1)
         locs = [delta*n for n in range(N)]  # the x locations of each image in space
         newName = "Image X"
+        #The rotation that we need to apply on the image.
         rotX = 0
         rotY = -3.141592653/2
         rotZ = 3.141592653
@@ -442,6 +460,7 @@ def DisplayImageFunction(orientation):
         delta = (y_max-y_min)/(N-1)
         locs = [delta*n for n in range(N)]  # the y locations of each image in space
         newName = "Image Y"
+        #The rotation that we need to apply on the image.
         rotX = -3.141592653/2
         rotY = 0
         rotZ = 0
@@ -508,6 +527,8 @@ def DisplayImageFunction(orientation):
 
        im_ob.location = (locX, locY, locZ)  # this is correct
 
+       #Lock the translations in directions different form the orientation of 
+       #the image.
        if(orientation == 'Z'):
             im_ob.lock_location[0] = True # x
             im_ob.lock_location[1] = True # y
@@ -544,19 +565,23 @@ class ImageScrollOperator(bpy.types.Operator):
      if bpy.context.mode == 'OBJECT':
        if (bpy.context.active_object.type=='EMPTY'):
             im_ob = bpy.context.active_object
-            (ind, N, delta, orientation, image_files) = getIndex(im_ob)
+            (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
 
             movement = 1
+            #If the user press shift, the movement is increased.
             if event.shift:
                 movement = bpy.context.scene.shift_step
                 if (movement <= 0):
                     movement = 1;
 
+            #Images can be moved backward with the mouseWheelDown or the key -
             if event.type == 'WHEELDOWNMOUSE' or event.type == 'NUMPAD_MINUS':  # Apply
               if ind >= movement:
                  ind = ind - movement
                  moveImage(im_ob, -delta*movement, orientation)
-
+                 #No need to call the load_im function because the handler will
+                 # do it (see print_updated_objects()).
+            #Images can be moved forward with the mouseWheelDown or the key +
             elif event.type == 'WHEELUPMOUSE' or event.type == 'NUMPAD_PLUS':  # Apply
                if ind < N-movement:
                  ind = ind + movement
@@ -578,12 +603,14 @@ class ImageScrollOperator(bpy.types.Operator):
              return {'FINISHED'}
 
 def moveImage(im_ob, delta, orientation):
+    """The image is moved switch it's orientation"""
     if (orientation == 'Z'):
         im_ob.location.z = im_ob.location.z + delta
     elif (orientation == 'X'):
         im_ob.location.x = im_ob.location.x + delta
     elif (orientation == 'Y'):
         im_ob.location.y = im_ob.location.y + delta
+
 
 def load_im(ind, image_files, im_ob, orientation):
 # check if image already loaded, only load new image if not
@@ -599,8 +626,14 @@ def load_im(ind, image_files, im_ob, orientation):
         bpy.data.images.load(full_path)  # often produces TIFFReadDirectory: Warning, can ignore
     im_ob.data = bpy.data.images[filename_only]
 
+
 def getIndex(im_ob):
+    """Find the index of the image currently displayed, according to it's
+    current position"""
     imageName = im_ob.name
+
+    #This function also extract information here and return it, either the
+    # several function that call it would do it several times.
     if (imageName == "Image Z"):
         directory = bpy.context.scene.image_path_Z
         exte = bpy.context.scene.image_ext_Z
@@ -608,6 +641,7 @@ def getIndex(im_ob):
         N = len(image_files)
         max=bpy.context.scene.z_side
         orientation = 'Z'
+        point_location = im_ob.location.z
     elif (imageName == "Image X"):
         directory = bpy.context.scene.image_path_X
         exte = bpy.context.scene.image_ext_X
@@ -615,6 +649,7 @@ def getIndex(im_ob):
         N = len(image_files)
         max=bpy.context.scene.x_side
         orientation = 'X'
+        point_location = im_ob.location.x
     elif (imageName == "Image Y"):
         directory = bpy.context.scene.image_path_Y
         exte = bpy.context.scene.image_ext_Y
@@ -622,54 +657,48 @@ def getIndex(im_ob):
         N = len(image_files)
         max=bpy.context.scene.y_side
         orientation = 'Y'
+        point_location = im_ob.location.y
+   
     min=0
     delta = (max-min)/(N - 1)
-    locs = [delta*n for n in range(N)]
-
-    im_ob = bpy.context.active_object
-    imageName = im_ob.name
-
-    if (imageName == "Image Z"):
-        point_location = im_ob.location.z
-    elif (imageName == "Image X"):
-        point_location = im_ob.location.x
-    elif (imageName == "Image Y"):
-        point_location = im_ob.location.y
+    locs = [delta*n for n in range(N)]        
 
     min_dist=float('inf')
     for ii in range(len(locs)):
        if abs(locs[ii]-point_location) < min_dist:
            min_dist = abs(locs[ii]-point_location)
            ind = ii 
-    return (ind, N, delta, orientation, image_files)
+
+    return (ind, N, delta, orientation, image_files, locs)
 
 
 @persistent
 def print_updated_objects(scene):
-    updated_objects = []
-    for o in scene.objects:
-        if o.is_updated:
-            updated_objects.append(o)
-
-    if(len(updated_objects) > 0):
-        for im_ob in updated_objects :
+    """Called after that the scene is updated. It look for the updated images and
+    load the image corresponding to it's actual location."""
+    for im_ob in scene.objects:
+        # Search for the updated objects
+        if im_ob.is_updated:
+            # Only look at the images, we don't want to do anything on the objects
             if (im_ob.name in ["Image Z","Image X","Image Y"]):
-
-                (ind, N, delta, orientation, image_files) = getIndex(im_ob)
-
+                (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
                 load_im(ind, image_files, im_ob, orientation)
-
                 #following code need locs from getIndex to work (add return parameter), but it may be unnecessary
                 # it would forbid the image to go further than the size of the stack and replace it to the exact place every time we move it
                 # otherwise the image is displayed in the in-between locations.
-                #if (im_ob.name == "Image Z"):
-                #    im_ob.location.z = locs[ind]
-                #elif (im_ob.name == "Image X"):
-                #    im_ob.location.x = locs[ind]
-                #elif (im_ob.name == "Image Y"):
-                #    im_ob.location.y = locs[ind]
+                
+                #Here we rectify the position of the image. If the image is in
+                #between two locs, it will move it to the currently displayed
+                #image's location.
+                if (bpy.context.scene.limit_to_box == True):
+                    if (im_ob.name == "Image Z"):
+                        im_ob.location.z = locs[ind]
+                    elif (im_ob.name == "Image X"):
+                        im_ob.location.x = locs[ind]
+                    elif (im_ob.name == "Image Y"):
+                        im_ob.location.y = locs[ind]
 
-
+#The handler that call the function after each time the scene is updated.
 bpy.app.handlers.scene_update_post.append(print_updated_objects)
 
 class PointOperator(bpy.types.Operator):
