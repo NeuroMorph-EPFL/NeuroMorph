@@ -11,5 +11,5 @@ This module superimposes images from the original (electron microscopy) image st
 
 
 #### Generate 3D Image Stacks  ([download](http://raw.githubusercontent.com/ajorstad/NeuroMorph/master/NeuroMorph_Toolkit/Generate_3D_image_stacks.ijm))
-This macro for [Fiji](http://fiji.sc/) creates image stacks in the X and Y dimensions, given an image stack in Z.  For use with the NeuroMorph Image Stack Interactions Blender add-on.  Open the original image stack in Fiji (File - Import - Image Sequence), open the .ijm macro file in Fiji, click "Run", choose the location of the new image stack folders, and confirm the voxel dimensions from the original imaging procedure (for our sample EM stack, this is [5, 5, 7.4] nm).
+This macro for [Fiji](http://fiji.sc/) creates image stacks in the X and Y dimensions, given an image stack in Z.  For use with the NeuroMorph Image Stack Interactions Blender add-on.  Open the original image stack in Fiji (File - Import - Image Sequence), open the .ijm macro file in Fiji, click "Run", choose the location of the new image stack folders, and confirm the voxel dimensions from the original imaging procedure (for the provided sample EM stack, this is [5, 5, 7.4] nm).
 
