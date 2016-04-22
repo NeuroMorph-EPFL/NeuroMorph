@@ -1,4 +1,4 @@
-#    NeuroMorph_Image_Mesh_Superposition.py (C) 2014,  Biagio Nigro, Anne Jorstad
+#    NeuroMorph_Image_Stack_Interactions.py (C) 2016,  Biagio Nigro, Anne Jorstad, Tom Boissonnet
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,8 +16,8 @@
 bl_info = {  
     "name": "NeuroMorph Image Stack Interactions",
     "author": "Biagio Nigro, Anne Jorstad, Tom Boissonnet",
-    "version": (1, 2, 4),
-    "blender": (2, 7, 5),
+    "version": (1, 3, 0),
+    "blender": (2, 7, 6),
     "location": "View3D > Object Image Superposition",
     "description": "Superimposes image files over 3D objects interactively",
     "warning": "",  
@@ -141,14 +141,8 @@ bpy.types.Scene.file_min_Y = bpy.props.IntProperty \
 bpy.types.Scene.shift_step = bpy.props.IntProperty \
         (
         name="Shift step",
-        description="Step for scrolling through image stack",
+        description="Step size for scrolling through image stack while holding shift",
         default=10
-    )
-bpy.types.Scene.limit_to_box = bpy.props.BoolProperty \
-        (
-        name="Limit Images to the Box",
-        description="Limit the display of Images to the Box of the stack",
-        default=True
     )
 
 bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
@@ -187,20 +181,22 @@ class SuperimposePanel(bpy.types.Panel):
         row = self.layout.row()
         row.operator("superimpose.tif", text='Show Images at Vertex')
 
-        row = self.layout.row()
-        row.operator("object.modal_operator", text='Scroll Through Image Stack')
-        row.prop(context.scene , "shift_step")
+        split = self.layout.row().split(percentage=0.6)
+        col1 = split.column()
+        col1.operator("object.modal_operator", text='Scroll Through Image Stack')
+        col2 = split.column().row()
+        col2.prop(context.scene , "shift_step")
 
-        row = self.layout.row()
-        row.prop(context.scene, "limit_to_box")
 
         self.layout.label("--Retrieve Object from Image--")
-        
-        row = self.layout.row()
-        row.operator("object.point_operator", text='Display Grid on Z')
-        row.prop(context.scene , "x_grid") 
-        row.prop(context.scene , "y_grid") 
-        row.prop(context.scene , "z_grid")
+
+        split = self.layout.row().split(percentage=0.33)
+        col1 = split.column()
+        col1.operator("object.point_operator", text='Display Grid')
+        col2 = split.column().row()
+        col2.prop(context.scene , "x_grid") 
+        col2.prop(context.scene , "y_grid") 
+        col2.prop(context.scene , "z_grid")
         
         row = self.layout.row()
         row.operator("object.pickup_operator", text='Display Object at Selected Vertex')
@@ -683,26 +679,13 @@ def print_updated_objects(scene):
             if (im_ob.name in ["Image Z","Image X","Image Y"]):
                 (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
                 load_im(ind, image_files, im_ob, orientation)
-                #following code need locs from getIndex to work (add return parameter), but it may be unnecessary
-                # it would forbid the image to go further than the size of the stack and replace it to the exact place every time we move it
-                # otherwise the image is displayed in the in-between locations.
-                
-                #Here we rectify the position of the image. If the image is in
-                #between two locs, it will move it to the currently displayed
-                #image's location.
-                if (bpy.context.scene.limit_to_box == True):
-                    if (im_ob.name == "Image Z"):
-                        im_ob.location.z = locs[ind]
-                    elif (im_ob.name == "Image X"):
-                        im_ob.location.x = locs[ind]
-                    elif (im_ob.name == "Image Y"):
-                        im_ob.location.y = locs[ind]
+
 
 #The handler that call the function after each time the scene is updated.
 bpy.app.handlers.scene_update_post.append(print_updated_objects)
 
 class PointOperator(bpy.types.Operator):
-    """Display grid for object point selection"""
+    """Display grid on selected image for object point selection"""
     bl_idname = "object.point_operator"
     bl_label = "Choose Point Operator"
     
