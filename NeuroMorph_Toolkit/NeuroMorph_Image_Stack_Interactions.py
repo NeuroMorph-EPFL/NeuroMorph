@@ -145,6 +145,23 @@ bpy.types.Scene.shift_step = bpy.props.IntProperty \
         default=10
     )
 
+def update_render_images(self, context):
+
+    im_ob_list = [item for item in bpy.data.objects if (item.name =='Image Z' or item.name =='Image X' or item.name =='Image Y')]
+    for im_ob in im_ob_list:
+       if(bpy.context.scene.render_images):
+            create_plane(im_ob)
+       else :
+            delete_plane(im_ob)
+
+bpy.types.Scene.render_images = bpy.props.BoolProperty \
+        (
+        name="Render Images",
+        description="Set on true, it will create planes with the images as textures.",
+        default=False,
+        update=update_render_images
+    )
+
 bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
@@ -156,6 +173,8 @@ class SuperimposePanel(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
 
+    
+    
  
     def draw(self, context):
         self.layout.label("--Display Images from Stack--")
@@ -187,6 +206,8 @@ class SuperimposePanel(bpy.types.Panel):
         col2 = split.column().row()
         col2.prop(context.scene , "shift_step")
 
+        row = self.layout.row()
+        row.prop(context.scene , "render_images")
 
         self.layout.label("--Retrieve Object from Image--")
 
@@ -404,7 +425,7 @@ class DisplayImageButton(bpy.types.Operator):  # adjusted
                 else:
                     self.report({'INFO'}, "Select a vertex on a mesh object")
             else:
-                self.report({'INFO'},"No image files found in the X directory")
+                self.report({'INFO'},"No image files found in the Y directory")
             if (Ny <= 0 and Nz <=0 and Nx <=0):
                 self.report({'INFO'},"No image files found in the selected directories")
         return {'FINISHED'}
@@ -418,8 +439,6 @@ def DisplayImageFunction(orientation):
     x_min = 0.0
     y_min = 0.0
     z_min = 0.0
-    scale_here = max(x_max, y_max)  # image is loaded with max dimension = 1
-    scale_vec = [scale_here, scale_here, scale_here]
 
     if(orientation == 'Z'):
         scale_here = max(x_max, y_max)  # image is loaded with max dimension = 1
@@ -472,6 +491,11 @@ def DisplayImageFunction(orientation):
     candidate_list = [item.name for item in bpy.data.objects if item.name == newName]
     for object_name in candidate_list:
        bpy.data.objects[object_name].select = True
+       delete_plane(bpy.data.objects[object_name])
+#       childs = bpy.data.objects[object_name].children
+#       for child in childs:
+#        if ('Plane ' in child.name):
+#            child.select = True
     bpy.ops.object.delete()
 
     # collect selected verts
@@ -530,10 +554,13 @@ def DisplayImageFunction(orientation):
             im_ob.lock_location[1] = True # y
        elif(orientation == 'X'):
             im_ob.lock_location[2] = True # z
-            im_ob.lock_location[1] = True # y
+            im_ob.lock_location[1] = True # y            
        elif(orientation == 'Y'):
             im_ob.lock_location[0] = True # x
             im_ob.lock_location[2] = True # z
+            
+       if (bpy.context.scene.render_images):
+           create_plane(im_ob)
 
        bpy.ops.object.select_all(action='TOGGLE')
        bpy.ops.object.select_all(action='DESELECT')
@@ -542,6 +569,91 @@ def DisplayImageFunction(orientation):
     bpy.context.scene.objects.active = myob
     myob.select = True
     bpy.ops.object.mode_set(mode = 'OBJECT')
+
+def create_plane(im_ob):
+    x_max = bpy.context.scene.x_side
+    y_max = bpy.context.scene.y_side
+    z_max = bpy.context.scene.z_side
+    if("Image Z" in im_ob.name):
+        orientation = 'Z'
+        pl_dimensions = (x_max, y_max, 0)
+        pl_location = (x_max/2, y_max/2, im_ob.location[2])
+        pl_rotation = (3.141592, 0.0, 0.0)
+        pl_name = 'Plane Z'
+        mat_name = 'Mat Z'
+        texture_name = 'Text Z'
+    elif("Image X" in im_ob.name):
+        orientation = 'X'
+        pl_dimensions = (z_max, y_max, 0)
+        pl_location = (im_ob.location[0], y_max/2, z_max/2)
+        pl_rotation = (0.0, -3.141592/2, 3.141592653)
+        pl_name = 'Plane X'
+        mat_name = 'Mat X'
+        texture_name = 'Text X'
+    elif("Image Y" in im_ob.name):
+        orientation = 'Y'
+        pl_dimensions = (x_max, z_max, 0)
+        pl_location = (x_max/2, im_ob.location[1], z_max/2)
+        pl_rotation = (-3.141592/2, 0.0, 0.0)
+        pl_name = 'Plane Y'
+        mat_name = 'Mat Y'
+        texture_name = 'Text Y'
+
+    #Deselecting all object before creating the parent links
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.ops.mesh.primitive_plane_add(location=pl_location, rotation=pl_rotation)
+    pl_ob = bpy.context.active_object
+    bpy.context.scene.objects.active = im_ob
+    bpy.ops.object.parent_set(keep_transform=True, type='OBJECT')
+    pl_ob.dimensions = pl_dimensions
+    pl_ob.name = pl_name
+    pl_ob.hide = True
+    pl_ob.select = False
+
+    #Creating it's associated texture and material
+    pl_ob.data.uv_textures.new()
+    cTex = bpy.data.textures.new(texture_name, type = 'IMAGE')
+    mat = bpy.data.materials.new(mat_name)
+    mtex = mat.texture_slots.add()
+    mtex.texture = cTex
+    mtex.texture_coords = 'UV'
+    mtex.mapping = 'FLAT' 
+    # TODO Check the parameters
+    mtex.use_map_color_diffuse = True 
+    mtex.use_map_color_emission = True 
+    mtex.emission_color_factor = 0.5
+    mtex.use_map_density = True
+    pl_ob.data.materials.append(mat)
+    
+    
+def delete_plane(im_ob):
+    selected_ob = bpy.context.selected_objects
+
+    bpy.ops.object.select_all(action='DESELECT')
+    ob_hadPlane = False
+    childs = im_ob.children
+    for child in childs:
+        if ('Plane ' in child.name):
+            child.select = True
+            child.hide = False
+            ob_hadPlane = True
+    bpy.ops.object.delete()
+
+    if ob_hadPlane:
+        if ('Image Z' in im_ob.name):
+            mat = bpy.data.materials['Mat Z']
+            text = bpy.data.textures['Text Z']
+        elif ('Image X' in im_ob.name):
+            mat = bpy.data.materials['Mat X']
+            text = bpy.data.textures['Text X']
+        elif ('Image Y' in im_ob.name):
+            mat = bpy.data.materials['Mat Y']
+            text = bpy.data.textures['Text Y']
+        bpy.data.materials.remove(mat) 
+        bpy.data.textures.remove(text)  
+
+    for ob in selected_ob:
+        ob.select = True
 
 class ImageScrollOperator(bpy.types.Operator):
     """Scroll through image stack from selected image with mouse scroll wheel"""
@@ -683,6 +795,28 @@ def print_updated_objects(scene):
 
 #The handler that call the function after each time the scene is updated.
 bpy.app.handlers.scene_update_post.append(print_updated_objects)
+
+def set_texture(im_ob):
+    for child in im_ob.children:
+        if child.name == 'Plane Z':
+            child.data.uv_textures[0].data[0].image = im_ob.data
+            child.data.materials['Mat Z'].texture_slots['Text Z'].texture.image = im_ob.data
+        elif child.name == 'Plane X':
+            child.data.uv_textures[0].data[0].image = im_ob.data
+            child.data.materials['Mat X'].texture_slots['Text X'].texture.image = im_ob.data
+        elif child.name == 'Plane Y':
+            child.data.uv_textures[0].data[0].image = im_ob.data
+            child.data.materials['Mat Y'].texture_slots['Text Y'].texture.image = im_ob.data
+
+@persistent
+def set_images_texture(scene):
+    if(bpy.context.scene.render_images):
+        for im_ob in scene.objects:
+            if (im_ob.name in ["Image Z","Image X","Image Y"]):
+                set_texture(im_ob)
+
+#The handler that call the function before each rendering frame.
+bpy.app.handlers.render_pre.append(set_images_texture)
 
 class PointOperator(bpy.types.Operator):
     """Display grid on selected image for object point selection"""
