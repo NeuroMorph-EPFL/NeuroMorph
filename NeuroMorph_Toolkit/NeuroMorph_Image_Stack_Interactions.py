@@ -606,6 +606,9 @@ def create_plane(im_ob):
     bpy.context.scene.objects.active = im_ob
     bpy.ops.object.parent_set(keep_transform=True, type='OBJECT')
     pl_ob.dimensions = pl_dimensions
+    pl_ob.lock_location[0] = True # x
+    pl_ob.lock_location[1] = True # y
+    pl_ob.lock_location[2] = True # y
     pl_ob.name = pl_name
     pl_ob.hide = True
     pl_ob.select = False
