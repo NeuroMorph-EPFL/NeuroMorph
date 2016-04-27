@@ -257,22 +257,23 @@ class SelectStackFolderZ(bpy.types.Operator):  # adjusted
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
 
     def execute(self, context):
-        bpy.context.scene.image_path_Z = self.directory
+        if bpy.context.scene.image_path_Z != self.directory:
+            bpy.context.scene.image_path_Z = self.directory
 
-        # clear out images in blender memory
-        # (else display errors possible if previously loaded file of same name from different stack)
-        for f in bpy.data.images:
-            f.user_clear()
-            bpy.data.images.remove(f)
+            # clear out images in blender memory
+            # (else display errors possible if previously loaded file of same name from different stack)
+            for f in bpy.data.images:
+                f.user_clear()
+                bpy.data.images.remove(f)
 
-        # load image filenames and extract file extension
-        LoadImageFilenames('Z')
-        if len(bpy.context.scene.imagefilepaths_z) < 1:
-            self.report({'INFO'},"No image files found in selected directory")
-        else:
-            example_name = bpy.context.scene.imagefilepaths_z[0].name
-            file_ext = os.path.splitext(example_name)[1]
-            bpy.context.scene.image_ext_Z = file_ext
+            # load image filenames and extract file extension
+            LoadImageFilenames('Z')
+            if len(bpy.context.scene.imagefilepaths_z) < 1:
+                self.report({'INFO'},"No image files found in selected directory")
+            else:
+                example_name = bpy.context.scene.imagefilepaths_z[0].name
+                file_ext = os.path.splitext(example_name)[1]
+                bpy.context.scene.image_ext_Z = file_ext
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -289,22 +290,23 @@ class SelectStackFolderX(bpy.types.Operator):  # adjusted
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
 
     def execute(self, context):
-        bpy.context.scene.image_path_X = self.directory
+        if bpy.context.scene.image_path_X != self.directory:
+            bpy.context.scene.image_path_X = self.directory
 
-        # clear out images in blender memory
-        # (else display errors possible if previously loaded file of same name from different stack)
-        for f in bpy.data.images:
-            f.user_clear()
-            bpy.data.images.remove(f)
+            # clear out images in blender memory
+            # (else display errors possible if previously loaded file of same name from different stack)
+            for f in bpy.data.images:
+                f.user_clear()
+                bpy.data.images.remove(f)
 
-        # load image filenames and extract file extension
-        LoadImageFilenames('X')
-        if len(bpy.context.scene.imagefilepaths_x) < 1:
-            self.report({'INFO'}, "No image files found in selected directory")
-        else:
-            example_name = bpy.context.scene.imagefilepaths_x[0].name
-            file_ext = os.path.splitext(example_name)[1]
-            bpy.context.scene.image_ext_X = file_ext
+            # load image filenames and extract file extension
+            LoadImageFilenames('X')
+            if len(bpy.context.scene.imagefilepaths_x) < 1:
+                self.report({'INFO'}, "No image files found in selected directory")
+            else:
+                example_name = bpy.context.scene.imagefilepaths_x[0].name
+                file_ext = os.path.splitext(example_name)[1]
+                bpy.context.scene.image_ext_X = file_ext
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -321,22 +323,23 @@ class SelectStackFolderY(bpy.types.Operator):  # adjusted
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
 
     def execute(self, context):
-        bpy.context.scene.image_path_Y = self.directory
+        if bpy.context.scene.image_path_Y != self.directory:
+            bpy.context.scene.image_path_Y = self.directory
 
-        # clear out images in blender memory
-        # (else display errors possible if previously loaded file of same name from different stack)
-        for f in bpy.data.images:
-            f.user_clear()
-            bpy.data.images.remove(f)
+            # clear out images in blender memory
+            # (else display errors possible if previously loaded file of same name from different stack)
+            for f in bpy.data.images:
+                f.user_clear()
+                bpy.data.images.remove(f)
 
-        # load image filenames and extract file extension
-        LoadImageFilenames('Y')
-        if len(bpy.context.scene.imagefilepaths_y) < 1:
-            self.report({'INFO'}, "No image files found in selected directory")
-        else:
-            example_name = bpy.context.scene.imagefilepaths_y[0].name
-            file_ext = os.path.splitext(example_name)[1]
-            bpy.context.scene.image_ext_Y = file_ext
+            # load image filenames and extract file extension
+            LoadImageFilenames('Y')
+            if len(bpy.context.scene.imagefilepaths_y) < 1:
+                self.report({'INFO'}, "No image files found in selected directory")
+            else:
+                example_name = bpy.context.scene.imagefilepaths_y[0].name
+                file_ext = os.path.splitext(example_name)[1]
+                bpy.context.scene.image_ext_Y = file_ext
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -373,9 +376,7 @@ def LoadImageFilenames(orientation) :
     sorted_filenames = sort_nicely([f for f in largest_group])
     the_filepaths = [os.path.join(path, f) for f in sorted_filenames]
 
-    # make sure imagefilepaths is empty
-    for ind in range(len(imagefilepaths)):
-        imagefilepaths.remove(ind)
+    imagefilepaths.clear()
 
     # insert into CollectionProperty
     for f in the_filepaths:
@@ -386,6 +387,12 @@ def LoadImageFilenames(orientation) :
     id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
     file_min = int(id_string.group())
 
+    if(orientation == 'Z'):
+        bpy.context.scene.file_min_Z = file_min
+    elif (orientation == 'X'):
+        bpy.context.scene.file_min_X = file_min
+    elif (orientation == 'Y'):
+        bpy.context.scene.file_min_Y = file_min
 
 def sort_nicely( filenames ):
     # Sort the given list in the way that humans expect
