@@ -492,10 +492,6 @@ def DisplayImageFunction(orientation):
     for object_name in candidate_list:
        bpy.data.objects[object_name].select = True
        delete_plane(bpy.data.objects[object_name])
-#       childs = bpy.data.objects[object_name].children
-#       for child in childs:
-#        if ('Plane ' in child.name):
-#            child.select = True
     bpy.ops.object.delete()
 
     # collect selected verts
@@ -785,7 +781,7 @@ def getIndex(im_ob):
 
 @persistent
 def print_updated_objects(scene):
-    """Called after that the scene is updated. It look for the updated images and
+    """Called when that the scene is updated. It look for the updated images and
     load the image corresponding to it's actual location."""
     for im_ob in scene.objects:
         # Search for the updated objects
@@ -794,10 +790,36 @@ def print_updated_objects(scene):
             if (im_ob.name in ["Image Z","Image X","Image Y"]):
                 (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
                 load_im(ind, image_files, im_ob, orientation)
+                if (im_ob.name == "Image Z"): 
+                    im_ob.location.z = locs[ind]
+                elif (im_ob.name == "Image X"):
+                    im_ob.location.x = locs[ind]
+                elif (im_ob.name == "Image Y"):
+                    im_ob.location.y = locs[ind]
 
 
 #The handler that call the function after each time the scene is updated.
 bpy.app.handlers.scene_update_post.append(print_updated_objects)
+
+@persistent
+def set_image_for_frame(scene):
+    """Do the same thing as print_updated_objects, when rendering plane is
+checked. Set also the texture of the planes.
+    """
+    if(bpy.context.scene.render_images):
+        for im_ob in scene.objects:
+            if (im_ob.name in ["Image Z","Image X","Image Y"]):
+                (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
+                load_im(ind, image_files, im_ob, orientation)
+                if (im_ob.name == "Image Z"): 
+                    im_ob.location.z = locs[ind]
+                elif (im_ob.name == "Image X"):
+                    im_ob.location.x = locs[ind]
+                elif (im_ob.name == "Image Y"):
+                    im_ob.location.y = locs[ind]
+                set_texture(im_ob)
+                
+bpy.app.handlers.frame_change_post.append(set_image_for_frame)
 
 def set_texture(im_ob):
     for child in im_ob.children:
@@ -810,16 +832,6 @@ def set_texture(im_ob):
         elif child.name == 'Plane Y':
             child.data.uv_textures[0].data[0].image = im_ob.data
             child.data.materials['Mat Y'].texture_slots['Text Y'].texture.image = im_ob.data
-
-@persistent
-def set_images_texture(scene):
-    if(bpy.context.scene.render_images):
-        for im_ob in scene.objects:
-            if (im_ob.name in ["Image Z","Image X","Image Y"]):
-                set_texture(im_ob)
-
-#The handler that call the function before each rendering frame.
-bpy.app.handlers.render_pre.append(set_images_texture)
 
 class PointOperator(bpy.types.Operator):
     """Display grid on selected image for object point selection"""
