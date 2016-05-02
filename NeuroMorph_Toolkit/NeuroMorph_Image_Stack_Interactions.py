@@ -629,6 +629,11 @@ def create_plane(im_ob):
     bpy.ops.mesh.primitive_plane_add(location=pl_location, rotation=pl_rotation)
     pl_ob = bpy.context.active_object
     bpy.context.scene.objects.active = im_ob
+    isImageVisible = im_ob.hide
+    if (isImageVisible):
+        #If the image is not displayed, the parent_set function fail
+        im_ob.hide = False
+    #pl_ob.parent = im_ob
     bpy.ops.object.parent_set(keep_transform=True, type='OBJECT')
     pl_ob.dimensions = pl_dimensions
     pl_ob.lock_location[0] = True # x
@@ -637,19 +642,22 @@ def create_plane(im_ob):
     pl_ob.name = pl_name
     pl_ob.hide = True
     pl_ob.select = False
+    if (isImageVisible):
+        im_ob.hide = True
 
     #Creating it's associated texture and material
     pl_ob.data.uv_textures.new()
     cTex = bpy.data.textures.new(texture_name, type = 'IMAGE')
 
-    if (bpy.context.scene.default_render):
-        mat = bpy.data.materials.new(mat_name)
 
-    mat.use_shadeless = True
+    mat = bpy.data.materials.new(mat_name)
+    if (bpy.context.scene.default_render):
+        mat.use_shadeless = True
+
     mtex = mat.texture_slots.add()
     mtex.texture = cTex
     mtex.texture_coords = 'UV'
-    mtex.mapping = 'FLAT' 
+    mtex.mapping = 'FLAT'
     pl_ob.data.materials.append(mat)
     
     
