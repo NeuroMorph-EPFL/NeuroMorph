@@ -162,31 +162,12 @@ bpy.types.Scene.render_images = bpy.props.BoolProperty \
         update=update_render_images
     )
 
-def set_default_render_properties(self, context):
-
-    im_mat_list = [item for item in bpy.data.materials if (item.name =='Mat Z' or item.name =='Mat X' or item.name =='Mat Y')]
-    if (bpy.context.scene.default_render):
-        bpy.context.scene.world.light_settings.use_environment_light = True
-        for im_mat in im_mat_list:
-            im_mat.use_shadeless = True
-    else :
-        bpy.context.scene.world.light_settings.use_environment_light = False
-        for im_mat in im_mat_list:
-            im_mat.use_shadeless = False
-
-bpy.types.Scene.default_render = bpy.props.BoolProperty \
-        (
-        name="Default Render Properties",
-        description="Set on true, it set to the scene objects and images some \
-        properties needed for rendering.",
-        default=False,
-        update=set_default_render_properties
-    )
 
 bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
+bpy.context.scene.world.light_settings.use_environment_light = True
 
 # Define the panel
 class SuperimposePanel(bpy.types.Panel):
@@ -229,7 +210,6 @@ class SuperimposePanel(bpy.types.Panel):
 
         row = self.layout.row()
         row.prop(context.scene , "render_images")
-        row.prop(context.scene , "default_render")
 
         self.layout.label("--Retrieve Object from Image--")
 
@@ -651,8 +631,7 @@ def create_plane(im_ob):
 
 
     mat = bpy.data.materials.new(mat_name)
-    if (bpy.context.scene.default_render):
-        mat.use_shadeless = True
+    mat.use_shadeless = True
 
     mtex = mat.texture_slots.add()
     mtex.texture = cTex
@@ -1263,7 +1242,7 @@ class RemTranspButton(bpy.types.Operator):
 def register():
     bpy.utils.register_module(__name__)
     km = bpy.context.window_manager.keyconfigs.active.keymaps['3D View']
-    kmi = km.keymap_items.new(ImageScrollOperator.bl_idname, 'Y', 'PRESS', ctrl=True)
+    kmi = km.keymap_items.new(ImageScrollOperator.bl_idname, 'Y', 'PRESS', ctrl=True)    
     
    
 
