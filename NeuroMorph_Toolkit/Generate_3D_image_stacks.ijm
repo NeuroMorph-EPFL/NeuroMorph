@@ -16,9 +16,9 @@
 
 originalStack= getTitle();
 mainFolder = getDirectory("Choose a directory to save the folders of separated images");
-XYFolder = mainFolder + "XY_Zstack_Images" + File.separator;
-XZFolder = mainFolder + "XZ_Ystack_Images" + File.separator;
-ZYFolder = mainFolder + "ZY_Xstack_Images" + File.separator;
+ZFolder = mainFolder + "Z_Stack" + File.separator;
+YFolder = mainFolder + "Y_Stack" + File.separator;
+XFolder = mainFolder + "X_Stack" + File.separator;
 
 getVoxelSize(xSize, ySize, zSize, unit);
 
@@ -27,38 +27,44 @@ Dialog.addMessage("Please check if the dimensions are correct");
 Dialog.addNumber("Voxel width", xSize);
 Dialog.addNumber("Voxel height", ySize);
 Dialog.addNumber("Voxel depth", zSize);
+Dialog.addCheckbox("Create Z stack", true);
 Dialog.show();
 xSize = Dialog.getNumber();
 ySize = Dialog.getNumber();
 zSize = Dialog.getNumber();
+createZ = Dialog.getCheckbox();
 
 run("Properties...", "channels=1 frames=1 unit=nm pixel_width="+xSize+" pixel_height="+ySize+" voxel_depth="+zSize+"");
 
 
-if (File.isDirectory(XYFolder) || File.isDirectory(XZFolder) || File.isDirectory(ZYFolder)) {
-	exit("Folder of XY, XZ or ZY images already found, macro aborted.");
+if ((createZ && File.isDirectory(ZFolder)) || File.isDirectory(YFolder) || File.isDirectory(XFolder)) {
+	exit("Folder of Z, Y or X stack already found, macro aborted.");
 }
 
-File.makeDirectory(XYFolder);
-File.makeDirectory(XZFolder);
-File.makeDirectory(ZYFolder);
+if (createZ) {
+	File.makeDirectory(ZFolder);
+}
+File.makeDirectory(YFolder);
+File.makeDirectory(XFolder);
 
 
 selectWindow(originalStack);
-run("Reslice [/]...", "output="+zSize+" start=Top"); // Vue du haut (XZ);
-rename("XZ_Y_");
-run("Image Sequence... ", "format=TIFF save="+XZFolder+"XZ_Y_0000.tif");
+run("Reslice [/]...", "output="+zSize+" start=Top"); // Vue du haut (Z);
+rename("Y_");
+run("Image Sequence... ", "format=TIFF save=["+YFolder+"Y_0000.tif]");
 run("Close");
 
 selectWindow(originalStack);
-run("Reslice [/]...", "output="+zSize+" start=Left rotate"); // Vue de cote (ZY);
-rename("ZY_X_");
-run("Image Sequence... ", "format=TIFF save="+ZYFolder+"ZY_X_0000.tif");
+run("Reslice [/]...", "output="+zSize+" start=Left rotate"); // Vue de cote (X);
+rename("X_");
+run("Image Sequence... ", "format=TIFF save=["+XFolder+"X_0000.tif]");
 run("Close");
 
 selectWindow(originalStack);
-rename("XY_Z_");
-run("Image Sequence... ", "format=TIFF save="+XYFolder+"XY_Z_0000.tif");
+if (createZ) {
+	rename("Z_");
+	run("Image Sequence... ", "format=TIFF save=["+ZFolder+"Z_0000.tif]");
+}
 run("Close");
 
 
