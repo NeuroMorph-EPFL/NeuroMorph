@@ -8,7 +8,7 @@ ilastik, from a downsampled series of images from the EM_stack folder.
 *(Open this file in Blender.)*
 
 
-#### EM_stack folder  ([download](http://dstats.net/download/http://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Samples/EM_stack.zip))
+#### EM_stack folder  ([download](http://dstats.net/download/http://github.com/ajorstad/NeuroMorph/tree/master/NeuroMorph_Samples/EM_stack))
 Contains 272 serial tiff images. These are serial electron micrographs taken with a focused ion beam scanning electron microscope. Each image is
 700 pixels by 700 pixels, and each pixel has a dimension of 5 x 5 nm. Therefore the width of each image is 3500 nm.  
 
