@@ -167,7 +167,7 @@ bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.P
 bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
-bpy.context.scene.world.light_settings.use_environment_light = True
+#bpy.context.scene.world.light_settings.use_environment_light = True
 
 # Define the panel
 class SuperimposePanel(bpy.types.Panel):
