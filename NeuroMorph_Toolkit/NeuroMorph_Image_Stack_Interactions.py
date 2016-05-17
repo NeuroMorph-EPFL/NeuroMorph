@@ -167,8 +167,6 @@ bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.P
 bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
-#bpy.context.scene.world.light_settings.use_environment_light = True
-
 # Define the panel
 class SuperimposePanel(bpy.types.Panel):
     bl_label = "Image Stack Interactions"
@@ -794,6 +792,8 @@ def getIndex(im_ob):
     return (ind, N, delta, orientation, image_files, locs)
 
 
+#A handler that call the function after each time the scene is updated.
+# (add as handler in the register function)
 @persistent
 def print_updated_objects(scene):
     """Called when that the scene is updated. It look for the updated images and
@@ -813,9 +813,8 @@ def print_updated_objects(scene):
                     im_ob.location.y = locs[ind]
 
 
-#The handler that call the function after each time the scene is updated.
-bpy.app.handlers.scene_update_post.append(print_updated_objects)
 
+# (add as handler in the register function)
 @persistent
 def set_image_for_frame(scene):
     """Do the same thing as print_updated_objects, when rendering plane is
@@ -834,7 +833,16 @@ checked. Set also the texture of the planes.
                     im_ob.location.y = locs[ind]
                 set_texture(im_ob)
                 
-bpy.app.handlers.frame_change_post.append(set_image_for_frame)
+#A handler to change light property when the script is loaded
+def setLight(scene):
+    bpy.context.scene.world.light_settings.use_environment_light = True
+    #And we remove the handler just after we set the light on
+    bpy.app.handlers.scene_update_post.remove(setLight)
+
+# Same Handler that is called when a new blend file is loaded
+@persistent
+def setLightLoad(scene):
+    bpy.context.scene.world.light_settings.use_environment_light = True
 
 def set_texture(im_ob):
     for child in im_ob.children:
@@ -1242,16 +1250,23 @@ class RemTranspButton(bpy.types.Operator):
 def register():
     bpy.utils.register_module(__name__)
     km = bpy.context.window_manager.keyconfigs.active.keymaps['3D View']
-    kmi = km.keymap_items.new(ImageScrollOperator.bl_idname, 'Y', 'PRESS', ctrl=True)    
-    
+    kmi = km.keymap_items.new(ImageScrollOperator.bl_idname, 'Y', 'PRESS', ctrl=True) 
+
+    bpy.app.handlers.scene_update_post.append(setLight)
+    bpy.app.handlers.load_post.append(setLightLoad)
+    bpy.app.handlers.frame_change_post.append(set_image_for_frame)
+    bpy.app.handlers.scene_update_post.append(print_updated_objects)
+
+
+
    
 
 def unregister():
     bpy.utils.unregister_module(__name__)
-    del bpy.types.Scene.imagefilepaths_x
-    del bpy.types.Scene.imagefilepaths_y
-    del bpy.types.Scene.imagefilepaths_z
 
+    bpy.app.handlers.scene_update_post.remove(print_updated_objects)
+    bpy.app.handlers.frame_change_post.remove(set_image_for_frame)
+    bpy.app.handlers.load_post.remove(setLightLoad)
 
 if __name__ == "__main__":
     register()
