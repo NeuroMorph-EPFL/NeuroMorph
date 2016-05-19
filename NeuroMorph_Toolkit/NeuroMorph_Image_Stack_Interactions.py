@@ -1008,7 +1008,7 @@ def pointInsideMesh(point,ob):
     outside = False
     count = 0
     for axis in axes:  # send out rays, if cross this object in every direction, point is inside
-        location,normal,index = ob.ray_cast(orig,orig+axis*max_dist)  # this will error if ob is in a different layer
+        result,location,normal,index = ob.ray_cast(orig,orig+axis*max_dist)  # this will error if ob is in a different layer
         if index != -1:
             count = count+1
 
