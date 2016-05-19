@@ -36,152 +36,14 @@ import sys
 import re
 from os import listdir
 
-# Define properties
-bpy.types.Scene.x_side = bpy.props.FloatProperty \
-      (
-        name = "x",
-        description = "x-dimension of image stack (microns)",
-        default = 1
-      )
-bpy.types.Scene.y_side = bpy.props.FloatProperty \
-      (
-        name = "y",
-        description = "y-dimension of image stack (microns)",
-        default = 1
-      )
-bpy.types.Scene.z_side = bpy.props.FloatProperty \
-      (
-        name = "z",
-        description = "z-dimension of image stack (microns)",
-        default = 1
-      )
-
-bpy.types.Scene.image_ext_Z = bpy.props.StringProperty \
-      (
-        name = "extZ",
-        description = "Image Extension Z",
-        default = ".tif"
-      )
-
-bpy.types.Scene.image_ext_X = bpy.props.StringProperty \
-        (
-        name = "extX",
-        description = "Image Extension X",
-        default = ".tif"
-    )
-
-bpy.types.Scene.image_ext_Y = bpy.props.StringProperty \
-        (
-        name="extY",
-        description="Image Extension Y",
-        default=".tif"
-    )
-      
-bpy.types.Scene.image_path_Z = bpy.props.StringProperty \
-      (
-        name = "Source_Z",
-        description = "Location of images in the stack Z",
-        default = "/"
-      )
-
-bpy.types.Scene.image_path_X = bpy.props.StringProperty \
-        (
-        name = "Source_X",
-        description = "Location of images in the stack X",
-        default = "/"
-    )
-
-bpy.types.Scene.image_path_Y = bpy.props.StringProperty \
-        (
-        name="Source_Y",
-        description="Location of images in the stack Y",
-        default="/"
-    )
-
-bpy.types.Scene.x_grid = bpy.props.IntProperty \
-      (
-        name = "nx",
-        description = "Number of grid points in x",
-        default = 50
-      )
-      
-bpy.types.Scene.y_grid = bpy.props.IntProperty \
-      (
-        name = "ny",
-        description = "Number of grid points in y",
-        default = 50
-      )
-
-bpy.types.Scene.z_grid = bpy.props.IntProperty \
-      (
-        name = "nz",
-        description = "Number of grid points in z",
-        default = 50
-      )
-
-bpy.types.Scene.file_min_Z = bpy.props.IntProperty \
-      (
-        name = "file_min_Z",
-        description = "min Z file number",
-        default = 0
-      )
-bpy.types.Scene.file_min_X = bpy.props.IntProperty \
-        (
-        name = "file_min_X",
-        description = "min X file number",
-        default=0
-    )
-bpy.types.Scene.file_min_Y = bpy.props.IntProperty \
-        (
-        name="file_min_Y",
-        description="min Y file number",
-        default=0
-    )
-
-bpy.types.Scene.shift_step = bpy.props.IntProperty \
-        (
-        name="Shift step",
-        description="Step size for scrolling through image stack while holding shift",
-        default=10
-    )
-
-def update_render_images(self, context):
-
-    im_ob_list = [item for item in bpy.data.objects if (item.name =='Image Z' or item.name =='Image X' or item.name =='Image Y')]
-    for im_ob in im_ob_list:
-       if(bpy.context.scene.render_images):
-            create_plane(im_ob)
-       else :
-            delete_plane(im_ob)
-
-bpy.types.Scene.render_images = bpy.props.BoolProperty \
-        (
-        name="Render Images",
-        description="Set on true, it will create planes with the images as textures.",
-        default=False,
-        update=update_render_images
-    )
-
-
-bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-
 # Define the panel
 class SuperimposePanel(bpy.types.Panel):
     bl_label = "Image Stack Interactions"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
 
-    
-    
- 
     def draw(self, context):
         self.layout.label("--Display Images from Stack--")
-
-        row = self.layout.row(align=True)
-        row.prop(context.scene, "image_path_Z")
-        row.operator("importfolder_z.tif", text='', icon='FILESEL')
 
         row = self.layout.row(align=True)
         row.prop(context.scene, "image_path_X")
@@ -190,6 +52,10 @@ class SuperimposePanel(bpy.types.Panel):
         row = self.layout.row(align=True)
         row.prop(context.scene, "image_path_Y")
         row.operator("importfolder_y.tif", text='', icon='FILESEL')
+
+        row = self.layout.row(align=True)
+        row.prop(context.scene, "image_path_Z")
+        row.operator("importfolder_z.tif", text='', icon='FILESEL')
 
         self.layout.label("Image Stack Dimensions (microns):")
         row = self.layout.row()
@@ -247,7 +113,7 @@ def active_node_mat(mat):
             return mat_node
         else:
             return mat
-    return None               
+    return None            
 
 class SelectStackFolderZ(bpy.types.Operator):  # adjusted
     """Select location of the Z stack images"""
@@ -572,6 +438,15 @@ def DisplayImageFunction(orientation):
     bpy.context.scene.objects.active = myob
     myob.select = True
     bpy.ops.object.mode_set(mode = 'OBJECT')
+
+def update_render_images(self, context):
+
+    im_ob_list = [item for item in bpy.data.objects if (item.name =='Image Z' or item.name =='Image X' or item.name =='Image Y')]
+    for im_ob in im_ob_list:
+       if(bpy.context.scene.render_images):
+            create_plane(im_ob)
+       else :
+            delete_plane(im_ob)   
 
 def create_plane(im_ob):
     x_max = bpy.context.scene.x_side
@@ -1141,7 +1016,7 @@ def pointInsideMesh(point,ob):
     ob.hide = this_visibility
 
     bpy.context.scene.update()
-
+    
     if count<6:
         return False
     else: 
@@ -1257,9 +1132,126 @@ def register():
     bpy.app.handlers.frame_change_post.append(set_image_for_frame)
     bpy.app.handlers.scene_update_post.append(print_updated_objects)
 
+    # Define properties
+    bpy.types.Scene.x_side = bpy.props.FloatProperty \
+          (
+            name = "x",
+            description = "x-dimension of image stack (microns)",
+            default = 1
+          )
+    bpy.types.Scene.y_side = bpy.props.FloatProperty \
+          (
+            name = "y",
+            description = "y-dimension of image stack (microns)",
+            default = 1
+          )
+    bpy.types.Scene.z_side = bpy.props.FloatProperty \
+          (
+            name = "z",
+            description = "z-dimension of image stack (microns)",
+            default = 1
+          )
 
+    bpy.types.Scene.image_ext_Z = bpy.props.StringProperty \
+          (
+            name = "extZ",
+            description = "Image Extension Z",
+            default = ".tif"
+          )
 
-   
+    bpy.types.Scene.image_ext_X = bpy.props.StringProperty \
+            (
+            name = "extX",
+            description = "Image Extension X",
+            default = ".tif"
+        )
+
+    bpy.types.Scene.image_ext_Y = bpy.props.StringProperty \
+            (
+            name="extY",
+            description="Image Extension Y",
+            default=".tif"
+        )
+
+    bpy.types.Scene.image_path_Z = bpy.props.StringProperty \
+          (
+            name = "Source_Z",
+            description = "Location of images in the stack Z",
+            default = "/"
+          )
+
+    bpy.types.Scene.image_path_X = bpy.props.StringProperty \
+            (
+            name = "Source_X",
+            description = "Location of images in the stack X",
+            default = "/"
+        )
+
+    bpy.types.Scene.image_path_Y = bpy.props.StringProperty \
+            (
+            name="Source_Y",
+            description="Location of images in the stack Y",
+            default="/"
+        )
+
+    bpy.types.Scene.x_grid = bpy.props.IntProperty \
+          (
+            name = "nx",
+            description = "Number of grid points in x",
+            default = 50
+          )
+
+    bpy.types.Scene.y_grid = bpy.props.IntProperty \
+          (
+            name = "ny",
+            description = "Number of grid points in y",
+            default = 50
+          )
+
+    bpy.types.Scene.z_grid = bpy.props.IntProperty \
+          (
+            name = "nz",
+            description = "Number of grid points in z",
+            default = 50
+          )
+
+    bpy.types.Scene.file_min_Z = bpy.props.IntProperty \
+          (
+            name = "file_min_Z",
+            description = "min Z file number",
+            default = 0
+          )
+    bpy.types.Scene.file_min_X = bpy.props.IntProperty \
+            (
+            name = "file_min_X",
+            description = "min X file number",
+            default=0
+        )
+    bpy.types.Scene.file_min_Y = bpy.props.IntProperty \
+            (
+            name="file_min_Y",
+            description="min Y file number",
+            default=0
+        )
+
+    bpy.types.Scene.shift_step = bpy.props.IntProperty \
+            (
+            name="Shift step",
+            description="Step size for scrolling through image stack while holding shift",
+            default=10
+        )
+    
+    bpy.types.Scene.render_images = bpy.props.BoolProperty \
+            (
+            name="Render Images",
+            description="Set on true, it will create planes with the images as textures.",
+            default=False,
+            update=update_render_images
+        )
+
+    bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+    bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+    bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
 def unregister():
     bpy.utils.unregister_module(__name__)
@@ -1267,6 +1259,27 @@ def unregister():
     bpy.app.handlers.scene_update_post.remove(print_updated_objects)
     bpy.app.handlers.frame_change_post.remove(set_image_for_frame)
     bpy.app.handlers.load_post.remove(setLightLoad)
+
+    del bpy.types.Scene.x_side
+    del bpy.types.Scene.y_side
+    del bpy.types.Scene.z_side
+    del bpy.types.Scene.image_ext_X
+    del bpy.types.Scene.image_ext_Y
+    del bpy.types.Scene.image_ext_Z
+    del bpy.types.Scene.image_path_X
+    del bpy.types.Scene.image_path_Y
+    del bpy.types.Scene.image_path_Z
+    del bpy.types.Scene.x_grid
+    del bpy.types.Scene.y_grid
+    del bpy.types.Scene.z_grid
+    del bpy.types.Scene.file_min_X
+    del bpy.types.Scene.file_min_Y
+    del bpy.types.Scene.file_min_Z
+    del bpy.types.Scene.shift_step
+    del bpy.types.Scene.render_images
+    del bpy.types.Scene.imagefilepaths_x
+    del bpy.types.Scene.imagefilepaths_y
+    del bpy.types.Scene.imagefilepaths_z
 
 if __name__ == "__main__":
     register()
