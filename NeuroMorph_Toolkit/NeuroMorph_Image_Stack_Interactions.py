@@ -116,7 +116,7 @@ def active_node_mat(mat):
     return None            
 
 class SelectStackFolderZ(bpy.types.Operator):  # adjusted
-    """Select location of the Z stack images"""
+    """Select location of the Z stack images (original image stack)"""
     bl_idname = "importfolder_z.tif"
     bl_label = "Select folder of the Z stack images"
 
@@ -149,7 +149,7 @@ class SelectStackFolderZ(bpy.types.Operator):  # adjusted
         return {"RUNNING_MODAL"}
 
 class SelectStackFolderX(bpy.types.Operator):  # adjusted
-    """Select location of the X stack images"""
+    """Select location of the X stack images (optional)"""
     bl_idname = "importfolder_x.tif"
     bl_label = "Select folder of the X stack images"
 
@@ -182,7 +182,7 @@ class SelectStackFolderX(bpy.types.Operator):  # adjusted
         return {"RUNNING_MODAL"}
 
 class SelectStackFolderY(bpy.types.Operator):  # adjusted
-    """Select location of the Y stack images"""
+    """Select location of the Y stack images (optional)"""
     bl_idname = "importfolder_y.tif"
     bl_label = "Select folder of the Y stack images"
 
@@ -1243,8 +1243,8 @@ def register():
     
     bpy.types.Scene.render_images = bpy.props.BoolProperty \
             (
-            name="Render Images",
-            description="Set on true, it will create planes with the images as textures.",
+            name="Include images in render",
+            description="Must be checked to have images rendered as visible textured planes in an animation",
             default=False,
             update=update_render_images
         )
@@ -1283,3 +1283,4 @@ def unregister():
 
 if __name__ == "__main__":
     register()
+    
