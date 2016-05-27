@@ -36,133 +36,14 @@ import sys
 import re
 from os import listdir
 
-# Define properties
-bpy.types.Scene.x_side = bpy.props.FloatProperty \
-      (
-        name = "x",
-        description = "x-dimension of image stack (microns)",
-        default = 1
-      )
-bpy.types.Scene.y_side = bpy.props.FloatProperty \
-      (
-        name = "y",
-        description = "y-dimension of image stack (microns)",
-        default = 1
-      )
-bpy.types.Scene.z_side = bpy.props.FloatProperty \
-      (
-        name = "z",
-        description = "z-dimension of image stack (microns)",
-        default = 1
-      )
-
-bpy.types.Scene.image_ext_Z = bpy.props.StringProperty \
-      (
-        name = "extZ",
-        description = "Image Extension Z",
-        default = ".tif"
-      )
-
-bpy.types.Scene.image_ext_X = bpy.props.StringProperty \
-        (
-        name = "extX",
-        description = "Image Extension X",
-        default = ".tif"
-    )
-
-bpy.types.Scene.image_ext_Y = bpy.props.StringProperty \
-        (
-        name="extY",
-        description="Image Extension Y",
-        default=".tif"
-    )
-      
-bpy.types.Scene.image_path_Z = bpy.props.StringProperty \
-      (
-        name = "Source_Z",
-        description = "Location of images in the stack Z",
-        default = "/"
-      )
-
-bpy.types.Scene.image_path_X = bpy.props.StringProperty \
-        (
-        name = "Source_X",
-        description = "Location of images in the stack X",
-        default = "/"
-    )
-
-bpy.types.Scene.image_path_Y = bpy.props.StringProperty \
-        (
-        name="Source_Y",
-        description="Location of images in the stack Y",
-        default="/"
-    )
-
-bpy.types.Scene.x_grid = bpy.props.IntProperty \
-      (
-        name = "nx",
-        description = "Number of grid points in x",
-        default = 50
-      )
-      
-bpy.types.Scene.y_grid = bpy.props.IntProperty \
-      (
-        name = "ny",
-        description = "Number of grid points in y",
-        default = 50
-      )
-
-bpy.types.Scene.z_grid = bpy.props.IntProperty \
-      (
-        name = "nz",
-        description = "Number of grid points in z",
-        default = 50
-      )
-
-bpy.types.Scene.file_min_Z = bpy.props.IntProperty \
-      (
-        name = "file_min_Z",
-        description = "min Z file number",
-        default = 0
-      )
-bpy.types.Scene.file_min_X = bpy.props.IntProperty \
-        (
-        name = "file_min_X",
-        description = "min X file number",
-        default=0
-    )
-bpy.types.Scene.file_min_Y = bpy.props.IntProperty \
-        (
-        name="file_min_Y",
-        description="min Y file number",
-        default=0
-    )
-
-bpy.types.Scene.shift_step = bpy.props.IntProperty \
-        (
-        name="Shift step",
-        description="Step size for scrolling through image stack while holding shift",
-        default=10
-    )
-
-bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-
-
 # Define the panel
 class SuperimposePanel(bpy.types.Panel):
     bl_label = "Image Stack Interactions"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
 
- 
     def draw(self, context):
         self.layout.label("--Display Images from Stack--")
-
-        row = self.layout.row(align=True)
-        row.prop(context.scene, "image_path_Z")
-        row.operator("importfolder_z.tif", text='', icon='FILESEL')
 
         row = self.layout.row(align=True)
         row.prop(context.scene, "image_path_X")
@@ -171,6 +52,10 @@ class SuperimposePanel(bpy.types.Panel):
         row = self.layout.row(align=True)
         row.prop(context.scene, "image_path_Y")
         row.operator("importfolder_y.tif", text='', icon='FILESEL')
+
+        row = self.layout.row(align=True)
+        row.prop(context.scene, "image_path_Z")
+        row.operator("importfolder_z.tif", text='', icon='FILESEL')
 
         self.layout.label("Image Stack Dimensions (microns):")
         row = self.layout.row()
@@ -187,6 +72,8 @@ class SuperimposePanel(bpy.types.Panel):
         col2 = split.column().row()
         col2.prop(context.scene , "shift_step")
 
+        row = self.layout.row()
+        row.prop(context.scene , "render_images")
 
         self.layout.label("--Retrieve Object from Image--")
 
@@ -226,7 +113,7 @@ def active_node_mat(mat):
             return mat_node
         else:
             return mat
-    return None               
+    return None            
 
 class SelectStackFolderZ(bpy.types.Operator):  # adjusted
     """Select location of the Z stack images"""
@@ -236,22 +123,23 @@ class SelectStackFolderZ(bpy.types.Operator):  # adjusted
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
 
     def execute(self, context):
-        bpy.context.scene.image_path_Z = self.directory
+        if bpy.context.scene.image_path_Z != self.directory:
+            bpy.context.scene.image_path_Z = self.directory
 
-        # clear out images in blender memory
-        # (else display errors possible if previously loaded file of same name from different stack)
-        for f in bpy.data.images:
-            f.user_clear()
-            bpy.data.images.remove(f)
+            # clear out images in blender memory
+            # (else display errors possible if previously loaded file of same name from different stack)
+            for f in bpy.data.images:
+                f.user_clear()
+                bpy.data.images.remove(f)
 
-        # load image filenames and extract file extension
-        LoadImageFilenames('Z')
-        if len(bpy.context.scene.imagefilepaths_z) < 1:
-            self.report({'INFO'},"No image files found in selected directory")
-        else:
-            example_name = bpy.context.scene.imagefilepaths_z[0].name
-            file_ext = os.path.splitext(example_name)[1]
-            bpy.context.scene.image_ext_Z = file_ext
+            # load image filenames and extract file extension
+            LoadImageFilenames('Z')
+            if len(bpy.context.scene.imagefilepaths_z) < 1:
+                self.report({'INFO'},"No image files found in selected directory")
+            else:
+                example_name = bpy.context.scene.imagefilepaths_z[0].name
+                file_ext = os.path.splitext(example_name)[1]
+                bpy.context.scene.image_ext_Z = file_ext
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -268,22 +156,23 @@ class SelectStackFolderX(bpy.types.Operator):  # adjusted
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
 
     def execute(self, context):
-        bpy.context.scene.image_path_X = self.directory
+        if bpy.context.scene.image_path_X != self.directory:
+            bpy.context.scene.image_path_X = self.directory
 
-        # clear out images in blender memory
-        # (else display errors possible if previously loaded file of same name from different stack)
-        for f in bpy.data.images:
-            f.user_clear()
-            bpy.data.images.remove(f)
+            # clear out images in blender memory
+            # (else display errors possible if previously loaded file of same name from different stack)
+            for f in bpy.data.images:
+                f.user_clear()
+                bpy.data.images.remove(f)
 
-        # load image filenames and extract file extension
-        LoadImageFilenames('X')
-        if len(bpy.context.scene.imagefilepaths_x) < 1:
-            self.report({'INFO'}, "No image files found in selected directory")
-        else:
-            example_name = bpy.context.scene.imagefilepaths_x[0].name
-            file_ext = os.path.splitext(example_name)[1]
-            bpy.context.scene.image_ext_X = file_ext
+            # load image filenames and extract file extension
+            LoadImageFilenames('X')
+            if len(bpy.context.scene.imagefilepaths_x) < 1:
+                self.report({'INFO'}, "No image files found in selected directory")
+            else:
+                example_name = bpy.context.scene.imagefilepaths_x[0].name
+                file_ext = os.path.splitext(example_name)[1]
+                bpy.context.scene.image_ext_X = file_ext
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -300,22 +189,23 @@ class SelectStackFolderY(bpy.types.Operator):  # adjusted
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
 
     def execute(self, context):
-        bpy.context.scene.image_path_Y = self.directory
+        if bpy.context.scene.image_path_Y != self.directory:
+            bpy.context.scene.image_path_Y = self.directory
 
-        # clear out images in blender memory
-        # (else display errors possible if previously loaded file of same name from different stack)
-        for f in bpy.data.images:
-            f.user_clear()
-            bpy.data.images.remove(f)
+            # clear out images in blender memory
+            # (else display errors possible if previously loaded file of same name from different stack)
+            for f in bpy.data.images:
+                f.user_clear()
+                bpy.data.images.remove(f)
 
-        # load image filenames and extract file extension
-        LoadImageFilenames('Y')
-        if len(bpy.context.scene.imagefilepaths_y) < 1:
-            self.report({'INFO'}, "No image files found in selected directory")
-        else:
-            example_name = bpy.context.scene.imagefilepaths_y[0].name
-            file_ext = os.path.splitext(example_name)[1]
-            bpy.context.scene.image_ext_Y = file_ext
+            # load image filenames and extract file extension
+            LoadImageFilenames('Y')
+            if len(bpy.context.scene.imagefilepaths_y) < 1:
+                self.report({'INFO'}, "No image files found in selected directory")
+            else:
+                example_name = bpy.context.scene.imagefilepaths_y[0].name
+                file_ext = os.path.splitext(example_name)[1]
+                bpy.context.scene.image_ext_Y = file_ext
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -352,9 +242,7 @@ def LoadImageFilenames(orientation) :
     sorted_filenames = sort_nicely([f for f in largest_group])
     the_filepaths = [os.path.join(path, f) for f in sorted_filenames]
 
-    # make sure imagefilepaths is empty
-    for ind in range(len(imagefilepaths)):
-        imagefilepaths.remove(ind)
+    imagefilepaths.clear()
 
     # insert into CollectionProperty
     for f in the_filepaths:
@@ -365,6 +253,12 @@ def LoadImageFilenames(orientation) :
     id_string = re.search('([0-9]+)', min_im_name)  # only searches filename, not full path
     file_min = int(id_string.group())
 
+    if(orientation == 'Z'):
+        bpy.context.scene.file_min_Z = file_min
+    elif (orientation == 'X'):
+        bpy.context.scene.file_min_X = file_min
+    elif (orientation == 'Y'):
+        bpy.context.scene.file_min_Y = file_min
 
 def sort_nicely( filenames ):
     # Sort the given list in the way that humans expect
@@ -404,7 +298,7 @@ class DisplayImageButton(bpy.types.Operator):  # adjusted
                 else:
                     self.report({'INFO'}, "Select a vertex on a mesh object")
             else:
-                self.report({'INFO'},"No image files found in the X directory")
+                self.report({'INFO'},"No image files found in the Y directory")
             if (Ny <= 0 and Nz <=0 and Nx <=0):
                 self.report({'INFO'},"No image files found in the selected directories")
         return {'FINISHED'}
@@ -418,8 +312,6 @@ def DisplayImageFunction(orientation):
     x_min = 0.0
     y_min = 0.0
     z_min = 0.0
-    scale_here = max(x_max, y_max)  # image is loaded with max dimension = 1
-    scale_vec = [scale_here, scale_here, scale_here]
 
     if(orientation == 'Z'):
         scale_here = max(x_max, y_max)  # image is loaded with max dimension = 1
@@ -472,6 +364,7 @@ def DisplayImageFunction(orientation):
     candidate_list = [item.name for item in bpy.data.objects if item.name == newName]
     for object_name in candidate_list:
        bpy.data.objects[object_name].select = True
+       delete_plane(bpy.data.objects[object_name])
     bpy.ops.object.delete()
 
     # collect selected verts
@@ -530,10 +423,13 @@ def DisplayImageFunction(orientation):
             im_ob.lock_location[1] = True # y
        elif(orientation == 'X'):
             im_ob.lock_location[2] = True # z
-            im_ob.lock_location[1] = True # y
+            im_ob.lock_location[1] = True # y            
        elif(orientation == 'Y'):
             im_ob.lock_location[0] = True # x
             im_ob.lock_location[2] = True # z
+            
+       if (bpy.context.scene.render_images):
+           create_plane(im_ob)
 
        bpy.ops.object.select_all(action='TOGGLE')
        bpy.ops.object.select_all(action='DESELECT')
@@ -542,6 +438,109 @@ def DisplayImageFunction(orientation):
     bpy.context.scene.objects.active = myob
     myob.select = True
     bpy.ops.object.mode_set(mode = 'OBJECT')
+
+def update_render_images(self, context):
+
+    im_ob_list = [item for item in bpy.data.objects if (item.name =='Image Z' or item.name =='Image X' or item.name =='Image Y')]
+    for im_ob in im_ob_list:
+       if(bpy.context.scene.render_images):
+            create_plane(im_ob)
+       else :
+            delete_plane(im_ob)   
+
+def create_plane(im_ob):
+    x_max = bpy.context.scene.x_side
+    y_max = bpy.context.scene.y_side
+    z_max = bpy.context.scene.z_side
+    if("Image Z" in im_ob.name):
+        orientation = 'Z'
+        pl_dimensions = (x_max, y_max, 0)
+        pl_location = (x_max/2, y_max/2, im_ob.location[2])
+        pl_rotation = (3.141592, 0.0, 0.0)
+        pl_name = 'Plane Z'
+        mat_name = 'Mat Z'
+        texture_name = 'Text Z'
+    elif("Image X" in im_ob.name):
+        orientation = 'X'
+        pl_dimensions = (z_max, y_max, 0)
+        pl_location = (im_ob.location[0], y_max/2, z_max/2)
+        pl_rotation = (0.0, -3.141592/2, 3.141592653)
+        pl_name = 'Plane X'
+        mat_name = 'Mat X'
+        texture_name = 'Text X'
+    elif("Image Y" in im_ob.name):
+        orientation = 'Y'
+        pl_dimensions = (x_max, z_max, 0)
+        pl_location = (x_max/2, im_ob.location[1], z_max/2)
+        pl_rotation = (-3.141592/2, 0.0, 0.0)
+        pl_name = 'Plane Y'
+        mat_name = 'Mat Y'
+        texture_name = 'Text Y'
+
+    #Deselecting all object before creating the parent links
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.ops.mesh.primitive_plane_add(location=pl_location, rotation=pl_rotation)
+    pl_ob = bpy.context.active_object
+    bpy.context.scene.objects.active = im_ob
+    isImageVisible = im_ob.hide
+    if (isImageVisible):
+        #If the image is not displayed, the parent_set function fail
+        im_ob.hide = False
+    #pl_ob.parent = im_ob
+    bpy.ops.object.parent_set(keep_transform=True, type='OBJECT')
+    pl_ob.dimensions = pl_dimensions
+    pl_ob.lock_location[0] = True # x
+    pl_ob.lock_location[1] = True # y
+    pl_ob.lock_location[2] = True # y
+    pl_ob.name = pl_name
+    pl_ob.hide = True
+    pl_ob.select = False
+    if (isImageVisible):
+        im_ob.hide = True
+
+    #Creating it's associated texture and material
+    pl_ob.data.uv_textures.new()
+    cTex = bpy.data.textures.new(texture_name, type = 'IMAGE')
+
+
+    mat = bpy.data.materials.new(mat_name)
+    mat.use_shadeless = True
+
+    mtex = mat.texture_slots.add()
+    mtex.texture = cTex
+    mtex.texture_coords = 'UV'
+    mtex.mapping = 'FLAT'
+    pl_ob.data.materials.append(mat)
+    
+    
+def delete_plane(im_ob):
+    selected_ob = bpy.context.selected_objects
+
+    bpy.ops.object.select_all(action='DESELECT')
+    ob_hadPlane = False
+    childs = im_ob.children
+    for child in childs:
+        if ('Plane ' in child.name):
+            child.select = True
+            child.hide = False
+            ob_hadPlane = True
+    bpy.ops.object.delete()
+
+    if ob_hadPlane:
+        if ('Image Z' in im_ob.name):
+            mat = bpy.data.materials['Mat Z']
+            text = bpy.data.textures['Text Z']
+        elif ('Image X' in im_ob.name):
+            mat = bpy.data.materials['Mat X']
+            text = bpy.data.textures['Text X']
+        elif ('Image Y' in im_ob.name):
+            mat = bpy.data.materials['Mat Y']
+            text = bpy.data.textures['Text Y']
+        bpy.data.materials.remove(mat) 
+        bpy.data.textures.remove(text)  
+
+    for ob in selected_ob:
+        ob.select = True
 
 class ImageScrollOperator(bpy.types.Operator):
     """Scroll through image stack from selected image with mouse scroll wheel"""
@@ -668,9 +667,11 @@ def getIndex(im_ob):
     return (ind, N, delta, orientation, image_files, locs)
 
 
+#A handler that call the function after each time the scene is updated.
+# (add as handler in the register function)
 @persistent
 def print_updated_objects(scene):
-    """Called after that the scene is updated. It look for the updated images and
+    """Called when that the scene is updated. It look for the updated images and
     load the image corresponding to it's actual location."""
     for im_ob in scene.objects:
         # Search for the updated objects
@@ -679,10 +680,56 @@ def print_updated_objects(scene):
             if (im_ob.name in ["Image Z","Image X","Image Y"]):
                 (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
                 load_im(ind, image_files, im_ob, orientation)
+                if (im_ob.name == "Image Z"): 
+                    im_ob.location.z = locs[ind]
+                elif (im_ob.name == "Image X"):
+                    im_ob.location.x = locs[ind]
+                elif (im_ob.name == "Image Y"):
+                    im_ob.location.y = locs[ind]
 
 
-#The handler that call the function after each time the scene is updated.
-bpy.app.handlers.scene_update_post.append(print_updated_objects)
+
+# (add as handler in the register function)
+@persistent
+def set_image_for_frame(scene):
+    """Do the same thing as print_updated_objects, when rendering plane is
+checked. Set also the texture of the planes.
+    """
+    if(bpy.context.scene.render_images):
+        for im_ob in scene.objects:
+            if (im_ob.name in ["Image Z","Image X","Image Y"]):
+                (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
+                load_im(ind, image_files, im_ob, orientation)
+                if (im_ob.name == "Image Z"): 
+                    im_ob.location.z = locs[ind]
+                elif (im_ob.name == "Image X"):
+                    im_ob.location.x = locs[ind]
+                elif (im_ob.name == "Image Y"):
+                    im_ob.location.y = locs[ind]
+                set_texture(im_ob)
+                
+#A handler to change light property when the script is loaded
+def setLight(scene):
+    bpy.context.scene.world.light_settings.use_environment_light = True
+    #And we remove the handler just after we set the light on
+    bpy.app.handlers.scene_update_post.remove(setLight)
+
+# Same Handler that is called when a new blend file is loaded
+@persistent
+def setLightLoad(scene):
+    bpy.context.scene.world.light_settings.use_environment_light = True
+
+def set_texture(im_ob):
+    for child in im_ob.children:
+        if child.name == 'Plane Z':
+            child.data.uv_textures[0].data[0].image = im_ob.data
+            child.data.materials['Mat Z'].texture_slots['Text Z'].texture.image = im_ob.data
+        elif child.name == 'Plane X':
+            child.data.uv_textures[0].data[0].image = im_ob.data
+            child.data.materials['Mat X'].texture_slots['Text X'].texture.image = im_ob.data
+        elif child.name == 'Plane Y':
+            child.data.uv_textures[0].data[0].image = im_ob.data
+            child.data.materials['Mat Y'].texture_slots['Text Y'].texture.image = im_ob.data
 
 class PointOperator(bpy.types.Operator):
     """Display grid on selected image for object point selection"""
@@ -961,7 +1008,7 @@ def pointInsideMesh(point,ob):
     outside = False
     count = 0
     for axis in axes:  # send out rays, if cross this object in every direction, point is inside
-        location,normal,index = ob.ray_cast(orig,orig+axis*max_dist)  # this will error if ob is in a different layer
+        result,location,normal,index = ob.ray_cast(orig,orig+axis*max_dist)  # this will error if ob is in a different layer
         if index != -1:
             count = count+1
 
@@ -969,7 +1016,7 @@ def pointInsideMesh(point,ob):
     ob.hide = this_visibility
 
     bpy.context.scene.update()
-
+    
     if count<6:
         return False
     else: 
@@ -1078,16 +1125,161 @@ class RemTranspButton(bpy.types.Operator):
 def register():
     bpy.utils.register_module(__name__)
     km = bpy.context.window_manager.keyconfigs.active.keymaps['3D View']
-    kmi = km.keymap_items.new(ImageScrollOperator.bl_idname, 'Y', 'PRESS', ctrl=True)
+    kmi = km.keymap_items.new(ImageScrollOperator.bl_idname, 'Y', 'PRESS', ctrl=True) 
+
+    bpy.app.handlers.scene_update_post.append(setLight)
+    bpy.app.handlers.load_post.append(setLightLoad)
+    bpy.app.handlers.frame_change_post.append(set_image_for_frame)
+    bpy.app.handlers.scene_update_post.append(print_updated_objects)
+
+    # Define properties
+    bpy.types.Scene.x_side = bpy.props.FloatProperty \
+          (
+            name = "x",
+            description = "x-dimension of image stack (microns)",
+            default = 1
+          )
+    bpy.types.Scene.y_side = bpy.props.FloatProperty \
+          (
+            name = "y",
+            description = "y-dimension of image stack (microns)",
+            default = 1
+          )
+    bpy.types.Scene.z_side = bpy.props.FloatProperty \
+          (
+            name = "z",
+            description = "z-dimension of image stack (microns)",
+            default = 1
+          )
+
+    bpy.types.Scene.image_ext_Z = bpy.props.StringProperty \
+          (
+            name = "extZ",
+            description = "Image Extension Z",
+            default = ".tif"
+          )
+
+    bpy.types.Scene.image_ext_X = bpy.props.StringProperty \
+            (
+            name = "extX",
+            description = "Image Extension X",
+            default = ".tif"
+        )
+
+    bpy.types.Scene.image_ext_Y = bpy.props.StringProperty \
+            (
+            name="extY",
+            description="Image Extension Y",
+            default=".tif"
+        )
+
+    bpy.types.Scene.image_path_Z = bpy.props.StringProperty \
+          (
+            name = "Source_Z",
+            description = "Location of images in the stack Z",
+            default = "/"
+          )
+
+    bpy.types.Scene.image_path_X = bpy.props.StringProperty \
+            (
+            name = "Source_X",
+            description = "Location of images in the stack X",
+            default = "/"
+        )
+
+    bpy.types.Scene.image_path_Y = bpy.props.StringProperty \
+            (
+            name="Source_Y",
+            description="Location of images in the stack Y",
+            default="/"
+        )
+
+    bpy.types.Scene.x_grid = bpy.props.IntProperty \
+          (
+            name = "nx",
+            description = "Number of grid points in x",
+            default = 50
+          )
+
+    bpy.types.Scene.y_grid = bpy.props.IntProperty \
+          (
+            name = "ny",
+            description = "Number of grid points in y",
+            default = 50
+          )
+
+    bpy.types.Scene.z_grid = bpy.props.IntProperty \
+          (
+            name = "nz",
+            description = "Number of grid points in z",
+            default = 50
+          )
+
+    bpy.types.Scene.file_min_Z = bpy.props.IntProperty \
+          (
+            name = "file_min_Z",
+            description = "min Z file number",
+            default = 0
+          )
+    bpy.types.Scene.file_min_X = bpy.props.IntProperty \
+            (
+            name = "file_min_X",
+            description = "min X file number",
+            default=0
+        )
+    bpy.types.Scene.file_min_Y = bpy.props.IntProperty \
+            (
+            name="file_min_Y",
+            description="min Y file number",
+            default=0
+        )
+
+    bpy.types.Scene.shift_step = bpy.props.IntProperty \
+            (
+            name="Shift step",
+            description="Step size for scrolling through image stack while holding shift",
+            default=10
+        )
     
-   
+    bpy.types.Scene.render_images = bpy.props.BoolProperty \
+            (
+            name="Render Images",
+            description="Set on true, it will create planes with the images as textures.",
+            default=False,
+            update=update_render_images
+        )
+
+    bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+    bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+    bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
 def unregister():
     bpy.utils.unregister_module(__name__)
+
+    bpy.app.handlers.scene_update_post.remove(print_updated_objects)
+    bpy.app.handlers.frame_change_post.remove(set_image_for_frame)
+    bpy.app.handlers.load_post.remove(setLightLoad)
+
+    del bpy.types.Scene.x_side
+    del bpy.types.Scene.y_side
+    del bpy.types.Scene.z_side
+    del bpy.types.Scene.image_ext_X
+    del bpy.types.Scene.image_ext_Y
+    del bpy.types.Scene.image_ext_Z
+    del bpy.types.Scene.image_path_X
+    del bpy.types.Scene.image_path_Y
+    del bpy.types.Scene.image_path_Z
+    del bpy.types.Scene.x_grid
+    del bpy.types.Scene.y_grid
+    del bpy.types.Scene.z_grid
+    del bpy.types.Scene.file_min_X
+    del bpy.types.Scene.file_min_Y
+    del bpy.types.Scene.file_min_Z
+    del bpy.types.Scene.shift_step
+    del bpy.types.Scene.render_images
     del bpy.types.Scene.imagefilepaths_x
     del bpy.types.Scene.imagefilepaths_y
     del bpy.types.Scene.imagefilepaths_z
-
 
 if __name__ == "__main__":
     register()
