@@ -1,4 +1,4 @@
-#    NeuroMorph_Synapse_Density.py (C) 2015,  Anne Jorstad
+#    NeuroMorph_Vesicle_Distance.py (C) 2015,  Anne Jorstad
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -14,10 +14,10 @@
 #    along with this program.  If not, see http://www.gnu.org/licenses/
 
 bl_info = {  
-    "name": "NeuroMorph Synapse Vesicle Density",
-    "author": "Anne Jorstad, Csaba Botos",
-    "version": (1, 1, 0),
-    "blender": (2, 7, 5),
+    "name": "NeuroMorph Synapse Vesicle Distances",
+    "author": "Anne Jorstad",
+    "version": (1, 2, 0),
+    "blender": (2, 7, 7),
     "location": "View3D > Vesicle to Synapse Distances",
     "description": "Calculate distances from vesicles to a synapse",
     "warning": "",  
@@ -38,41 +38,36 @@ import copy
 import numpy as np  # must have Blender > 2.7
 
 
+# Define scene variables
+bpy.types.Scene.filename = bpy.props.StringProperty \
+    (
+        name = "Output file", 
+        description = "Set file name and path for output data", 
+        default = "/"
+    )
+
+
 # Define the panel
-class SuperimposePanel(bpy.types.Panel):
+class VesicleDistancePanel(bpy.types.Panel):
     bl_label = "Vesicle to Synapse Distances"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
+    # bl_category = "NeuroMorph"
 
     def draw(self, context):
 
-        row = self.layout.row()
-        row.operator("scene.set_synapse", text='Set Synapse to Highlighted Object')
+        row = self.layout.row(align=True)
+        row.prop(context.scene, "filename")
+        row.operator("file.set_filename", text='', icon='FILESEL')
 
         row = self.layout.row()
-        self.layout.prop(context.scene, 'vesicle_prefix')
-
-        row = self.layout.row()
-        row.operator("file.set_vesicle_filename", text='Set File Name and Path for Export', icon='FILESEL')
-
-        row = self.layout.row()
-        row.operator("object.get_density", text='Calculate Distances')
+        row.operator("object.get_distances", text='Calculate Distances to Active Object')
 
 
-class SetSynapse(bpy.types.Operator):
-    """Define the synapse to be used for distance calculations (highlight the object, then click here)"""
-    bl_idname = "scene.set_synapse"
-    bl_label = "Define the synapse to be used"
-    
-    def execute(self, context):
-        bpy.types.Scene.the_synapse = bpy.context.object
-        return {'FINISHED'}
-
-
-
+# Define file name and path for export
 class DefineFile(bpy.types.Operator):
-    """Define file name and path for distance measurement export."""
-    bl_idname = "file.set_vesicle_filename"
+    """Define file name and path for distance measurement export"""
+    bl_idname = "file.set_filename"
     bl_label = "Define file path and name"
 
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
@@ -83,7 +78,7 @@ class DefineFile(bpy.types.Operator):
         filename = self.filename
         fname = filename + '.csv'
         full_filename = os.path.join(directory, fname)
-        bpy.types.Scene.filename = full_filename
+        bpy.context.scene.filename = full_filename
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -92,13 +87,14 @@ class DefineFile(bpy.types.Operator):
         return {"RUNNING_MODAL"}
 
 
-def write_density_data(dists, all_vesicles, synapse_name, mean_dist):
+# Write distances data to file
+def write_distance_data(dists, all_vesicles, synapse_name, mean_dist):
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
     filename = bpy.props.StringProperty(subtype="FILE_NAME")
-    full_filename = bpy.types.Scene.filename
+    full_filename = bpy.context.scene.filename
 
     f = open(full_filename, 'w')
-    f.write('Vesicle Name,Distance to Synapse,' + synapse_name + '\n\n')
+    f.write('Vesicle Name,Distance to ' + synapse_name + '\n\n')
 
     for ind, d in enumerate(dists):
         f.write(all_vesicles[ind].name + "," + str(d) + '\n')
@@ -108,33 +104,20 @@ def write_density_data(dists, all_vesicles, synapse_name, mean_dist):
     f.close()
 
 
-
+# Calculate distance from center of every child object to the active object, and write file
 class CalculateVesicleDistances(bpy.types.Operator):
-    """Calculate density of all vesicles relative to the synapse (might require all objects to be in the same layer)"""
-    # this might only work if all objects are in the same layer
-    bl_idname = "object.get_density"
-    bl_label = "Calculate distances of all vesicles to the synapse"
+    """Calculate distance of all child vesicles to the active synapse"""
+    bl_idname = "object.get_distances"
+    bl_label = "Calculate distances of all child vesicles to the selected synapse"
     
     def execute(self, context):
 
-        if hasattr(bpy.types.Scene.the_synapse, 'name'):
-            the_synapse = bpy.types.Scene.the_synapse
-        else:
-            self.report({'ERROR'}, 'Synapse not assigned.  First set synapse object.')
-            return {'FINISHED'}
+        # Assign objects considered here
+        the_synapse = bpy.context.object
+        all_vesicles = the_synapse.children
 
-        vesicle_prefix = context.scene.vesicle_prefix
-
-        # Extract the synapse and list of all vesicles
-        len_vstr = len(vesicle_prefix)
-        all_vesicles = []
-        for obj in bpy.data.objects:
-            this_name = obj.name
-            if this_name[0:len_vstr] == vesicle_prefix:
-                all_vesicles.append(obj)
-
-        if len(all_vesicles) == 0:
-            self.report({'ERROR'}, 'No objects were found with the prefix "' + vesicle_prefix + '".')
+        if all_vesicles == ():
+            self.report({'ERROR'}, 'Active object has no children.')
             return {'FINISHED'}
 
         # Calculate center coordinates of each vesicle
@@ -170,7 +153,7 @@ class CalculateVesicleDistances(bpy.types.Operator):
         # mean_3D = [sum(col) / float(len(col)) for col in zip(*dists)]
 
         # Write file containing all distances and mean
-        write_density_data(dists, all_vesicles, the_synapse.name, mean_dist)
+        write_distance_data(dists, all_vesicles, the_synapse.name, mean_dist)
 
         return {'FINISHED'}
 
@@ -181,20 +164,12 @@ def get_dist_sq(coord1, coord2):  # distance is monotonic, take square root at e
     return d
 
 
+
 def register():
     bpy.utils.register_module(__name__)
 
-    bpy.types.Scene.the_synapse = []
-    bpy.types.Scene.vesicle_prefix = StringProperty(name = "Vesicle Prefix", default="vesicle")
-    bpy.types.Scene.filename = StringProperty(name = "File name and path", default="/synapse_distances.csv")
-
 def unregister():
     bpy.utils.unregister_module(__name__)
-
-    del bpy.types.Scene.the_synapse
-    del bpy.types.Scene.vesicle_prefix
-    del bpy.types.Scene.filename
-
 
 
 if __name__ == "__main__":
