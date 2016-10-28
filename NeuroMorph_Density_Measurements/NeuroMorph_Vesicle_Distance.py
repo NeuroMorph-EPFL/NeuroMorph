@@ -52,7 +52,7 @@ class VesicleDistancePanel(bpy.types.Panel):
     bl_label = "Vesicle to Synapse Distances"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
-    # bl_category = "NeuroMorph"
+    bl_category = "NeuroMorph"
 
     def draw(self, context):
 
