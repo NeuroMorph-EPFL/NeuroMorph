@@ -41,6 +41,7 @@ class SuperimposePanel(bpy.types.Panel):
     bl_label = "Image Stack Interactions"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
+    bl_category = "NeuroMorph"
 
     def draw(self, context):
         self.layout.label("--Display Images from Stack--")
