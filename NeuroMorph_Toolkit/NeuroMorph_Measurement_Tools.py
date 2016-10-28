@@ -1296,26 +1296,28 @@ class MeasurementToolsPanel(bpy.types.Panel):
 
 
 def register():
-    # create panel on left
-    bpy.utils.register_class(GetComputePanel)
+    # # create panel on left
+    # bpy.utils.register_class(MeasurementToolsPanel)
     
-    # the classes are registered here, but not executed until the buttons are pushed
-    bpy.utils.register_class(Create_Submesh)
-    bpy.utils.register_class(Create_Closed_Submesh)
-    bpy.utils.register_class(Create_Both_Meshes)
-    bpy.utils.register_class(Create_Whole_Surfaces)
-    bpy.utils.register_class(Adjust_scene_scale)
-    bpy.utils.register_class(Update_Name)
-    bpy.utils.register_class(Remesh_Object)
-    bpy.utils.register_class(WriteData)
-    bpy.utils.register_class(DeleteChildren)
-    bpy.utils.register_class(Write_Selected_Data)
-    bpy.utils.register_class(ClearAllVertices)
-    bpy.utils.register_class(CreateCurve)
-    bpy.utils.register_class(CreatePath)
-    bpy.utils.register_class(GetVertex)
-    bpy.utils.register_class(VertexListItem)
-    bpy.utils.register_class(PropertyPanel_geometry)
+    # # the classes are registered here, but not executed until the buttons are pushed
+    # bpy.utils.register_class(Create_Submesh)
+    # bpy.utils.register_class(Create_Closed_Submesh)
+    # bpy.utils.register_class(Create_Both_Meshes)
+    # bpy.utils.register_class(Create_Whole_Surfaces)
+    # bpy.utils.register_class(Adjust_scene_scale)
+    # bpy.utils.register_class(Update_Name)
+    # bpy.utils.register_class(Remesh_Object)
+    # bpy.utils.register_class(WriteData)
+    # bpy.utils.register_class(DeleteChildren)
+    # bpy.utils.register_class(Write_Selected_Data)
+    # bpy.utils.register_class(ClearAllVertices)
+    # bpy.utils.register_class(CreateCurve)
+    # bpy.utils.register_class(CreatePath)
+    # bpy.utils.register_class(GetVertex)
+    # bpy.utils.register_class(VertexListItem)
+    # bpy.utils.register_class(PropertyPanel_geometry)
+
+    bpy.utils.register_module(__name__)
 
     # define new properties
     bpy.types.Scene.float_scale = FloatProperty(name = "scale", default = 1.0, min = 10**-20)
@@ -1361,24 +1363,26 @@ def register():
 
 
 def unregister():
-    global global_name
-    bpy.utils.unregister_class(GetComputePanel)
-    bpy.utils.unregister_class(Create_Submesh)
-    bpy.utils.unregister_class(Create_Closed_Submesh)
-    bpy.utils.unregister_class(Create_Both_Meshes)
-    bpy.utils.unregister_class(Create_Whole_Surfaces)
-    bpy.utils.unregister_class(Adjust_scene_scale)
-    bpy.utils.unregister_class(Update_Name)
-    bpy.utils.unregister_class(Remesh_Object)
-    bpy.utils.unregister_class(WriteData)
-    bpy.utils.unregister_class(DeleteChildren)
-    bpy.utils.unregister_class(Write_Selected_Data)
-    bpy.utils.unregister_class(ClearAllVertices)
-    bpy.utils.unregister_class(CreateCurve)
-    bpy.utils.unregister_class(CreatePath)
-    bpy.utils.unregister_class(GetVertex)
-    bpy.utils.unregister_class(VertexListItem)
-    bpy.utils.unregister_class(PropertyPanel_geometry)
+    # global global_name
+    # bpy.utils.unregister_class(MeasurementToolsPanel)
+    # bpy.utils.unregister_class(Create_Submesh)
+    # bpy.utils.unregister_class(Create_Closed_Submesh)
+    # bpy.utils.unregister_class(Create_Both_Meshes)
+    # bpy.utils.unregister_class(Create_Whole_Surfaces)
+    # bpy.utils.unregister_class(Adjust_scene_scale)
+    # bpy.utils.unregister_class(Update_Name)
+    # bpy.utils.unregister_class(Remesh_Object)
+    # bpy.utils.unregister_class(WriteData)
+    # bpy.utils.unregister_class(DeleteChildren)
+    # bpy.utils.unregister_class(Write_Selected_Data)
+    # bpy.utils.unregister_class(ClearAllVertices)
+    # bpy.utils.unregister_class(CreateCurve)
+    # bpy.utils.unregister_class(CreatePath)
+    # bpy.utils.unregister_class(GetVertex)
+    # bpy.utils.unregister_class(VertexListItem)
+    # bpy.utils.unregister_class(PropertyPanel_geometry)
+    bpy.utils.unregister_module(__name__)
+
     del bpy.types.Scene.float_scale
     del bpy.types.Scene.remesh_octree_depth
     del bpy.types.Object.string_name
