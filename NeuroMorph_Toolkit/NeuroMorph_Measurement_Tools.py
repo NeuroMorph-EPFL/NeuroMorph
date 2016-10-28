@@ -1,4 +1,4 @@
-#    NeuroMorph_Measurements.py (C) 2014,  Anne Jorstad, Biagio Nigro, Diego Marcos
+#    NeuroMorph_Measurements.py (C) 2016,  Anne Jorstad, Biagio Nigro, Diego Marcos
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@ bl_info = {
     "name": "NeuroMorph Measurement Tools:  Submesh Volume, Surface Area, and Length",
     "description": "Calculates the surface area, volume, and length of user-determined subregions of meshes",
     "author": "Anne Jorstad, Biagio Nigro, Diego Marcos",
-    "version": (1, 2, 4),
+    "version": (1, 2, 5),
     "blender": (2, 7, 5),
     "location": "View3D > Add > Mesh",
     "warning": "",
@@ -1146,48 +1146,49 @@ def set_name(self, value):
     return
 
 
-class DeleteChildren(bpy.types.Operator):
-    """Delete child objects of selected object (parent must be visible)"""
-    bl_idname = "mesh.delete_all_children"
-    bl_label = "Delete all child objects"
-    bl_options = {"REGISTER", "UNDO"}
+# class DeleteChildren(bpy.types.Operator):
+#     """Delete child objects of selected object (parent must be visible)"""
+#     bl_idname = "mesh.delete_all_children"
+#     bl_label = "Delete all child objects"
+#     bl_options = {"REGISTER", "UNDO"}
     
-    def execute(self, context):
+#     def execute(self, context):
                      
       
-      if bpy.ops.object.mode_set.poll():
-           bpy.ops.object.mode_set(mode='OBJECT')  
-      #   
-      objlist = [item for item in bpy.context.selected_objects if item.parent==None and item.type=="MESH"]   
+#       if bpy.ops.object.mode_set.poll():
+#            bpy.ops.object.mode_set(mode='OBJECT')  
+#       #   
+#       objlist = [item for item in bpy.context.selected_objects if item.parent==None and item.type=="MESH"]   
       
           
-      bpy.ops.object.select_all(action='DESELECT')
-      for obj in objlist:
+#       bpy.ops.object.select_all(action='DESELECT')
+#       for obj in objlist:
           
-          bpy.context.scene.objects.active = obj
-             #mt = bpy.context.active_object
-          if obj.children!=None:
+#           bpy.context.scene.objects.active = obj
+#              #mt = bpy.context.active_object
+#           if obj.children!=None:
                     
-            childlist=obj.children
-            obj.select=False
-            for child in childlist:
+#             childlist=obj.children
+#             obj.select=False
+#             for child in childlist:
                   
-                  if child.hide==True:
-                     child.hide=False
+#                   if child.hide==True:
+#                      child.hide=False
                                
-                  if child.select==False:
-                     child.select=True
-                  bpy.context.scene.objects.active = child  
-                  #obj.select=False
-                  bpy.ops.object.delete() 
-      return {'FINISHED'}
+#                   if child.select==False:
+#                      child.select=True
+#                   bpy.context.scene.objects.active = child  
+#                   #obj.select=False
+#                   bpy.ops.object.delete() 
+#       return {'FINISHED'}
 
 
 # create a button on the left that executes Create_new_obj when clicked
-class GetComputePanel(bpy.types.Panel):
+class MeasurementToolsPanel(bpy.types.Panel):
     bl_label = "Measurement Tools"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
+    bl_category = "NeuroMorph"
 
 #    bl_region_type = "UI"
     def draw(self, context):
@@ -1287,8 +1288,10 @@ class GetComputePanel(bpy.types.Panel):
         colR = split.column()
         colL.prop(scn, 'float_scale')
         colR.operator("mesh.adjust_scale", text = "Apply Scale")
-        row = layout.row()
-        layout.operator("mesh.delete_all_children", text = "Delete All Children")
+
+        # # Added to Parent-Child Relationship tool
+        # row = layout.row()
+        # layout.operator("mesh.delete_all_children", text = "Delete All Children")
 
 
 
