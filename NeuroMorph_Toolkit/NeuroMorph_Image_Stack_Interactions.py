@@ -46,6 +46,12 @@ class SuperimposePanel(bpy.types.Panel):
     def draw(self, context):
         self.layout.label("--Display Images from Stack--")
 
+        self.layout.label("Image Stack Dimensions (microns):")
+        row = self.layout.row()
+        row.prop(context.scene , "x_side")
+        row.prop(context.scene , "y_side")
+        row.prop(context.scene , "z_side")
+
         row = self.layout.row(align=True)
         row.prop(context.scene, "image_path_X")
         row.operator("importfolder_x.tif", text='', icon='FILESEL')
@@ -57,13 +63,12 @@ class SuperimposePanel(bpy.types.Panel):
         row = self.layout.row(align=True)
         row.prop(context.scene, "image_path_Z")
         row.operator("importfolder_z.tif", text='', icon='FILESEL')
-
-        self.layout.label("Image Stack Dimensions (microns):")
-        row = self.layout.row()
-        row.prop(context.scene , "x_side")
-        row.prop(context.scene , "y_side")
-        row.prop(context.scene , "z_side")
         
+        split = self.layout.row().split(percentage=0.6)  # percentage=0.53
+        colL = split.column()
+        colR = split.column()
+        colR.operator("object.clear_images", text='Clear Images')
+
         row = self.layout.row()
         row.operator("superimpose.tif", text='Show Images at Vertex')
 
@@ -105,6 +110,35 @@ class SuperimposePanel(bpy.types.Panel):
              row.prop(mat, "diffuse_color", text="")
 
 
+
+class ClearImages(bpy.types.Operator):
+    """Clear all images in memory (necessary if new image folder contains same names as previous folder)"""
+    bl_idname = "object.clear_images"
+    bl_label = "Clear all images in memory (necessary if new image folder contains same names as previous folder)"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        bpy.ops.object.select_all(action='DESELECT')
+        im_ob_list = [ob for ob in bpy.context.scene.objects if ob.name == "Image"]
+        if len(im_ob_list) > 0:  # delete it
+            for im_ob in im_ob_list:
+                bpy.context.scene.objects.active = im_ob
+                im_ob.select = True
+                bpy.ops.object.delete()
+
+            # Activate an object so other functions have appropriate modes
+            ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide == False][0]
+            bpy.context.scene.objects.active = ob_0
+            ob_0.select = True
+
+        for f in bpy.data.images:
+            f.user_clear()
+            bpy.data.images.remove(f)
+        return {'FINISHED'}
+
+
+
+
 def active_node_mat(mat):
     # TODO, 2.4x has a pipeline section, for 2.5 we need to communicate
     # which settings from node-materials are used
@@ -126,12 +160,6 @@ class SelectStackFolderZ(bpy.types.Operator):  # adjusted
     def execute(self, context):
         if bpy.context.scene.image_path_Z != self.directory:
             bpy.context.scene.image_path_Z = self.directory
-
-            # clear out images in blender memory
-            # (else display errors possible if previously loaded file of same name from different stack)
-            for f in bpy.data.images:
-                f.user_clear()
-                bpy.data.images.remove(f)
 
             # load image filenames and extract file extension
             LoadImageFilenames('Z')
@@ -160,12 +188,6 @@ class SelectStackFolderX(bpy.types.Operator):  # adjusted
         if bpy.context.scene.image_path_X != self.directory:
             bpy.context.scene.image_path_X = self.directory
 
-            # clear out images in blender memory
-            # (else display errors possible if previously loaded file of same name from different stack)
-            for f in bpy.data.images:
-                f.user_clear()
-                bpy.data.images.remove(f)
-
             # load image filenames and extract file extension
             LoadImageFilenames('X')
             if len(bpy.context.scene.imagefilepaths_x) < 1:
@@ -192,12 +214,6 @@ class SelectStackFolderY(bpy.types.Operator):  # adjusted
     def execute(self, context):
         if bpy.context.scene.image_path_Y != self.directory:
             bpy.context.scene.image_path_Y = self.directory
-
-            # clear out images in blender memory
-            # (else display errors possible if previously loaded file of same name from different stack)
-            for f in bpy.data.images:
-                f.user_clear()
-                bpy.data.images.remove(f)
 
             # load image filenames and extract file extension
             LoadImageFilenames('Y')
@@ -385,6 +401,7 @@ def DisplayImageFunction(orientation):
        bpy.ops.object.empty_add(type='IMAGE', location=vert_coordinate, rotation=(rotX,rotY,rotZ))
        im_ob = bpy.context.active_object
        im_ob.name = newName
+       im_ob.image_from_stack_interactions = True
 
        # find closest image slice to orientation-coord of vertex
        if(orientation == 'Z'):
@@ -560,6 +577,11 @@ class ImageScrollOperator(bpy.types.Operator):
 
      if bpy.context.mode == 'OBJECT':
        if (bpy.context.active_object.type=='EMPTY'):
+
+            if not bpy.context.active_object.image_from_stack_interactions:
+                self.report({'INFO'},"Image not created with this tool, use Image Stack Notation tools instead.")
+                return {'FINISHED'}
+
             im_ob = bpy.context.active_object
             (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
 
@@ -1177,21 +1199,21 @@ def register():
     bpy.types.Scene.image_path_Z = bpy.props.StringProperty \
           (
             name = "Source_Z",
-            description = "Location of images in the stack Z",
+            description = "Location of images in the stack Z (XY-plane): use this when only one image stack",
             default = "/"
           )
 
     bpy.types.Scene.image_path_X = bpy.props.StringProperty \
             (
-            name = "Source_X",
-            description = "Location of images in the stack X",
+            name = "(Source_X)",
+            description = "Location of images in the stack X (YZ-plane)",
             default = "/"
         )
 
     bpy.types.Scene.image_path_Y = bpy.props.StringProperty \
             (
-            name="Source_Y",
-            description="Location of images in the stack Y",
+            name="(Source_Y)",
+            description="Location of images in the stack Y (XZ-plane)",
             default="/"
         )
 
@@ -1254,6 +1276,8 @@ def register():
     bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
     bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
+    bpy.types.Object.image_from_stack_interactions = bpy.props.BoolProperty(name = "Image created from Stack Interactions tool", default=False)
+
 def unregister():
     bpy.utils.unregister_module(__name__)
 
@@ -1281,6 +1305,7 @@ def unregister():
     del bpy.types.Scene.imagefilepaths_x
     del bpy.types.Scene.imagefilepaths_y
     del bpy.types.Scene.imagefilepaths_z
+    del bpy.types.Object.image_from_stack_interactions
 
 if __name__ == "__main__":
     register()
