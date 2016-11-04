@@ -45,19 +45,19 @@ from bpy.types import Operator, Macro
 
 
 # Define properties
-bpy.types.Scene.x_side = bpy.props.FloatProperty \
+bpy.types.Scene.x_side_sn = bpy.props.FloatProperty \
       (
         name = "x",
         description = "x-dimension of image stack (microns)",
         default = 1
       )
-bpy.types.Scene.y_side = bpy.props.FloatProperty \
+bpy.types.Scene.y_side_sn = bpy.props.FloatProperty \
       (
         name = "y",
         description = "y-dimension of image stack (microns)",
         default = 1
       )
-bpy.types.Scene.z_side = bpy.props.FloatProperty \
+bpy.types.Scene.z_side_sn = bpy.props.FloatProperty \
       (
         name = "z",
         description = "z-dimension of image stack (microns)",
@@ -78,25 +78,17 @@ bpy.types.Scene.image_path = bpy.props.StringProperty \
         default = "/"
       )
       
-bpy.types.Scene.x_grid = bpy.props.IntProperty \
-      (
-        name = "nx",
-        description = "Number of grid points in x",
-        default = 50
-      )
-      
-bpy.types.Scene.y_grid = bpy.props.IntProperty \
-      (
-        name = "ny",
-        description = "Number of grid points in y",
-        default = 50
-      )
-
 bpy.types.Scene.file_min = bpy.props.IntProperty \
       (
         name = "file_min",
         description = "min file number",
         default = 0
+      )
+bpy.types.Scene.shift_step_sn = bpy.props.IntProperty \
+      (
+            name="Shift step",
+            description="Step size for scrolling through image stack while holding shift",
+            default=10
       )
 bpy.types.Scene.pt_radius = bpy.props.FloatProperty \
       (
@@ -140,6 +132,8 @@ bpy.types.Scene.convert_curve_on_release = bpy.props.BoolProperty \
 bpy.types.Scene.marker_prefix = StringProperty(name = "Marker Prefix", default="marker")
 bpy.types.Scene.surface_prefix = StringProperty(name = "Surface Prefix", default="surface")
 
+bpy.types.Object.image_from_stack_notation = bpy.props.BoolProperty(name = "Image created from Stack Notation tool", default=False)
+
 # bpy.types.Scene.currently_drawing = bpy.props.BoolProperty \
 #     (
 #     name = "Currently in grease pencil drawing session",
@@ -162,23 +156,30 @@ class StackNotationPanel(bpy.types.Panel):
 
         self.layout.label("Image Stack Dimensions (microns):")
         row = self.layout.row()
-        row.prop(context.scene , "x_side")
-        row.prop(context.scene , "y_side")
-        row.prop(context.scene , "z_side")
+        row.prop(context.scene , "x_side_sn")
+        row.prop(context.scene , "y_side_sn")
+        row.prop(context.scene , "z_side_sn")
 
         row = self.layout.row(align=True)
         row.prop(context.scene, "image_path")
         row.operator("importfolder.tif", text='', icon='FILESEL')
 
-        split = self.layout.row().split(percentage=0.53)
+        split = self.layout.row().split(percentage=0.6)  # percentage=0.53
         colL = split.column()
         colR = split.column()
+        colR.operator("object.clear_images_sn", text='Clear Images')
 
-        colL.operator("superimpose.tif", text='Show Image at Vertex', icon="TEXTURE")  # TEXTURE or IMAGE_DATA
+        split = self.layout.row().split(percentage=0.6)  # percentage=0.53
+        colL = split.column()
+        colR = split.column()
+        colL.operator("superimpose_sn.tif", text='Show Image at Vertex', icon="TEXTURE")  # TEXTURE or IMAGE_DATA
         colR.prop(context.scene , "center_view")
 
-        row = self.layout.row()
-        row.operator("object.modal_operator", text='Scroll Through Image Stack')
+        split = self.layout.row().split(percentage=0.6)
+        col1 = split.column()
+        col1.operator("object.modal_operator_sn", text='Scroll Through Image Stack', icon="FULLSCREEN_ENTER")
+        col2 = split.column().row()
+        col2.prop(context.scene , "shift_step_sn")
         
         # ----------------------------
         self.layout.label("---Desired Marking Precision---")
@@ -236,8 +237,8 @@ class StackNotationPanel(bpy.types.Panel):
         # ----------------------------
         self.layout.label("---Mesh Transparency---") 
         row = self.layout.row()
-        row.operator("object.add_transparency", text='Add Transparency')
-        row.operator("object.rem_transparency", text='Remove Transpanrency')
+        row.operator("object.add_transparency_sn", text='Add Transparency')
+        row.operator("object.rem_transparency_sn", text='Remove Transpanrency')
         row = self.layout.row()
         if bpy.context.object is not None:
             mat=bpy.context.object.active_material
@@ -294,18 +295,42 @@ class StackNotationPanel(bpy.types.Panel):
 #         return {'FINISHED'}
 
 
+class ClearImages_sn(bpy.types.Operator):
+    """Clear all images in memory (necessary if new image folder contains same names as previous folder)"""
+    bl_idname = "object.clear_images_sn"
+    bl_label = "Clear all images in memory (necessary if new image folder contains same names as previous folder)"
+    bl_options = {"REGISTER", "UNDO"}
 
-class ImageScrollOperator(bpy.types.Operator):
+    def execute(self, context):
+        bpy.ops.object.select_all(action='DESELECT')
+        im_ob_list = [ob for ob in bpy.context.scene.objects if ob.name == "Image"]
+        if len(im_ob_list) > 0:  # delete it
+            for im_ob in im_ob_list:
+                bpy.context.scene.objects.active = im_ob
+                im_ob.select = True
+                bpy.ops.object.delete()
+
+            # Activate an object so other functions have appropriate modes
+            ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide == False][0]
+            bpy.context.scene.objects.active = ob_0
+            ob_0.select = True
+
+        for f in bpy.data.images:
+            f.user_clear()
+            bpy.data.images.remove(f)
+        return {'FINISHED'}
+
+
+class ImageScrollOperator_sn(bpy.types.Operator):
     """Scroll through image stack from selected image with mouse scroll wheel"""
-    bl_idname = "object.modal_operator"
-    bl_label = "Simple Modal Operator"
+    bl_idname = "object.modal_operator_sn"
+    bl_label = "Modal Operator"
     bl_options = {"REGISTER", "UNDO"}
     # bl_options = {"GRAB_POINTER"}
 
-
     @classmethod
     def poll(self, context):
-        # print("in poll from ImageScrollOperator")
+        # print("in poll from ImageScrollOperator_sn")
         if bpy.context.scene.grease_pencil is not None and \
             bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
             hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
@@ -335,6 +360,11 @@ class ImageScrollOperator(bpy.types.Operator):
 
      
       if bpy.context.mode == 'OBJECT' and bpy.context.active_object.type == 'EMPTY':
+
+        if not bpy.context.active_object.image_from_stack_notation:
+            self.report({'INFO'},"Image not created with this tool, use Image Stack Interactions tools instead.")
+            return {'FINISHED'}
+
         directory = bpy.context.scene.image_path
         exte = bpy.context.scene.image_ext
         image_files = bpy.context.scene.imagefilepaths
@@ -344,14 +374,14 @@ class ImageScrollOperator(bpy.types.Operator):
         # context.scene.frame_current = self._initial_frame + self.offset
 
 
-        z_max=bpy.context.scene.z_side
+        z_max=bpy.context.scene.z_side_sn
         z_min=0
         delta_z = (z_max-z_min)/(N-1)
         z_locs = [delta_z*n for n in range(N)]  # the z locations of each image in space
         
         im_ob = bpy.context.active_object
 
-        # find closest image slice to z-coord of vertex
+        # Find index of closest image slice to z-coord of vertex
         point_z = im_ob.location.z
         min_dist=float('inf')
         for ii in range(len(z_locs)):
@@ -359,6 +389,12 @@ class ImageScrollOperator(bpy.types.Operator):
                min_dist = abs(z_locs[ii]-point_z)
                ind = ii
 
+        # If shift is pressed, the scroll step-size is increased
+        movement = 1
+        if event.shift:
+            movement = bpy.context.scene.shift_step_sn
+            if (movement <= 0):
+                movement = 1
         
         # Convert grease pencil curve on any action, if convert curve on release is checked
         if bpy.context.scene.convert_curve_on_release and \
@@ -393,16 +429,16 @@ class ImageScrollOperator(bpy.types.Operator):
         ### Specialty functionality
 
         # Scroll up and down through the image stack
-        elif event.type == 'WHEELDOWNMOUSE':  
-           ind = ind - 1
-           if ind >= 0:
-             load_im(ind, image_files, im_ob)
-             im_ob.location.z = im_ob.location.z - delta_z
+        elif event.type == 'WHEELDOWNMOUSE':
+            if ind >= movement:
+                ind = ind - movement
+                load_im_sn(ind, image_files, im_ob)
+                im_ob.location.z = im_ob.location.z - delta_z*movement
         elif event.type == 'WHEELUPMOUSE':
-           ind = ind + 1
-           if ind <= N-1:
-             load_im(ind, image_files, im_ob)
-             im_ob.location.z = im_ob.location.z + delta_z
+            if ind < N-movement:
+                ind = ind + movement
+                load_im_sn(ind, image_files, im_ob)
+                im_ob.location.z = im_ob.location.z + delta_z*movement
 
         # Mark a sphere on the image at the mouse location 
         elif event.type == 'M' and event.alt and event.value == 'PRESS':
@@ -525,14 +561,8 @@ class SelectStackFolder(bpy.types.Operator):  # adjusted
     def execute(self, context):
         bpy.context.scene.image_path = self.directory
 
-        # clear out images in blender memory
-        # (else display errors possible if previously loaded file of same name from different stack)
-        for f in bpy.data.images:
-            f.user_clear()
-            bpy.data.images.remove(f)
-
         # load image filenames and extract file extension
-        LoadImageFilenames(bpy.context.scene.image_path)
+        LoadImageFilenames_sn(bpy.context.scene.image_path)
         if len(bpy.context.scene.imagefilepaths) < 1:
             self.report({'INFO'},"No image files found in selected directory")
         else:
@@ -553,7 +583,7 @@ class SelectStackFolder(bpy.types.Operator):  # adjusted
 
 
 
-def LoadImageFilenames(path):
+def LoadImageFilenames_sn(path):
     image_file_extensions = ["png", "tif", "tiff", "bmp", "jpg", "jpeg", "tga"]  # can add others as needed
 
     # get filenames at image_path, extract filenames of type (image extension with most elements) in correct order
@@ -562,7 +592,7 @@ def LoadImageFilenames(path):
                     if os.path.splitext(f)[1].lower() == os.path.extsep+extension]
                     for extension in image_file_extensions}
     largest_group = max(grouped.values(), key=len)
-    the_filepaths = sort_nicely([os.path.join(path, f) for f in largest_group])
+    the_filepaths = sort_nicely_sn([os.path.join(path, f) for f in largest_group])
 
     # make sure imagefilepaths is empty
     for ind in range(len(bpy.context.scene.imagefilepaths)):
@@ -580,7 +610,7 @@ def LoadImageFilenames(path):
     bpy.context.scene.file_min = int(id_string.group())
 
 
-def sort_nicely( filenames ):
+def sort_nicely_sn( filenames ):
     # Sort the given list in the way that humans expect
     # eg 10 comes after 2, 010 comes after 10
     convert = lambda text: int(text) if text.isdigit() else text
@@ -588,9 +618,9 @@ def sort_nicely( filenames ):
     return sorted(filenames, key=alphanum_key)
 
 
-class DisplayImageButton(bpy.types.Operator):  # adjusted
+class DisplayImageButton_sn(bpy.types.Operator):  # adjusted
     """Display image plane at selected vertex"""
-    bl_idname = "superimpose.tif"
+    bl_idname = "superimpose_sn.tif"
     bl_label = "Superimpose image"
     bl_options = {"REGISTER", "UNDO"}
     
@@ -599,7 +629,7 @@ class DisplayImageButton(bpy.types.Operator):  # adjusted
             N = len(bpy.context.scene.imagefilepaths)
             if N > 0:
                 if (bpy.context.active_object.type=='MESH'):
-                    DisplayImageFunction()
+                    DisplayImageFunction_sn()
                 else:
                     self.report({'INFO'},"Select a vertex on a mesh object")
             else:
@@ -608,13 +638,13 @@ class DisplayImageButton(bpy.types.Operator):  # adjusted
   
 
 # create an empty and upload an image according to the vertical height field (z-axis)
-def DisplayImageFunction():
+def DisplayImageFunction_sn():
    image_files = bpy.context.scene.imagefilepaths
    exte = bpy.context.scene.image_ext
    N = len(image_files)
-   x_max = bpy.context.scene.x_side
-   y_max = bpy.context.scene.y_side
-   z_max = bpy.context.scene.z_side
+   x_max = bpy.context.scene.x_side_sn
+   y_max = bpy.context.scene.y_side_sn
+   z_max = bpy.context.scene.z_side_sn
    x_min = 0.0
    y_min = 0.0
    z_min = 0.0
@@ -654,6 +684,7 @@ def DisplayImageFunction():
       bpy.ops.object.empty_add(type='IMAGE', location=vert_coordinate, rotation=(3.141592653,0,0))
       im_ob = bpy.context.active_object
       im_ob.name = "Image"
+      im_ob.image_from_stack_notation = True  # denote as being created from this tool, to not be confused with Stack Interactions tool
 
       # find closest image slice to z-coord of vertex
       point_z = vert_coordinate[2]
@@ -663,7 +694,7 @@ def DisplayImageFunction():
             min_dist = abs(z_locs[ii]-point_z)
             ind = ii
 
-      load_im(ind, image_files, im_ob)
+      load_im_sn(ind, image_files, im_ob)
 
       im_ob.scale = scale_vec
       z_coord = z_locs[ind]
@@ -722,7 +753,7 @@ def add_sphere_at_loc(loc):
     bpy.context.space_data.show_manipulator = False
 
 
-def load_im(ind, image_files, im_ob):
+def load_im_sn(ind, image_files, im_ob):
 # check if image already loaded, only load new image if not
     newid = ind+bpy.context.scene.file_min
     full_path = image_files[newid].name
@@ -733,9 +764,9 @@ def load_im(ind, image_files, im_ob):
 
 
 
-class AddTranspButton(bpy.types.Operator):
+class AddTranspButton_sn(bpy.types.Operator):
     """Define transparency of selected mesh object"""
-    bl_idname = "object.add_transparency"
+    bl_idname = "object.add_transparency_sn"
     bl_label = "Add Transparency"
     bl_options = {"REGISTER", "UNDO"}
 
@@ -770,9 +801,9 @@ class AddTranspButton(bpy.types.Operator):
       return {'FINISHED'}
 
 
-class RemTranspButton(bpy.types.Operator):
+class RemTranspButton_sn(bpy.types.Operator):
     """Remove transparency of selected mesh object"""
-    bl_idname = "object.rem_transparency"
+    bl_idname = "object.rem_transparency_sn"
     bl_label = "Remove Transparency"
     bl_options = {"REGISTER", "UNDO"}
 
@@ -808,7 +839,7 @@ def insert_image_stack_ladder():
         bpy.ops.object.delete()
 
 
-    h = bpy.context.scene.z_side
+    h = bpy.context.scene.z_side_sn
     n = len(bpy.context.scene.imagefilepaths)
     d = h / (n-1)
     pts = [[0,0,z*d+d/2] for z in range(0,n)]
@@ -923,7 +954,10 @@ def draw_curve_fcn(self):
     bpy.context.area.type = "VIEW_3D"
     bpy.ops.gpencil.draw('INVOKE_REGION_WIN',mode='DRAW')
     for g in bpy.data.grease_pencil:
-        g.draw_mode = 'SURFACE'  # project drawn curves onto image plane
+        # Project drawn curves onto image plane 
+        #g.draw_mode = 'SURFACE'   # old versions of Blender
+        bpy.context.tool_settings.gpencil_stroke_placement_view3d = 'SURFACE'  # new versions of blender
+
         for lyr in g.layers:
             lyr.color = Vector([0,1,0])
             lyr.line_width = 2
@@ -970,10 +1004,11 @@ def convert_curve_fcn(self):  #, proj_z=False):
         self.report({'INFO'},"Image plane of this curve must be active")
         return {'CANCELLED'}
 
-    for g in bpy.data.grease_pencil:
-        if g.draw_mode != 'SURFACE':
-            g.draw_mode = 'SURFACE'
-            self.report({'INFO'},"Warning: Grease Pencil Drawing Settings changed to Surface mode for currect curve projection")
+    # for g in bpy.data.grease_pencil:
+    #     if g.draw_mode != 'SURFACE':
+    #         g.draw_mode = 'SURFACE'
+    #         self.report({'INFO'},"Warning: Grease Pencil Drawing Settings changed to Surface mode for currect curve projection")
+    bpy.context.tool_settings.gpencil_stroke_placement_view3d = 'SURFACE'  # new versions of blender
 
     the_image = bpy.context.object
     
@@ -1009,7 +1044,7 @@ def convert_curve_fcn(self):  #, proj_z=False):
     # Remove points with incorrect z-value, 
     # eg if drew over another curve, will project single point to height of that curve
     N = len(bpy.context.scene.imagefilepaths)
-    delta_z = bpy.context.scene.z_side / N / 2
+    delta_z = bpy.context.scene.z_side_sn / N / 2
     z_err = delta_z / 2  # arbitrary
 
     # Use median z-value as representative of curve
@@ -1071,7 +1106,7 @@ def convert_curve_fcn(self):  #, proj_z=False):
             bpy.ops.object.mode_set(mode = 'OBJECT')
 
 
-        # this_len = max(bpy.context.scene.x_side, bpy.context.scene.y_side)
+        # this_len = max(bpy.context.scene.x_side_sn, bpy.context.scene.y_side_sn)
         # thresh = this_len / 500.0  # from create_curve for remove_doubles, arbitrary
         # thresh = thresh * 5
         # count = 0
@@ -1237,7 +1272,7 @@ def get_mesh_density_threshold():
 # between mesh points, roughly based on number of vertices per image size;
 # used as parameter for remove_doubles on curves and also to define 
 # the number of intermediate cuts in the surface construction 
-    this_len = max(bpy.context.scene.x_side, bpy.context.scene.y_side)
+    this_len = max(bpy.context.scene.x_side_sn, bpy.context.scene.y_side_sn)
     npts_per_side = bpy.context.scene.scene_precision
     thresh = this_len / npts_per_side   # 0.01 or less is good
     return thresh
@@ -1417,7 +1452,7 @@ def sort_curves(self):
 
     # If diff_z < delta_z, take curves as coming from the same layer
     N = len(bpy.context.scene.imagefilepaths)
-    delta_z = bpy.context.scene.z_side / N / 2
+    delta_z = bpy.context.scene.z_side_sn / N / 2
 
     # Loop through curves, make list for each separate z-value
     # Sort curves within each z-value set, storing extreme endpts and the centerpts of each hole
@@ -1958,7 +1993,7 @@ def order_curves(crv_list):
 
 
 class LineOfBestFit_button(bpy.types.Operator):
-    """Create line of best fit through list of cuurves"""
+    """Create line of best fit through list of curves"""
     bl_idname = "object.line_of_best_fit"
     bl_label = "Create line of best fit"
     bl_options = {"REGISTER", "UNDO"}
@@ -1969,7 +2004,7 @@ class LineOfBestFit_button(bpy.types.Operator):
         ind = -1
         last_z = -100
         N = len(bpy.context.scene.imagefilepaths)
-        delta_z = bpy.context.scene.z_side / N / 2
+        delta_z = bpy.context.scene.z_side_sn / N / 2
         for obj in objs:
         #for ind, obj in enumerate(objs):
             if obj.select and hasattr(obj, 'data'):
@@ -2164,7 +2199,7 @@ def LoBF_code(xs, ys, z, npts, add_LoBF_to_scene):
 
     # Sample the curve to generate discrete mesh
     xmin_im = 0
-    xmax_im = bpy.context.scene.x_side
+    xmax_im = bpy.context.scene.x_side_sn
     xs_line = xmin_im + (xmax_im - xmin_im)/npts * np.array(range(npts))
     ys_line = LoBF(xs_line)
     pts_LoBF = [[x,y,z] for [x,y] in zip(xs_line, ys_line)]
@@ -2271,7 +2306,7 @@ def get_closest_endpts_from_pts(L1, L2, R1, R2):
 def register():
     bpy.utils.register_module(__name__)
     km = bpy.context.window_manager.keyconfigs.active.keymaps['3D View']
-    kmi = km.keymap_items.new(ImageScrollOperator.bl_idname, 'Y', 'PRESS', ctrl=True)
+    kmi = km.keymap_items.new(ImageScrollOperator_sn.bl_idname, 'X', 'PRESS', ctrl=True)
     kmi = km.keymap_items.new(AddSphere.bl_idname, 'M', 'PRESS', alt=True)
     kmi = km.keymap_items.new(DrawCurve.bl_idname, 'D', 'PRESS', ctrl=True)
     kmi = km.keymap_items.new(EraseCurve.bl_idname, 'E', 'PRESS', ctrl=True)
