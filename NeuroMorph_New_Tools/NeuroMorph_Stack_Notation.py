@@ -949,18 +949,27 @@ class DrawCurve(bpy.types.Operator):
 def draw_curve_fcn(self):
     print("in draw_curve_fcn()")
 
+    blender_vsn = float(bpy.app.version_string[0:4])
+
     # draw closed curve with grease pencil, can erase
     original_type = bpy.context.area.type
     bpy.context.area.type = "VIEW_3D"
     bpy.ops.gpencil.draw('INVOKE_REGION_WIN',mode='DRAW')
     for g in bpy.data.grease_pencil:
         # Project drawn curves onto image plane 
-        #g.draw_mode = 'SURFACE'   # old versions of Blender
-        bpy.context.tool_settings.gpencil_stroke_placement_view3d = 'SURFACE'  # new versions of blender
+        if blender_vsn < 2.77:
+            g.draw_mode = 'SURFACE'
+        else:
+            bpy.context.tool_settings.gpencil_stroke_placement_view3d = 'SURFACE'
 
         for lyr in g.layers:
-            lyr.color = Vector([0,1,0])
-            lyr.line_width = 2
+            if blender_vsn < 2.78:
+                lyr.color = Vector([0,1,0])
+                lyr.line_width = 2
+            else:
+                lyr.tint_color = Vector([0,1,0])
+                lyr.tint_factor = 1.0
+                # should also set line_width, but is no longer a property of the layer in 2.78
             lyr.show_x_ray = False  # visibility from z-buffer, not always visible
     bpy.context.area.type = original_type
     self.report({'INFO'},"Drawing...")
