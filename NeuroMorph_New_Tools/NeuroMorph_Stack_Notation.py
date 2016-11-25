@@ -337,7 +337,7 @@ class ImageScrollOperator_sn(bpy.types.Operator):
             len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
                 print("should convert curve now, but can't modify data from poll() function...")
                 # bpy.ops.ed.undo_push(message="convert curve")
-                # convert_curve_fcn(self, False)  # "can't modify blend data in this state (drawing/rendering)""
+                # convert_curve_fcn(self)  # "can't modify blend data in this state (drawing/rendering)""
         return True  # always
 
 
@@ -358,6 +358,7 @@ class ImageScrollOperator_sn(bpy.types.Operator):
       # if hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes'):
       #   print("strokes exists")
 
+      bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
      
       if bpy.context.mode == 'OBJECT' and bpy.context.active_object.type == 'EMPTY':
 
@@ -476,18 +477,20 @@ class ImageScrollOperator_sn(bpy.types.Operator):
                 bpy.ops.ed.undo_push(message="convert curve")
                 convert_curve_fcn(self)
 
-        # Convert grease pencil curve into 3D mesh immediately after drawing completes
-        # todo:  cannot detect end of grease pencil drawing (event is eaten by grease pencil routine instead of passed on),
-        #        so this action happens on any event after grease pencil drawing is terminated (eg mouse move)
+        # # Convert grease pencil curve into 3D mesh immediately after drawing completes
+        # # todo:  cannot detect end of grease pencil drawing (event is eaten by grease pencil routine instead of passed on),
+        # #        so this action happens on any event after grease pencil drawing is terminated (eg mouse move)
         # if bpy.types.Scene.convert_curve_on_release and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':  
-        #    the above is not detected at end of grease pencil session
+        #     # the above is not detected at end of grease pencil session
+        #     print("DETECTED GP MOUSE RELEASE!!")
+        #     convert_curve_fcn(self)
         # elif bpy.context.scene.convert_curve_on_release and \
         #     bpy.context.scene.grease_pencil is not None and \
         #     bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
         #     hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
         #     len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
-        #         bpy.ops.ed.undo_push(message="convert curve")
-        #         convert_curve_fcn(self, False)
+        #         bpy.ops.ed.undo_push(message="convert curve DETECTED 2")
+        #         convert_curve_fcn(self)
 
 
         # Draw with the grease pencil and create curve on release??
@@ -944,10 +947,14 @@ class DrawCurve(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
     def execute(self, context):
         draw_curve_fcn(self)
+        bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
         return {'FINISHED'}
 
 def draw_curve_fcn(self):
     print("in draw_curve_fcn()")
+
+    # On release, leave grease pencil mode (might want to change functionality in the future)
+    bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
 
     blender_vsn = float(bpy.app.version_string[0:4])
 
@@ -956,11 +963,17 @@ def draw_curve_fcn(self):
     bpy.context.area.type = "VIEW_3D"
     bpy.ops.gpencil.draw('INVOKE_REGION_WIN',mode='DRAW')
     for g in bpy.data.grease_pencil:
+        bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
+
         # Project drawn curves onto image plane 
         if blender_vsn < 2.77:
             g.draw_mode = 'SURFACE'
         else:
             bpy.context.tool_settings.gpencil_stroke_placement_view3d = 'SURFACE'
+
+        if blender_vsn >= 2.78:
+            for plt in g.palettes:  # color of stroke while drawing
+                plt.colors[0].color = Vector([0,1,0])
 
         for lyr in g.layers:
             if blender_vsn < 2.78:
@@ -971,7 +984,8 @@ def draw_curve_fcn(self):
                 lyr.tint_factor = 1.0
                 # should also set line_width, but is no longer a property of the layer in 2.78
             lyr.show_x_ray = False  # visibility from z-buffer, not always visible
-    bpy.context.area.type = original_type
+    # bpy.context.area.type = original_type
+    bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
     self.report({'INFO'},"Drawing...")
     # bpy.context.scene.currently_drawing = True
 
