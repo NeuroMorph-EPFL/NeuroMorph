@@ -320,6 +320,8 @@ class GetSurfaceAreas(bpy.types.Operator):
         areas = []
         t0 = datetime.datetime.now()
         for ind in range(0, len(centerline.data.vertices)):
+        # for ind in range(151,155):  ####################################################################### DEBUGGING with DS09_Ms2_glutamate2 <--------
+        # for ind in range(120,180):
             print(ind)
             this_area = get_cross_sectional_area(centerline, ind, meshobj, max_rad, kd_mesh, self)
             areas.append(this_area)
@@ -474,33 +476,44 @@ def make_plane(centerline, ind, max_rad):  # ind = 50 is good test case, is extr
     # Side length half length of centerline, arbitrary
     # rad = max(2*max_rad, get_dist(centerline.data.vertices[0].co, centerline.data.vertices[-1].co) / 8)
     rad = bpy.context.scene.search_radius
+    
+    # Calculate weighted average of two prior and two next normals
+    p0 = centerline.data.vertices[ind].co
 
-    # Create plane at vertex p2
-    if ind == 0:
-        p1 = centerline.data.vertices[1].co
-        p2 = centerline.data.vertices[0].co
-        norm = p1 - p2
+    if ind == 0 or ind == 1:
+        p_1 = centerline.data.vertices[1].co
+        p_0 = centerline.data.vertices[0].co
+        norm_m1 = p_1 - p_0
+        norm_m2 = norm_m1
     else:
-        p1 = centerline.data.vertices[ind-1].co
-        p2 = centerline.data.vertices[ind].co
-        norm = p2 - p1
-    norm = Vector(norm / np.linalg.norm(norm))
+        pm1 = centerline.data.vertices[ind-1].co
+        pm2 = centerline.data.vertices[ind-2].co
+        norm_m1 = p0 - pm1
+        norm_m2 = pm1 - pm2
 
-    vsn = 2
-    if vsn == 1:
-        # rotation = [a,b,c], angles in radians:
-        #   a = rotation in xy plane clockwise from (1,0,0)
-        #   b = rotation in xz plane clockwise from (0,0,1)
-        #   c = 0
-        rot = [math.atan2(norm[1],norm[0]), math.atan2(norm[0],norm[2]), 0]  # seems slightly off...
-        bpy.ops.mesh.primitive_plane_add(location = p2, rotation = rot, radius = rad)
-        plane = bpy.context.object
+    N = len(centerline.data.vertices)
+    if ind == N-1 or ind == N-2:
+        p_N = centerline.data.vertices[N-1].co
+        p_Nm1 = centerline.data.vertices[N-2].co
+        norm_p1 = p_N - p_Nm1
+        norm_p2 = norm_p1
+    else:
+        pp1 = centerline.data.vertices[ind+1].co
+        pp2 = centerline.data.vertices[ind+2].co
+        norm_p1 = pp1 - p0
+        norm_p2 = pp2 - pp1
 
-    if vsn == 2:  # http://blender.stackexchange.com/questions/19533/align-object-to-vector-using-python
-        bpy.ops.mesh.primitive_plane_add(location = p2, radius = rad)
-        plane = bpy.context.object
-        plane.rotation_mode = 'QUATERNION'
-        plane.rotation_quaternion = norm.to_track_quat('Z','Y')
+    norm_m1 = Vector(norm_m1 / np.linalg.norm(norm_m1))
+    norm_m2 = Vector(norm_m2 / np.linalg.norm(norm_m2))
+    norm_p1 = Vector(norm_p1 / np.linalg.norm(norm_p1))
+    norm_p2 = Vector(norm_p2 / np.linalg.norm(norm_p2))
+    norm_here = (norm_m1+norm_p1+norm_m2/2+norm_p2/2) / 3
+
+    # Construct plane, assign normal
+    bpy.ops.mesh.primitive_plane_add(location = p0, radius = rad)
+    plane = bpy.context.object
+    plane.rotation_mode = 'QUATERNION'
+    plane.rotation_quaternion = norm_here.to_track_quat('Z','Y')
 
     return(plane)
 
