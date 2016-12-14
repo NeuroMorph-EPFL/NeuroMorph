@@ -226,24 +226,6 @@ class PreProcessMesh(bpy.types.Operator):
 
 
 
-# deselect all vertices
-# select non-manifold (vertices)
-# store a vertex v0 that was not selected
-# delete selected vertices
-# select all vertices
-# mesh - clean up - delete loose
-# select only vertex v0
-# select linked
-# select inverse
-# delete selected vertices
-# select all
-# select - select boundary loop
-# add - make edge/face
-# repeate until no more non-manifold vertices
-# select all faces with > 4 vertices
-# mesh - clean up - split non-planar faces, thresh_angle=0
-
-
 # Count the number of faces each vertex is a part of
 def faces_per_vertex(ob):
     faces = ob.data.polygons
@@ -252,8 +234,6 @@ def faces_per_vertex(ob):
         for v in f.vertices:
             vert_table[v] += 1
     return vert_table
-
-
 
 
 
@@ -320,8 +300,6 @@ class GetSurfaceAreas(bpy.types.Operator):
         areas = []
         t0 = datetime.datetime.now()
         for ind in range(0, len(centerline.data.vertices)):
-        # for ind in range(151,155):  ####################################################################### DEBUGGING with DS09_Ms2_glutamate2 <--------
-        # for ind in range(120,180):
             print(ind)
             this_area = get_cross_sectional_area(centerline, ind, meshobj, max_rad, kd_mesh, self)
             areas.append(this_area)
@@ -382,7 +360,7 @@ def get_cross_sectional_area(centerline, ind, meshobj, max_rad, kd_mesh, self):
         print("found ", str(len(close_pts)), " close points, expecting more;  deleting nothing")
         x = crash  # deliberatly crash
 
-    # Cut mesh at plane, create new cross sectional face (takes a couple seconds)
+    # Cut mesh at plane, create new cross sectional face (can take a couple seconds)
     bool_mod = cross_section.modifiers.new('modifier1', 'BOOLEAN')
     bool_mod.operation = 'INTERSECT'
     bool_mod.object = plane
@@ -437,7 +415,7 @@ def get_cross_sectional_area(centerline, ind, meshobj, max_rad, kd_mesh, self):
         # print("chose face with center at ", polys[cap_ind].center)
 
     else:
-        print("ERROR:  found no polys with > 6 verts, something went wrong <--------------------- investigate")
+        print("ERROR:  found no polys with > 6 verts, something went wrong <-- investigate")
         print(len(cap_inds), "/", len(cross_section.data.polygons))
         x = intentional_crash  # force crash
 
@@ -465,7 +443,7 @@ def get_cross_sectional_area(centerline, ind, meshobj, max_rad, kd_mesh, self):
     # Delete temporary plane object and mesh objects
     select_obj(plane)
     bpy.ops.object.delete()
-    select_obj(cross_section)  # todo: keep cross section as new object child 
+    select_obj(cross_section)
     bpy.ops.object.delete()
 
     return(this_area)
@@ -883,7 +861,7 @@ class LoadCenterline(bpy.types.Operator):
         if subsample_curve:
             dists = get_length_along_vert_list(verts)
             len_ctrln = dists[-1]
-            npts = bpy.context.scene.npts_centerline  # eg 300
+            npts = bpy.context.scene.npts_centerline  # eg 200
             delta = len_ctrln / (npts-1)
 
             # Sample points along centerline a distance delta apart 
@@ -901,6 +879,11 @@ class LoadCenterline(bpy.types.Operator):
             verts_sub = [verts[ind] for ind in inds_to_keep]
             rs = [rs[ind] for ind in inds_to_keep]
             ctrline_obj = construct_curve(verts_sub, "centerline")
+
+            nverts_final = len(ctrline_obj.data.vertices)
+            if (nverts_final != npts):
+                self.report({'INFO'}, "Warning:  Incorrect number of centerline points created, try a different number.")
+                print("Warning:  Incorrect number of centerline points created, try a different number.")
             
         else:
             ctrline_obj = construct_curve(verts, "centerline")
@@ -986,13 +969,7 @@ class WriteCtrlineData(bpy.types.Operator):
             self.report({'INFO'}, "Selected object has no radius data.")
             return {'FINISHED'}
 
-        # Convert to global coords
         convert_to_global_coords()
-        # # bpy.ops.object.select_all(action='DESELECT')
-        # # bpy.context.scene.objects.active = centerline
-        # # centerline.select = True  # necessary
-        # select_obj(centerline)
-        # bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
         lengths = get_length_along_crv(centerline)
         radii = CollectionProperty2list(centerline.centerline_min_radii, True)
@@ -1039,157 +1016,3 @@ def unregister():
     bpy.utils.unregister_module(__name__)
 
 
-
-
-
-
-
-
-### old code
-# import pandas as pd  # not in Blender
-        # dataframe = pd.read_csv('CenterlineCoordinates.csv', sep=',')
-        # xs = dataframe[['Points:0']]
-        # ys = dataframe[['Points:1']]
-        # zs = dataframe[['Points:2']]
-        # rs = dataframe[['MaximumInscribedSphereRadius']]
-        # ctrline_obj = construct_curve(xs, ys, zs)
-
-# def construct_curve(xs, ys, zs):
-    # verts = [[xs[ii], ys[ii], zs[ii]] for ii in range(0,len(xs))]
-
-# # Optional:  Process curve points to be more evenly spaced
-        # pts_per_dist = 1000  # very arbitrary
-        # p0 = ctrline_obj.data.vertices[0]
-        # p1 = ctrline_obj.data.vertices[-1]
-        # delta_x = get_dist(p0.co, p1.co) / pts_per_dist
-        # # if curve has been processed, must then process radii values to correspond
-        # # by searching for closest xyz values to original curve
-
-# def read_csv(filename):  # use read_vtp() instead
-#     file = open(filename, "r")
-#     csvfile = csv.reader(file, delimiter=',')
-#     xname = "Points:0"
-#     yname = "Points:1"
-#     zname = "Points:2"
-#     rname = "MaximumInscribedSphereRadius"
-#     xind = -1
-#     yind = -1
-#     zind = -1
-#     rind = -1
-#     is_header = True
-#     verts = []
-#     rs = []
-#     for row in csvfile:
-#         if is_header:  # ['MaximumInscribedSphereRadius', 'Points:0', 'Points:1', 'Points:2']
-#             xind = row.index(xname)
-#             yind = row.index(yname)
-#             zind = row.index(zname)
-#             rind = row.index(rname)
-#             is_header = False
-#         else: 
-#             xyz = [float(row[xind]), -float(row[zind]), float(row[yind])]  # output from VMTK gives y=-z, z=y
-#             verts.append(xyz)
-#             rs.append(row[rind])
-#     return(verts, rs)
-
-# Define scene variables
-# bpy.types.Scene.ctrline_data_file = bpy.props.StringProperty \
-# (
-#   name = "Centerline data file", 
-#   description = "CSV file containing centerline data", 
-#   default = "/"
-# )
-# bpy.types.Scene.filename = bpy.props.StringProperty \
-# (
-#     name = "Output file", 
-#     description = "Set file name and path for output data", 
-#     default = "/"
-# )
-# bpy.types.Scene.centerline_min_radii = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-#     # stores radii list as strings in scene variable
-
-# bpy.types.Scene.vesicle_list = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-# # bpy.types.Scene.vesicle_list = bpy.props.CollectionProperty(type=bpy.types.FloatProperty)
-
-# these_obs = [ob for ob in bpy.data.objects if ob.select]
-        # if len(these_obs) != 2:
-        #     infostr = "Must select exactly 2 objects:  centerline and vesicle object"
-        #     self.report({'INFO'}, infostr)
-        #     return {'FINISHED'}
-        # centerline = [ob for ob in these_obs if len(ob.data.polygons) == 0]
-        # vesicle_obj = [ob for ob in these_obs if len(ob.data.polygons) > 0]
-        # if len(centerline) != 1 or len(vesicle_obj) != 1:
-        #     infostr = "Expecting one centerline object and one vesicle object"
-        #     self.report({'INFO'}, infostr)
-        #     return {'FINISHED'}
-        # centerline = centerline[0]
-        # vesicle_obj = vesicle_obj[0]
-
-        # vesicle_obj = bpy.data.objects["GABA3_vesicles"]  # todo:  read in objects via interface
-        # centerline = bpy.data.objects["centerline"]
-
-# these_obs = [ob for ob in bpy.data.objects if ob.select]
-        # if len(these_obs) != 2:
-        #     infostr = "Must select exactly 2 objects:  centerline and its surrounding mesh"
-        #     self.report({'INFO'}, infostr)
-        #     return {'FINISHED'}
-        # these_nverts = [len(ob.data.vertices) for ob in these_obs]
-        # nverts_centerline = min(these_nverts)
-        # nverts_mesh = max(these_nverts)
-        # min_ind = these_nverts.index(nverts_centerline)
-        # centerline = these_obs[min_ind]
-        # meshobj = these_obs[1-min_ind]
-        # radii = CollectionProperty2list(centerline.centerline_min_radii, True)
-        # # Check centerline
-        # if nverts_centerline != bpy.context.scene.npts_centerline:
-        #     infostr = "Warning: centerline of " + str(bpy.context.scene.npts_centerline) + " points not selected\n"
-        #     self.report({'INFO'}, infostr)
-        #     if nverts_centerline > bpy.context.scene.npts_centerline:
-        #         return {'FINISHED'}
-        # if len(centerline.data.polygons) != 0:
-        #     infostr = "No centerline object selected (expecting curve, but faces detected)"
-        #     self.report({'INFO'}, infostr)
-        #     return {'FINISHED'}
-
-        # # # for debugging
-        # # radii = [2,2,2]
-
-        # Project objects so 3D coordinates are consistent
-        # for ob in bpy.data.objects:
-        #     if hasattr(ob, 'data') and ob.location != Vector([0.0,0.0,0.0]):
-        #         select_obj(ob)
-        #         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-
-# class SelectCenterlineFile(bpy.types.Operator):  # adjusted
-#     """Select centerline data file"""
-#     bl_idname = "file.select_data_file"
-#     bl_label = "Select centerline data file"
-#     directory = bpy.props.StringProperty(subtype="FILE_PATH")
-#     filename = bpy.props.StringProperty(subtype="FILE_NAME")
-#     def execute(self, context):
-#         bpy.context.scene.ctrline_data_file = self.directory + self.filename
-#         return {'FINISHED'}
-
-#     def invoke(self, context, event):
-#         WindowManager = context.window_manager
-#         WindowManager.fileselect_add(self)
-#         return {"RUNNING_MODAL"}
-
-# # Define file name and path for export
-# class DefineFileOut(bpy.types.Operator):
-#     """Define file name and path for distance measurement export"""
-#     bl_idname = "file.set_filename"
-#     bl_label = "Define file path and name"
-#     directory = bpy.props.StringProperty(subtype="FILE_PATH")
-#     filename = bpy.props.StringProperty(subtype="FILE_NAME")
-#     def execute(self, context):
-#         directory = self.directory
-#         filename = self.filename
-#         full_filename = os.path.join(directory, filename)
-#         bpy.context.scene.filename = full_filename
-#         return {'FINISHED'}
-
-#     def invoke(self, context, event):
-#         WindowManager = context.window_manager
-#         WindowManager.fileselect_add(self)
-#         return {"RUNNING_MODAL"}
