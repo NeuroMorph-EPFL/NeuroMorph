@@ -12,4 +12,7 @@ This module allows the user to easily to show/hide all children of an object, de
 This module calculates the surface regions of two surfaces that are within a given distance of each other.
 
 #### NeuroMorph Stack Notation   ([download](http://raw.githubusercontent.com/ajorstad/NeuroMorph/master/NeuroMorph_New_Tools/NeuroMorph_Stack_Notation.py))
-This module allows the user to place spherical markers (vesicles) on images in 3D, and to draw lines that can be constructed into both open surfaces (synapses) and closed surfaces (mitochondria) in 3D.  Open surfaces with holes are handled.  Closed surfaces that branch cannot be handled.  3D images are loaded and can be scrolled through for easy 3D interactions.
+This module allows the user to scroll through images stacks in all 3 dimensions, place spherical markers (vesicles) on images in 3D, and draw lines that can be constructed into both open surfaces (synapses) and closed surfaces (mitochondria) in 3D.  Open surfaces with holes are handled.  Closed surfaces that branch cannot be handled.
+
+#### NeuroMorph Retrieve Object from Image   ([download](http://raw.githubusercontent.com/ajorstad/NeuroMorph/master/NeuroMorph_New_Tools/NeuroMorph_Retrieve_Object_from_Image.py))
+This module allows the user to select a point on an image and retrieve whatever 3D object in the scene contains that point, if any.  This function is a subset of the NeuroMorph Image Stack Interactions tool from the original NeuroMorph Toolkit; the rest of that tool's functionality is available in the NeuroMorph Stack Notation tool above, which must be loaded in order for this tool to work.
