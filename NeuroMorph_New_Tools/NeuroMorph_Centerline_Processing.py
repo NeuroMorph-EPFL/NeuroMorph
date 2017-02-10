@@ -48,7 +48,7 @@ import datetime
 bpy.types.Scene.npts_centerline = bpy.props.IntProperty \
 (
     name="Number of Centerline Points",
-    description = "Number of Points on the center line (default: 200)", 
+    description = "Number of points used to construct centerline (default: 200), do not change after centerline is loaded", 
     default=200
 )
 
@@ -96,6 +96,8 @@ class CenterlinePanel(bpy.types.Panel):
 
         row = self.layout.row()
         row.operator("object.load_centerline", text='Load Centerline from vtp', icon='MOD_CURVE')
+        row = self.layout.row()
+        row.operator("object.update_centerline", text='Update Centerline', icon='MOD_CURVE')
 
         # Functions depending on centerline object in Blender
         split = self.layout.row().split(percentage=0.1)
@@ -127,27 +129,27 @@ class CenterlinePanel(bpy.types.Panel):
 
 
 
-class PreProcessMesh_hack(bpy.types.Operator):
-    """Attempt to clean up non-manifold mesh geometry of selected mesh"""
-    bl_idname = "object.preprocess_mesh_hack"
-    bl_label = "Clean non-manifold mesh geometry"
+# class PreProcessMesh_hack(bpy.types.Operator):
+#     """Attempt to clean up non-manifold mesh geometry of selected mesh"""
+#     bl_idname = "object.preprocess_mesh_hack"
+#     bl_label = "Clean non-manifold mesh geometry"
 
-    def execute(self, context):
-        mesh = bpy.context.object
+#     def execute(self, context):
+#         mesh = bpy.context.object
 
-        # De-select all vertices
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_mode(type="VERT")
-        bpy.ops.mesh.select_all(action='DESELECT')
+#         # De-select all vertices
+#         bpy.ops.object.mode_set(mode='EDIT')
+#         bpy.ops.mesh.select_mode(type="VERT")
+#         bpy.ops.mesh.select_all(action='DESELECT')
         
-        # Collapse non-manifold vertices
-        # non-manifold options:  can select "Vertices", which includes the edges 
-        #     that belong to 3 or more faces from Multple Faces, or leave all on
-        bpy.ops.mesh.select_non_manifold()
-        bpy.ops.mesh.merge(type='COLLAPSE')
+#         # Collapse non-manifold vertices
+#         # non-manifold options:  can select "Vertices", which includes the edges 
+#         #     that belong to 3 or more faces from Multple Faces, or leave all on
+#         bpy.ops.mesh.select_non_manifold()
+#         bpy.ops.mesh.merge(type='COLLAPSE')
 
-        # returns in edit mode, so can see points that were modified
-        return {'FINISHED'}
+#         # returns in edit mode, so can see points that were modified
+#         return {'FINISHED'}
 
 
 class PreProcessMesh(bpy.types.Operator):
@@ -236,6 +238,85 @@ def faces_per_vertex(ob):
     return vert_table
 
 
+class RedefineCenterline(bpy.types.Operator):
+    """Use selected centerline with selected mesh object (must click here after making any changes to centerline)"""
+    bl_idname = "object.update_centerline"
+    bl_label = "Use modified centerline"
+
+    def execute(self, context):
+        assign_selected_objects(self)
+        err, objs = assign_selected_objects(self)
+        if err < 0:
+            return {'FINISHED'}
+        centerline, meshobj = objs
+
+        # Check if centerline has been modified by hand
+        unmodified = False
+        nverts = len(centerline.data.vertices)
+        if nverts == bpy.context.scene.npts_centerline:
+            # if modifications result in original number of points, will assume no modifications
+            unmodified = True
+
+        else:
+            # Delete minimum radius values, as no longer have a value 
+            # for each centerline vertex
+            list2CollectionProperty([], centerline.centerline_min_radii)
+
+        # Remove any centerline points that are outside obj
+        inds_to_check = [nverts-1, nverts-2, nverts-3, 0, 1, 2]
+        inds_to_delete = []
+        for ind in inds_to_check:
+            coord = centerline.data.vertices[ind].co
+            if point_outside_mesh(coord, meshobj):
+                inds_to_delete += [ind]
+
+        activate_an_object(centerline)
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        for ind in inds_to_delete:
+            centerline.data.vertices[ind].select = True
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.delete(type='VERT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+        if unmodified:  # also remove these points from min radii list
+            rs = CollectionProperty2list(centerline.centerline_min_radii, True)
+            for ind in inds_to_delete:
+                del rs[ind]
+            list2CollectionProperty(rs, centerline.centerline_min_radii)
+
+
+        # Reorder vertices along curve to run from 0 to nverts
+        activate_an_object(centerline)
+        bpy.ops.object.convert(target='CURVE')
+        bpy.ops.object.convert(target='MESH')
+
+        # Reassign number of centerline points
+        nverts = len(centerline.data.vertices)
+        bpy.context.scene.npts_centerline = nverts
+
+        return {'FINISHED'}
+
+
+# Check if point is inside object
+def point_outside_mesh(coord, ob):
+    # if rays in all 6 directions from pt intersect ob, assume pt is inside ob, else is outside
+    axes = [ mathutils.Vector((1,0,0)), mathutils.Vector((0,1,0)), mathutils.Vector((0,0,1)), \
+             mathutils.Vector((-1,0,0)), mathutils.Vector((0,-1,0)), mathutils.Vector((0,0,-1)) ]
+    coord = mathutils.Vector(coord)
+    max_dist = 10000.0
+    count = 0
+    for axis in axes:  # send out rays, if cross this object in every direction, point is inside
+        result,location,normal,index = ob.ray_cast(coord, coord+axis*max_dist)  # will error if ob in different layer
+        if index != -1:
+            count += 1
+    if count < 6:
+        return True
+    else:
+        return False
+
+
 
 # Extract centerline and mesh object from selected objects (exactly 2 selected objects expected)
 # Perform basic sanity checks
@@ -252,7 +333,7 @@ def assign_selected_objects(self):
         self.report({'INFO'}, infostr)
         return(-1, [])
     if len(centerline) > 1:
-        infostr = "Detected more than 1 potential centerline; second object must contain surfaces"
+        infostr = "Detected more than 1 potential centerline; second object must contain faces"
         self.report({'INFO'}, infostr)
         return(-1, [])
     centerline = centerline[0]
@@ -279,13 +360,11 @@ class GetSurfaceAreas(bpy.types.Operator):
         if err < 0:
             return {'FINISHED'}
         centerline, meshobj = objs
-        radii = CollectionProperty2list(centerline.centerline_min_radii, True)
 
         # Project objects so 3D coordinates are consistent
         convert_to_global_coords()
 
         # Preconstruct kd tree to aid in trimming far away vertices (fast)
-        max_rad = max(radii)
         nverts_mesh = len(meshobj.data.vertices)
         kd_mesh = mathutils.kdtree.KDTree(nverts_mesh)
         for i1, v1 in enumerate(meshobj.data.vertices):
@@ -301,7 +380,7 @@ class GetSurfaceAreas(bpy.types.Operator):
         t0 = datetime.datetime.now()
         for ind in range(0, len(centerline.data.vertices)):
             print(ind)
-            this_area = get_cross_sectional_area(centerline, ind, meshobj, max_rad, kd_mesh, self)
+            this_area = get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self)
             areas.append(this_area)
         t3 = datetime.datetime.now()
         print("total time: ", t3-t0)
@@ -317,12 +396,12 @@ class GetSurfaceAreas(bpy.types.Operator):
         return {'FINISHED'}
 
 
-def get_cross_sectional_area(centerline, ind, meshobj, max_rad, kd_mesh, self):
+def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
 # Create perpindicular plane to centerline at ind
 # Get area of intersection of plane with mesh
 
     # plane = bpy.data.objects["Plane"]
-    plane = make_plane(centerline, ind, max_rad)
+    plane = make_plane(centerline, ind)
     select_obj(plane)
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
@@ -449,7 +528,7 @@ def get_cross_sectional_area(centerline, ind, meshobj, max_rad, kd_mesh, self):
     return(this_area)
 
 
-def make_plane(centerline, ind, max_rad):  # ind = 50 is good test case, is extra piece intersection
+def make_plane(centerline, ind):
     # Create plane perpendicular to centerline at vertex ind
     # Side length half length of centerline, arbitrary
     # rad = max(2*max_rad, get_dist(centerline.data.vertices[0].co, centerline.data.vertices[-1].co) / 8)
@@ -628,6 +707,7 @@ def CollectionProperty2list(CP, numerical = False):
     return (new_list)
 
 def list2CollectionProperty(mylist, CP):
+    CP.clear()
     for elt in mylist:
         CP.add().name = str(elt)  # stores string for numerical or string input
     return()
@@ -882,11 +962,13 @@ class LoadCenterline(bpy.types.Operator):
 
             nverts_final = len(ctrline_obj.data.vertices)
             if (nverts_final != npts):
-                self.report({'INFO'}, "Warning:  Incorrect number of centerline points created, try a different number.")
-                print("Warning:  Incorrect number of centerline points created, try a different number.")
+                infostr = "Warning:  Incorrect number of centerline points created, value updated."
+                self.report({'INFO'}, infostr)
+                bpy.context.scene.npts_centerline = nverts_final
             
         else:
             ctrline_obj = construct_curve(verts, "centerline")
+            bpy.context.scene.npts_centerline = len(ctrline_obj.data.vertices)
 
         # Load radii values into scene variable
         # for r in rs:
@@ -928,14 +1010,18 @@ def write_data(lengths, radii, areas, vcounts, full_filename, self):
     # filename = bpy.props.StringProperty(subtype="FILE_NAME")
     outfile = open(full_filename, 'w')
 
-    outfile.write("distance along curve;minimum radius at vertex")
+    outfile.write("distance along curve")
+    if radii != []:
+        outfile.write(";minimum radius at vertex")
     if areas != []:
         outfile.write(";cross-sectional area at vertex")
     if vcounts != []:
         outfile.write(";number of vesicles closest to this vertex")
     outfile.write("\n\n")
     for v_ind in range(0, len(lengths)):
-        outfile.write(str(lengths[v_ind]) + ";" + str(radii[v_ind]))
+        outfile.write(str(lengths[v_ind]))
+        if radii != []:
+            outfile.write(";" + str(radii[v_ind]))
         if areas != []:
             outfile.write(";" + str(areas[v_ind]))
         if vcounts != []:
@@ -964,11 +1050,7 @@ class WriteCtrlineData(bpy.types.Operator):
         full_filename = define_filename(self, ".csv")
 
         # Assumes active object is centerline object
-        centerline = bpy.context.object  
-        if not hasattr(centerline, 'centerline_min_radii'):
-            self.report({'INFO'}, "Selected object has no radius data.")
-            return {'FINISHED'}
-
+        centerline = bpy.context.object
         convert_to_global_coords()
 
         lengths = get_length_along_crv(centerline)
@@ -1000,8 +1082,11 @@ def get_dist(coord1, coord2):  # distance is monotonic, take square root at end 
     return d
 
 # Sometimes this is necessary before changing modes
-def activate_an_object():
-    ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide == False][0]
+def activate_an_object(ob_0=[]):
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    if ob_0 == []:
+        ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide == False][0]
     bpy.context.scene.objects.active = ob_0
     ob_0.select = True
 
