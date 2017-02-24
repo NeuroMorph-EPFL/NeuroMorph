@@ -1,4 +1,4 @@
-User's guides coming soon!
+User's guides under development at [Blender wiki](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph).
 
 <img src="images/centerline_crosssections.png" width="300" align="right">
 #### NeuroMorph Centerline Processing   ([download](http://raw.githubusercontent.com/ajorstad/NeuroMorph/master/NeuroMorph_New_Tools/NeuroMorph_Centerline_Processing.py))
