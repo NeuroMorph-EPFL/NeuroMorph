@@ -41,7 +41,7 @@ import NeuroMorph_Stack_Notation as nmsn  # This module requires NeuroMorph_Stac
 
 # Define the panel
 class SuperimposePanel(bpy.types.Panel):
-    bl_label = "Image Stack Interactions"
+    bl_label = "Retrieve Object From Image"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
     bl_category = "NeuroMorph"
