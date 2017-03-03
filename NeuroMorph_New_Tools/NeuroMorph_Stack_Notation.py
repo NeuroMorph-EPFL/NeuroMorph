@@ -825,6 +825,12 @@ class SelectStackFolderZ(bpy.types.Operator):  # adjusted
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
     def execute(self, context):
         select_folder_execute(self, "Z", "image_path_Z", "imagefilepaths_z", "image_ext_Z")
+
+        # Insert bar of image stack height with vertex at each z,
+        # provides a vertex to click on for "show image at vertex" button
+        # when there are no objects in the scene
+        insert_image_stack_ladder()
+
         return {'FINISHED'}
     def invoke(self, context, event):
         select_folder_invoke(self, context, "exte_Z", "image_ext_Z")
@@ -868,7 +874,27 @@ def select_folder_execute(self, orientation, this_path, these_paths, this_ext):
             example_name = getattr(bpy.context.scene, these_paths)[0].name
             file_ext = os.path.splitext(example_name)[1]
             setattr(bpy.context.scene, this_ext, file_ext)
-    
+
+
+def execute(self, context):
+        bpy.context.scene.image_path = self.directory
+
+        # load image filenames and extract file extension
+        LoadImageFilenames_sn(bpy.context.scene.image_path)
+        if len(bpy.context.scene.imagefilepaths) < 1:
+            self.report({'INFO'},"No image files found in selected directory")
+        else:
+            example_name = bpy.context.scene.imagefilepaths[0].name
+            file_ext = os.path.splitext(example_name)[1]
+            bpy.context.scene.image_ext = file_ext
+
+        # insert bar of image stack height with vertex at each z
+        insert_image_stack_ladder()
+
+        return {'FINISHED'}
+
+
+
 def select_folder_invoke(self, context, self_ext, this_ext):
     WindowManager = context.window_manager
     WindowManager.fileselect_add(self)
@@ -1227,7 +1253,7 @@ def insert_image_stack_ladder():
 
 
     h = bpy.context.scene.z_side
-    n = len(bpy.context.scene.imagefilepaths)
+    n = len(bpy.context.scene.imagefilepaths_z)
     d = h / (n-1)
     pts = [[0,0,z*d+d/2] for z in range(0,n)]
     objname = "ImageStackLadder"
