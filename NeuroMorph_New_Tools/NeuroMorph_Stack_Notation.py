@@ -538,6 +538,10 @@ class ClearImages(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
+        any_ob = bpy.context.scene.objects[0]
+        any_ob.select = True
+        bpy.context.scene.objects.active = any_ob
+        bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_all(action='DESELECT')
         im_ob_list = [ob for ob in bpy.context.scene.objects if ob.name == "Image"]
         if len(im_ob_list) > 0:  # delete it
@@ -562,6 +566,13 @@ class ClearImages(bpy.types.Operator):
         bpy.context.scene.imagefilepaths_x.clear()
         bpy.context.scene.imagefilepaths_y.clear()
         bpy.context.scene.imagefilepaths_z.clear()
+
+        # Remove ImageStackLadder
+        isl = [ob for ob in bpy.data.objects if ob.name == "ImageStackLadder"]
+        if isl != []:
+            isl = isl[0]
+            isl.select = True
+            bpy.ops.object.delete() 
 
         return {'FINISHED'}
 
@@ -1271,7 +1282,7 @@ def insert_image_stack_ladder():
         bpy.context.active_object.name = "ladder_temp"
 
     # "join" all cylinders into single object
-    bpy.context.mode == 'OBJECT'
+    bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
     for obj in bpy.data.objects:
         if "ladder_temp" in obj.name:
