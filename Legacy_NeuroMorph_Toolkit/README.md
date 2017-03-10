@@ -1,3 +1,6 @@
+These files have been deprecated.  They are provided only for legacy purposes, as they were released with our 2014 Neuroinformatics paper.
+
+
 #### NeuroMorph Import Objects   ([download](http://dstats.net/download/http://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Toolkit/NeuroMorph_Import_Objects.py))
 This module is used to import one or many object models from .obj files obtained through 3D image segmentation software (e.g. [ilastik](www.ilastik.org) or [TrakEM2](www.ini.uzh.ch/~acardona/trakem2.html)) into Blender, for use with the other NeuroMorph tools.
 
