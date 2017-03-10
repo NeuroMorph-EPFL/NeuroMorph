@@ -13,9 +13,7 @@ Download the latest tools from the [**NeuroMorph_New_Tools**](https://github.com
 
 Download the Synaptic Vesicle Distance Measure add-on from the [**NeuroMorph_Density_Measurements**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Density_Measurements) folder.
 
-Download the original (legacy) NeuroMorph Toolkit from the [**NeuroMorph_Toolkit**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Toolkit) folder.
-
-Example meshes, objects, and image files for use with the add-ons are available in the [**NeuroMorph_Samples**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Samples) folder.
+Example meshes, objects, and image files for use with the add-ons are available in the [**NeuroMorph_Datasets**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Datasets) folder.
 <br><br>
 
 ### Documentation
