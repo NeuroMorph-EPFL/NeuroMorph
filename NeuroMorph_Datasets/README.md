@@ -2,14 +2,13 @@ Here you can find example 3D mesh objects and an image stack for use with the Ne
 
 
 #### NeuroMorph_sample.blend  ([download](http://dstats.net/download/http://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Datasets/NeuroMorph_sample.blend))
-This is a blender file that contains a number of axons, dendrites and synapses that were reconstructed, using 
-ilastik, from a downsampled series of images from the EM_stack folder.
+A blender file containing axons, dendrites, and synapses that were reconstructed from the images in the EM_stack folder.
 
 *(Open this file in Blender.)*
 
 
 #### EM_stack folder  ([download](http://dstats.net/download/http://github.com/ajorstad/NeuroMorph/tree/master/NeuroMorph_Datasets/EM_stack))
-Contains 272 serial tiff images in 5 zip files. These are serial electron micrographs taken with a focused ion beam scanning electron microscope. Each image is 700 pixels by 700 pixels, and each pixel has a dimension of 5 x 5 nm, so the width of each image is 3500 nm.  The pixels have a depth of 7.4 nm.
+Image stack source folder for NeuroMorph_sample.blend.  Contains 272 serial tiff images in 5 zip files. These are serial electron micrographs taken with a focused ion beam scanning electron microscope. Each image is 700 pixels by 700 pixels, and each pixel has a dimension of 5 x 5 nm, so the width of each image is 3500 nm.  The pixels have a depth of 7.4 nm.
 
 *(For use as the source folder using the NeuroMorph_Image_Stack_Interactions.py add-on with NeuroMorph_sample.blend.)*
 
