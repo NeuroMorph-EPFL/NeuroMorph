@@ -27,6 +27,7 @@ Updated user's guides are actively under development.
 
 [Video Tutorial](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
 *(Installation Note: In the most recent versions of Blender, the panel tools are found in the "Misc" tab on the far left.)*
+<br><br>
 
 
 #### Contact
