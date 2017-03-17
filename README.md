@@ -26,7 +26,9 @@ Download example meshes, objects, and image files for use with the add-ons:
 Updated user's guides are actively under development.
 
 [Video Tutorial](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
-*(Installation Note: NeuroMorph tools are found in the "NeuroMorph" tab on the far left.)*
+(not up-to-date, but still helpful)  
+
+Installation Note: NeuroMorph tools are found in the "NeuroMorph" tab on the far left in Blender.
 <br><br>
 
 
