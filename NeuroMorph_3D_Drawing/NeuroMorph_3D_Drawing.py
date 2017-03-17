@@ -1,4 +1,4 @@
-#    NeuroMorph_Stack_Notation.py (C) 2017,  Anne Jorstad
+#    NeuroMorph_3D_Drawing.py (C) 2017,  Anne Jorstad
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -14,11 +14,11 @@
 #    along with this program.  If not, see http://www.gnu.org/licenses/
 
 bl_info = {  
-    "name": "NeuroMorph Stack Notations",
+    "name": "NeuroMorph 3D Drawing",
     "author": "Anne Jorstad",
     "version": (1, 0, 0),
     "blender": (2, 7, 6),
-    "location": "View3D > Image Stack Notations",
+    "location": "View3D > 3D Drawing",
     "description": "Place markers on images and draw lines to construct surfaces in 3D",
     "warning": "",  
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/visualization",  
