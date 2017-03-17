@@ -1,4 +1,4 @@
-These files have been deprecated.  They are provided only for legacy purposes, as they were released with our 2014 Neuroinformatics paper.
+*These files have been deprecated.  They are provided only for legacy purposes, as they were released with our 2014 Neuroinformatics paper.*
 
 [Legacy Blender Wiki](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool)  (including installation instructions)
 
