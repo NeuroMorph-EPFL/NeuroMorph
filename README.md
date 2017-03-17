@@ -9,15 +9,21 @@ A. Jorstad, B. Nigro, C. Cali, M. Wawrzyniak, P. Fua, G. Knott.  (2014).  "Neuro
 
 ### Download
 
-Download the latest tools from the [**NeuroMorph_New_Tools**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_New_Tools) folder.
+Download individual tools from the following folders:  
+* [NeuroMorph_Measurement_Tools](NeuroMorph_Measurement_Tools)
+* [NeuroMorph_3D_Drawing](NeuroMorph_3D_Drawing)
+* [NeuroMorph_CenterLines_CossSections](NeuroMorph_CenterLines_CossSections)
+* [NeuroMorph_Proximity_Analysis](NeuroMorph_Proximity_Analysis)
+* [NeuroMorph_Other_Tools](NeuroMorph_Other_Tools)
 
-Download the Synaptic Vesicle Distance Measure add-on from the [**NeuroMorph_Density_Measurements**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Density_Measurements) folder.
-
-Example meshes, objects, and image files for use with the add-ons are available in the [**NeuroMorph_Datasets**](https://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Datasets) folder.
+Download example meshes, objects, and image files for use with the add-ons:
+* [NeuroMorph_Datasets](NeuroMorph_Datasets)
 <br><br>
 
 ### Documentation
-[**Blender Wiki**](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool)  (including installation instructions)
+User's guides under development at [Blender wiki](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph).
+
+[**Legacy Blender Wiki**](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool)  (including installation instructions)
 
 [**Video Tutorial**](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
 *(Installation Note: In the most recent versions of Blender, the panel tools are found in the "Misc" tab on the far left.)*
