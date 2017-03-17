@@ -21,11 +21,11 @@ Download example meshes, objects, and image files for use with the add-ons:
 <br><br>
 
 ### Documentation
-User's guides under development at [Blender wiki](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph).
 
-[**Legacy Blender Wiki**](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool)  (including installation instructions)
+[Blender Wiki](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph)  
+Updated user's guides are actively under development.
 
-[**Video Tutorial**](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
+[Video Tutorial](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
 *(Installation Note: In the most recent versions of Blender, the panel tools are found in the "Misc" tab on the far left.)*
 
 
