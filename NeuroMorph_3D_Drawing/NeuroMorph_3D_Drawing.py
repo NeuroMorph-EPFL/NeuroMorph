@@ -15,7 +15,7 @@
 
 bl_info = {  
     "name": "NeuroMorph 3D Drawing",
-    "author": "Anne Jorstad",
+    "author": "Anne Jorstad, Tom Boissonnet",
     "version": (1, 0, 0),
     "blender": (2, 7, 6),
     "location": "View3D > 3D Drawing",
@@ -201,7 +201,7 @@ bpy.types.Scene.render_images = bpy.props.BoolProperty \
 
 # Define the panel
 class StackNotationPanel(bpy.types.Panel):
-    bl_label = "Image Stack Notation"
+    bl_label = "3D Drawing"
     bl_space_type = "VIEW_3D"
     bl_region_type = "TOOLS"
     bl_category = "NeuroMorph"
