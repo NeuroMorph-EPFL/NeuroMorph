@@ -18,10 +18,10 @@ bl_info = {
     "description": "Calculates the surface area, volume, and length of user-determined subregions of meshes",
     "author": "Anne Jorstad, Biagio Nigro, Diego Marcos",
     "version": (1, 2, 5),
-    "blender": (2, 7, 5),
+    "blender": (2, 7, 8),
     "location": "View3D > Add > Mesh",
     "warning": "",
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/Measurement",
+    "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Measurement_Tools",
     "tracker_url": "",
     "category": "Mesh"}
 
@@ -585,25 +585,36 @@ def fget_SA(self):
 
 
 # calculate volume of mesh (assumed to be closed surface)
+# note:  if remove faces from previously closed solids,
+#        tool will return incorrect volume
+# There is no efficient way from this function 
+# to check whether mesh is closed
 def fget_vol(self):
     obj = self.data
     if hasattr(obj, 'polygons'):
         # if mesh not closed, don't calculate volume
         if self.is_open:
             return 'open mesh has no volume'
-        else:
-            n_faces = len(obj.polygons)
-            vol = 0
-            for f in range(0, n_faces):
-                n_vertices = len(obj.polygons[f].vertices[:])
-                if n_vertices != 3:  # faces must be triangles
-                    for v in range(0, n_vertices):
-                        return 'highlight a subregion'
-                tri = [0] * n_vertices
+        if not self.has_vol:  
+            # only calculate volume of objects created  
+            # with volume button in this tool
+            return 'volume not calculated'
+
+        n_faces = len(obj.polygons)
+        vol = 0
+        for f in range(0, n_faces):
+            this_face = obj.polygons[f]
+            n_vertices = len(this_face.vertices[:])
+            if n_vertices != 3:
                 for v in range(0, n_vertices):
-                    tri[v] = obj.vertices[obj.polygons[f].vertices[v]].co
-                vol += get_vol_tri(tri)
-            return vol
+                    # return 'highlight a subregion'
+                    return 'faces must be triangles'
+            tri = [0] * n_vertices
+            for v in range(0, n_vertices):
+                tri[v] = obj.vertices[obj.polygons[f].vertices[v]].co
+            vol += get_vol_tri(tri)
+
+        return vol
     else:
         return 'property not available'
 
@@ -824,6 +835,7 @@ class Create_Submesh(bpy.types.Operator):
               new_obj.is_open = 1
           else:
               new_obj.is_open = 0
+              new_obj.has_vol = 1
 
         # return with all vertices highlighted in edit mode
         # return input object as active
@@ -982,13 +994,20 @@ def close_and_add_mesh(new_obj, new_name, obj_ptr, sel_inds, selected_verts, sel
       bpy.context.scene.objects.unlink(new_obj)
       new_obj.user_clear()
       bpy.data.objects.remove(new_obj)
-      new_obj2.is_open = 0
 
-    # return with all vertices highlighted in edit mode
-    # return input object as active
+    # set flags
+      new_obj2.is_open = 0
+      new_obj2.has_vol = 1
+
+    # enforce consistent normals
       sel_inds2 = [ind for ind in range(len(new_obj2.data.vertices[:]))]
       make_original_active(new_obj2, sel_inds2)
+      bpy.ops.object.mode_set(mode='EDIT')
+      bpy.ops.mesh.select_all(action='SELECT')
+      bpy.ops.mesh.normals_make_consistent(inside=False)   
+      bpy.ops.object.mode_set(mode='OBJECT')
 
+    # return input object as active
       make_original_active(obj_ptr, sel_inds)
 
     # uncomment the following
@@ -1332,6 +1351,7 @@ def register():
     
     
     bpy.types.Object.is_open = BoolProperty(name="is_open", default=0)
+    bpy.types.Object.has_vol = BoolProperty(name="has_vol", default=0)
     # bpy.types.Object.vertex_collection = CollectionProperty(type=VertexListItem)
     # bpy.types.Object.vertex_collection_index = IntProperty(min= -1,default= -1)
 
@@ -1359,6 +1379,7 @@ def unregister():
     del bpy.types.Object.curvelength
     del bpy.types.Object.length
     del bpy.types.Object.is_open
+    del bpy.types.Object.has_vol
     # del bpy.types.Object.vertex_collection
     # del bpy.types.Object.vertex_collection_index
     
