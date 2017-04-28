@@ -1,4 +1,4 @@
-<img src="proximity.png" width="300" align="right">
+<img src="proximity_after.png" width="200" align="right"><img src="proximity_before.png" width="200" align="right">
 
 #### NeuroMorph Proximity Analysis   ([download](http://raw.githubusercontent.com/ajorstad/NeuroMorph/master/NeuroMorph_Proximity_Analysis/NeuroMorph_Proximity_Analysis.py))
 This module calculates the surface regions of two surfaces that are within a given distance of each other.
