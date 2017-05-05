@@ -23,10 +23,10 @@ Download example meshes, objects, and image files for use with the add-ons:
 ### Documentation
 
 [Blender Wiki](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph)  
-Updated user's guides are actively under development.
+Detailed instructions for each tool.
 
 [Video Tutorial](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
-(not up-to-date, but still helpful)  
+Not up-to-date, but still helpful for the measurement and image stack interaction tools.  
 
 Installation Note: NeuroMorph tools are found in the "NeuroMorph" tab on the far left in Blender.
 <br><br>
