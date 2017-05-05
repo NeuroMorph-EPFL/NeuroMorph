@@ -931,6 +931,8 @@ class LoadCenterline(bpy.types.Operator):
         return {"RUNNING_MODAL"}
 
     def execute(self, context):
+        bpy.ops.object.mode_set(mode='OBJECT')  # else is error at end
+
         this_filename = self.directory + self.filename
 
         # Load centerline data into mesh object
