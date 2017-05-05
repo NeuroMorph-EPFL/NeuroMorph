@@ -1,10 +1,16 @@
 <img src="proximity_after.png" width="200" align="right"><img src="proximity_before.png" width="200" align="right">
 
-#### NeuroMorph Proximity Analysis   ([download](http://raw.githubusercontent.com/ajorstad/NeuroMorph/master/NeuroMorph_Proximity_Analysis/NeuroMorph_Proximity_Analysis.py))
+#### NeuroMorph Proximity Analysis   
+[Download](http://raw.githubusercontent.com/ajorstad/NeuroMorph/master/NeuroMorph_Proximity_Analysis/NeuroMorph_Proximity_Analysis.py)  
+[Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Proximity_Analysis_Tools)  
+
 This module calculates the surface regions of two surfaces that are within a given distance of each other.
 
 
-#### NeuroMorph Synapse Vesicle Distances   ([download](http://dstats.net/download/http://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Proximity_Analysis/NeuroMorph_Vesicle_Distance.py))
+#### NeuroMorph Synapse Vesicle Distances   
+[Download](http://dstats.net/download/http://github.com/ajorstad/NeuroMorph/raw/master/NeuroMorph_Proximity_Analysis/NeuroMorph_Vesicle_Distance.py)  
+[Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Proximity_Analysis_Tools)  
+
 The Synaptic Vesicle Distance Measure add-on computes and outputs the closest distance from the center of each vesicle to a synapse, given a 3D mesh representation of a synapse and balls marking the synaptic vesicles.  The tool expects each vesicle to be a distinct child object of the parent synapse object.
 
 <img src="synapse_and_vesicles.png" width="200" align="left">
