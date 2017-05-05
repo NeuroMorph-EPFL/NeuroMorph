@@ -3,6 +3,7 @@
 [Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Other_Tools)  
 
 Macro for [Fiji](http://fiji.sc/) creates image stacks in the X and Y dimensions, given an image stack in Z.  Open the original image stack in Fiji (File - Import - Image Sequence), open the .ijm macro file in Fiji, click "Run", choose the location of the new image stack folders, and confirm the voxel dimensions from the original imaging procedure (for the provided sample EM stack, this is [5, 5, 7.4] nm).  Developed for use with the NeuroMorph Image Stack Interactions Blender add-on.  
+(Macro courtesy of Tom Boissonnet.)
 <br>
 
 #### NeuroMorph Parent-Child Tools   
