@@ -98,13 +98,6 @@ class ProximityAnalysisPanel(bpy.types.Panel):
         row = self.layout.row()
         row.operator("object.get_distances", text='Compute Interactions', icon='ARROW_LEFTRIGHT')  # 'ARROW_LEFTRIGHT', 'MESH_DATA'
 
-        # # Added to Parent-Child Relationship tool
-        # split = self.layout.row().split(percentage=0.5)
-        # col1 = split.column()
-        # col1.operator("object.show_children", text='Show Children')
-        # col2 = split.column()
-        # col2.operator("object.hide_children", text='Hide Children')
-
 
         # self.layout.label("----------- for debugging -----------")
         # split = self.layout.row().split(percentage=0.5)
@@ -260,81 +253,44 @@ class CalculateDistances(bpy.types.Operator):
         discontiguous_pairs = []
         make_child = True
         ob1_regions = separate_distinct_regions(ob1, verts1, make_child)
-        print("n regions:", len(ob1_regions))
-        # return {'FINISHED'}
+        print("# initial regions of ob1:", len(ob1_regions))
 
         for ob1_reg in ob1_regions:
             # get proximate verts on ob2
-            print("\nPROCESSING ", ob1_reg.name)
-            # if len(ob1_reg.data.polygons) == 0:
-            #     continue
-
-            ob2_regs_here = get_close_regions_to_single_region(ob1_reg, verts2, thresh, ob2, make_child)
-            if len(ob2_regs_here) == 0:
-                print("case 0:  there are no ob2_regs_here (only vertices, no faces)")
-                discontiguous_pairs.append([ob1_reg, []])
-
-                # return {'FINISHED'}
-
-            elif len(ob2_regs_here) == 1:
-                print("case 1:  all ob2 verts are in one contiguous region")
-                discontiguous_pairs.append([ob1_reg, ob2_regs_here[0]])
-                
-            else:
+            print("Processing ", ob1_reg.name)
+            handled1 = handle_subregion(ob1_reg, verts2, thresh, ob2, make_child, ob1, ob2, discontiguous_pairs, False)
+            if not handled1[0]:
+                # ob1_reg must be split into sub-regions for each corresponding ob2_regs_here
+                ob2_regs_here = handled1[1]
                 for ob2_reg in ob2_regs_here:
-                    print("case 2:  for each ob2_reg, proximate verts on ob1 should be strict subregion of ob1_reg")
-                    
-                    # if len(ob2_reg.data.polygons) == 0:
-                    #     continue  ## for debugging, case will disappear once delete len 0 objs
-
+                    # print("case 2:  for each ob2_reg, proximate verts on ob1 should be strict subregion of ob1_reg")
                     ob1_reg_vert_inds = range(len(ob1_reg.data.vertices))
-                    ob1_reg_here = get_close_regions_to_single_region(ob2_reg, ob1_reg_vert_inds, thresh, ob1_reg, make_child)
-                    if ob1_reg_here == []:
-                        discontiguous_pairs.append([[], ob2_reg])
-                    elif len(ob1_reg_here) == 1:
-                        if make_child:
-                            ob1_reg_here[0].parent = ob1
-                        discontiguous_pairs.append([ob1_reg_here[0], ob2_reg])
-                    else:
-                        print("expected single region, returned multiple, eek!  <------------------------------------------------- BAD")
-                        print(ob1_reg_here)
-                        print(ob2_reg)
-                        bad_count += 1
+                    handled2 = handle_subregion(ob2_reg, ob1_reg_vert_inds, thresh, ob1_reg, make_child, ob2, ob1, discontiguous_pairs, True)
+                    if not handled2[0]:
+                        # ob2_reg must be split into sub-regions for each corresponding ob1_reg_sub_here
+                        ob1_reg_sub_here = handled2[1]
+                        for ob1_reg_sub in ob1_reg_sub_here:
+                            # print("case 2b:  splitting ob1_reg into sub regions")
+                            ob2_reg_vert_inds = range(len(ob2_reg.data.vertices))
+                            handled3 = handle_subregion(ob1_reg_sub, ob2_reg_vert_inds, thresh, ob2_reg, make_child, ob1, ob2, discontiguous_pairs, False)
+                            if not handled3[0]:
+                                ob2_reg_sub_here = handled3[1]
+                                print("expected single region, returned multiple, --LAYER 2-- eek!  <------------------------------------------------- BAD")
+                                print("if run into this case, must call handle_subregion() for more layers")
+                                self.report({'INFO'}, "Error: some regions not processed, please notify developer")
+                                print(ob2_reg_sub_here)
+                                print(ob1_reg_sub)
+                                bad_count += 1
+
+                        # After loop, delete object ob2_reg, as it has been split into multiple components
+                        bpy.ops.object.select_all(action='DESELECT')
+                        ob2_reg.select = True
+                        bpy.ops.object.delete()
 
                 # After loop, delete object ob1_reg, as it has been split into multiple components
                 bpy.ops.object.select_all(action='DESELECT')
                 ob1_reg.select = True
                 bpy.ops.object.delete()
-
-
-        # # Deal with possible ob2_regions that correspond to regions with SA=0 on ob1
-        # # Not necessary if don't delete these regions before processing above (todo: check)
-        # ob2_regions = separate_distinct_regions(ob2, verts2, make_child)
-        # for ob2_reg in ob2_regions:
-        # 
-        #     # Test if this region already included in discontiguous_pairs
-        #     vert_here = ob2_reg.data.vertices[0].co  # todo: is it really enough to test just one point?
-        #     delta_zero = .00001  # todo: deal with scale here
-        #     already_handled = False
-        #     for sub_ob1, sub_ob2 in discontiguous_pairs:
-        #         if sub_ob2 != []:
-        #             size2 = len(sub_ob2.data.vertices)
-        #             kd2 = mathutils.kdtree.KDTree(size2)
-        #             for i2, v2 in enumerate(sub_ob2.data.vertices):
-        #                 kd2.insert(v2.co, i2)
-        #             kd2.balance()
-        # 
-        #             v2co, i2, dist_here = kd2.find(vert_here)
-        #             if dist_here < delta_zero:
-        #                 already_handled = True
-        #                 break
-        # 
-        #     if already_handled:
-        #         continue
-        # 
-        #     # probably just need to add:  
-        #     discontiguous_pairs.append([[], ob2_reg])
-
 
 
         # For each discontiguous vertex region pairs, calculate surface areas and centroids
@@ -373,6 +329,28 @@ class CalculateDistances(bpy.types.Operator):
         print("\nTIME AT END: ", t2, ",  TIME DIFF: ", t2-t1)
 
         return {'FINISHED'}
+
+
+# Process repeated in layers, potentially indefinitely when return false (will eventually stop at mesh resolution)
+def handle_subregion(ob1_reg, verts2, thresh, ob2_reg, make_child, ob1, ob2, discontiguous_pairs, reverse_obs):
+    ob2_regs_here = get_close_regions_to_single_region(ob1_reg, verts2, thresh, ob2_reg, make_child)
+    if len(ob2_regs_here) == 0:
+        if (reverse_obs):
+            discontiguous_pairs.append([[], ob1_reg])
+        else:
+            discontiguous_pairs.append([ob1_reg, []])
+        return ([True])
+    elif len(ob2_regs_here) == 1:
+        if make_child:
+            ob2_regs_here[0].parent = ob2
+            ob1_reg.parent = ob1  # may already be the case
+        if (reverse_obs):
+            discontiguous_pairs.append([ob2_regs_here[0], ob1_reg])
+        else:
+            discontiguous_pairs.append([ob1_reg, ob2_regs_here[0]])
+        return ([True])
+    else:
+        return ([False, ob2_regs_here])
 
 
 # Return lists of vertices on each obj that are within thresh of some vertex on other obj
@@ -480,11 +458,11 @@ def separate_distinct_regions(ob1, vert_list1, make_child=True):
     #         print(ob.name, len(ob.data.polygons))
     
 
-    # Delete vertices and edges that are not part of any faces
-    # Do not do this until end end after everything has been processed!
-    if False:
-        for ob_i in ob_list_after:
-            delete_extraneous_verts(ob_1, True)
+    # # Delete vertices and edges that are not part of any faces
+    # # Do not do this until end end after everything has been processed!
+    # if False:
+    #     for ob_i in ob_list_after:
+    #         delete_extraneous_verts(ob_1, True)
 
     # Remove meshes with zero vertices, todo: still need this?
     if False:
@@ -539,7 +517,7 @@ def delete_extraneous_verts(ob, separate_at_end=False):
     # separate objects again, if being added to a list for further processing, otherwise don't
     if separate_at_end:
         nobjs_before = len(bpy.data.objects)
-        bpy.ops.object.mode_set(mode='EDIT')    # todo: why does separate(loose) needs edit mode here, but obj mode above?
+        bpy.ops.object.mode_set(mode='EDIT')    # todo: why does separate(loose) need edit mode here, but obj mode above?
         bpy.ops.mesh.separate(type='LOOSE')     # each discontiguous region is now a separate object
         bpy.ops.object.mode_set(mode='OBJECT')
 
