@@ -11,3 +11,5 @@ Scroll through image stacks in 3D. Place spherical markers (eg vesicles) on imag
 [Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/3D_Drawing)
 
 Objects existing at any image point can be retrieved (made visible), allowing for easy navigation of object connectivity. Requires the 3D Drawing tool to be loaded.
+
+[![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph_3D_Drawing?pixel)](https://github.com/ajorstad/NeuroMorph/tree/master/NeuroMorph_3D_Drawing)
