@@ -36,4 +36,4 @@ Installation Note: NeuroMorph tools are found in the "NeuroMorph" tab on the far
 <anne.jorstad@epfl.ch>, <corrado.cali@epfl.ch>, <graham.knott@epfl.ch>
 
 
-[![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/chromeskel_a/readme?pixel)](https://github.com/ajorstad/NeuroMorph)
+[![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph-main?pixel)](https://github.com/ajorstad/NeuroMorph)
