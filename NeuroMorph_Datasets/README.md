@@ -20,3 +20,5 @@ into the Blender software. The models were reconstructed from the stack of image
 of the ‘import objects’ tool.
 
 *(For use with NeuroMorph_Import_Objects.py add-on.)*
+
+[![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph_Datasets?pixel)](https://github.com/ajorstad/NeuroMorph/tree/master/NeuroMorph_Datasets)
