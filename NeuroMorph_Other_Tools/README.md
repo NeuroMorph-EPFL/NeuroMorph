@@ -25,3 +25,5 @@ Import one or many object models from .obj files obtained through 3D image segme
 [Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Other_Tools)  
 
 Previously part of the deprecated NeuroMorph Measurement Tools, allows objects to be named according to a naming convention developed for neural structures.
+
+[![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph_Other_Tools?pixel)](https://github.com/ajorstad/NeuroMorph/tree/master/NeuroMorph_Other_Tools)
