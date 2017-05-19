@@ -19,3 +19,5 @@ The Synaptic Vesicle Distance Measure add-on computes and outputs the closest di
 *Initially developed to provide analysis for the [paper](http://www.jneurosci.org/content/35/24/9024):*
 
 Barnes SJ, Cheetham CE, Liu Y, Bennett SH, Albieri G, Jorstad AA, Knott GW, Finnerty GT.  (2015)  "Delayed and Temporally Imprecise Neurotransmission in Reorganizing Cortical Microcircuits." The Journal of Neuroscience, 35(24): 9024-9037.
+
+[![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph_Proximity_Analysis?pixel)](https://github.com/ajorstad/NeuroMorph/tree/master/NeuroMorph_Proximity_Analysis)
