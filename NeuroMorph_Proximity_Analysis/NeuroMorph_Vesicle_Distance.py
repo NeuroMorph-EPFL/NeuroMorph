@@ -56,6 +56,9 @@ class VesicleDistancePanel(bpy.types.Panel):
 
     def draw(self, context):
 
+        row = self.layout.row()
+        row.operator("object.reduce_spheres", text='Reduce Spheres to Points')
+
         row = self.layout.row(align=True)
         row.prop(context.scene, "filename")
         row.operator("file.set_filename", text='', icon='FILESEL')
@@ -158,6 +161,120 @@ class CalculateVesicleDistances(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# Calculate distance from center of every child object to the active object, and write file
+class Sphere2Point(bpy.types.Operator):
+    """Replace each child mesh of selected object by single point at the object's center (useful when very many objects in scene)"""
+    bl_idname = "object.reduce_spheres"
+    bl_label = "Replace each child mesh of selected object by single point at the object's center  (useful when very many objects in scene)"
+    
+    def execute(self, context):
+        vscls_as_children = True
+        
+        # Assumes active object is parent, with many child meshes
+        if vscls_as_children:
+            parent_ob = bpy.context.object
+            vscl_list = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH' \
+                                                            and ob_i.parent == parent_ob]
+            if len(vscl_list) == 0:
+                self.report({'INFO'}, "Selected object has no mesh children.")
+
+            else:
+                # Convert to world coordinates
+                bpy.ops.object.mode_set(mode='OBJECT')
+                bpy.ops.object.select_all(action='DESELECT')
+                parent_ob.select = True
+                bpy.context.scene.objects.active = parent_ob
+                bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+                for ob in vscl_list:
+                    ob.select = True
+                    bpy.context.scene.objects.active = ob
+                    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+                # Convert to points
+                vert_ob_list = spheres2pts(vscl_list)
+
+                # Reassign parent object
+                for vert_ob in vert_ob_list:
+                    vert_ob.parent = parent_ob
+
+
+        # # Assumes active object is single object consisting of many joined distinct vescile meshes
+        # else:
+        #     vscl_ob = bpy.context.object
+        #     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+        #     # Store list of already-existing objects
+        #     ob_list_before = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH']
+
+        #     # Separate into distinct sphere objects
+        #     bpy.ops.object.mode_set(mode='EDIT')
+        #     bpy.ops.mesh.select_all(action='SELECT')  # edit mode
+        #     bpy.ops.object.mode_set(mode='OBJECT')
+        #     bpy.ops.mesh.separate(type='LOOSE')     # each discontiguous region is a separate object
+
+        #     # Get list of only new objects = the spheres
+        #     ob_list_after = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH']
+        #     for ob_i in ob_list_before:
+        #         ob_list_after.remove(ob_i)
+
+        #     ob_list_after.append(vscl_ob)  # is now just one of the spheres
+
+        #     # Replace each sphere with only its centerpoint
+        #     vert_ob_list = spheres2pts(ob_list_after)
+
+        #     # Return new vertex objects joined into single object
+        #     bpy.ops.object.mode_set(mode='OBJECT')
+        #     bpy.ops.object.select_all(action='DESELECT')
+        #     for vert_ob in vert_ob_list:
+        #         vert_ob.select = True
+        #     bpy.context.scene.objects.active = vert_ob_list[0]
+        #     bpy.ops.object.join()
+
+        return {'FINISHED'}
+
+
+
+# Calculate center of sphere, delete sphere, add new object 
+# with single vertex at center of sphere, same name as sphere
+def spheres2pts(spherelist):
+    vert_ob_list = []
+    for vscl in spherelist:
+        # Select object and all vertices
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        vscl.select = True
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+
+        these_verts = vscl.data.vertices
+        nverts = len(these_verts)
+        v_sum = Vector([0,0,0])
+        for vert in these_verts:
+            v_sum += vert.co
+
+        this_mean = v_sum / nverts
+
+        # Delete vscl object
+        # To delete selected vertices:  bpy.ops.mesh.delete(type='VERT')
+        this_name = vscl.name
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.delete()
+
+        # Create new single vertex object at vscl_mean
+        me = bpy.data.meshes.new(this_name)
+        vscl_ctr_ob = bpy.data.objects.new(this_name, me)
+        bpy.context.scene.objects.link(vscl_ctr_ob)
+        me.from_pydata([this_mean], [], [])
+        me.update()
+        vert_ob_list.append(vscl_ctr_ob)
+
+    # Return an active object
+    vert_ob_list[0].select = True
+    bpy.context.scene.objects.active = vert_ob_list[0]
+
+    return(vert_ob_list)
+
+
 
 def get_dist_sq(coord1, coord2):  # distance is monotonic, take square root at end for efficiency
     d = (coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2 + (coord1[2] - coord2[2])**2
@@ -174,4 +291,3 @@ def unregister():
 
 if __name__ == "__main__":
     register()
-
