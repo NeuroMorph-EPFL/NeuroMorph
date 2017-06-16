@@ -53,9 +53,14 @@ class ParentChildPanel(bpy.types.Panel):
         col2 = split.column()
         col2.operator("object.hide_children", text='Hide Children')
 
+        # New
+        split = self.layout.row().split(percentage=0.5)
+        col1 = split.column()
+        col1.operator("object.select_children", text='Select Children')
+
         # From Measurement Tools
-        row = self.layout.row()
-        row.operator("mesh.delete_all_children", text = "Delete All Children")
+        col2 = split.column()
+        col2.operator("mesh.delete_all_children", text = "Delete Children")
 
         # From Stack Notation
         row = self.layout.row()
@@ -90,12 +95,25 @@ class HideChildren(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# Select children of active object
+class SelectChildren(bpy.types.Operator):
+    """Select all children of active object"""
+    bl_idname = "object.select_children"
+    bl_label = "Select all children of active object"
+
+    def execute(self, context):
+        active_ob = bpy.context.object
+        children = [ob for ob in bpy.context.scene.objects if ob.parent == active_ob]
+        for ob in children:
+            ob.select = True
+        return {'FINISHED'}
+
 
 # Delete children of active object
 class DeleteChildren(bpy.types.Operator):
-    """Delete child objects of selected object (parent must be visible)"""
+    """Delete all children of acrove object (parent must be visible)"""
     bl_idname = "mesh.delete_all_children"
-    bl_label = "Delete all child objects"
+    bl_label = "Delete all children of acrove object (parent must be visible)"
     bl_options = {"REGISTER", "UNDO"}
     
     def execute(self, context):
