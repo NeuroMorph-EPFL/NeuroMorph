@@ -21,7 +21,7 @@ bl_info = {
     "location": "View3D > Lengths",
     "description": "Interface for NeuroMorph naming convention",
     "warning": "",  
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/visualization",  
+    "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Other_Tools",  
     "tracker_url": "",  
     "category": "Tool"}  
   
