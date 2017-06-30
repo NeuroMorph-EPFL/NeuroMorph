@@ -21,7 +21,7 @@ bl_info = {
     "location": "View3D > Proximity Analysis",
     "description": "Calculate regions of surface within a given distance of each other",
     "warning": "",  
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/visualization",  
+    "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Proximity_Analysis_Tools",  
     "tracker_url": "",  
     "category": "Tool"}  
   
@@ -183,30 +183,6 @@ class SetObject2(bpy.types.Operator):
         bpy.context.scene.name2 = bpy.context.object.name
         return {'FINISHED'}
 
-# # Show/Hide children of active object
-# class ShowChildren(bpy.types.Operator):
-#     """Show all children of active object"""
-#     bl_idname = "object.show_children"
-#     bl_label = "Show all children of active object"
-
-#     def execute(self, context):
-#         active_ob = bpy.context.object
-#         children = [ob for ob in bpy.context.scene.objects if ob.parent == active_ob]
-#         for ob in children:
-#             ob.hide = False
-#         return {'FINISHED'}
-
-# class HideChildren(bpy.types.Operator):
-#     """Hide all children of active object"""
-#     bl_idname = "object.hide_children"
-#     bl_label = "Hide all children of active object"
-
-#     def execute(self, context):
-#         active_ob = bpy.context.object
-#         children = [ob for ob in bpy.context.scene.objects if ob.parent == active_ob]
-#         for ob in children:
-#             ob.hide = True
-#         return {'FINISHED'}
 
 
 # Outer function organizing everything
@@ -326,7 +302,7 @@ class CalculateDistances(bpy.types.Operator):
 
         print("bad count (better be 0!) = ", bad_count)
         t2 = datetime.datetime.now()
-        print("\nTIME AT END: ", t2, ",  TIME DIFF: ", t2-t1)
+        print("Total processing time: ", t2-t1)
 
         return {'FINISHED'}
 
@@ -389,7 +365,7 @@ def get_close_verts(ob1, ob2, thresh):
     return ([close_verts1, close_verts2])
 
 
-def get_close_regions_to_single_region(ob1_reg, verts2, thresh, ob2, make_child=True):  # todo: test this
+def get_close_regions_to_single_region(ob1_reg, verts2, thresh, ob2, make_child=True):  # todo: test this (seems fine)
     # Build KDTrees
     size1 = len(ob1_reg.data.vertices)
     kd1 = mathutils.kdtree.KDTree(size1)
@@ -458,12 +434,6 @@ def separate_distinct_regions(ob1, vert_list1, make_child=True):
     #         print(ob.name, len(ob.data.polygons))
     
 
-    # # Delete vertices and edges that are not part of any faces
-    # # Do not do this until end end after everything has been processed!
-    # if False:
-    #     for ob_i in ob_list_after:
-    #         delete_extraneous_verts(ob_1, True)
-
     # Remove meshes with zero vertices, todo: still need this?
     if False:
         ob_list_meshes = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH']
@@ -475,7 +445,6 @@ def separate_distinct_regions(ob1, vert_list1, make_child=True):
     # Remove all pre-existing objects, again
     ob_list_after = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH']
     for ob_i in ob_list_before:
-        # print(ob_i.name)
         if ob_i in ob_list_after:
             ob_list_after.remove(ob_i)
         else:
@@ -488,7 +457,6 @@ def separate_distinct_regions(ob1, vert_list1, make_child=True):
         for ob_i in ob_list_after:
             # ob_i.name = "sub-" + str(ob1.name)
             ob_i.parent = ob1
-            # ob_i.hide = True  # do at end instead, so all operations work
 
     return (ob_list_after)
 
@@ -505,6 +473,7 @@ def delete_extraneous_verts(ob, separate_at_end=False):
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.mesh.select_face_by_sides(number=3, type='GREATER')
+    bpy.ops.mesh.select_face_by_sides(number=3, type='EQUAL')
     # this includes edges that are part of no faces if both of its vertices are parts of faces
 
     bpy.ops.mesh.select_all(action='INVERT')
@@ -547,13 +516,12 @@ def get_SAs_and_centroid(sub_ob1, sub_ob2):
     # Calculate surface areas of sub_objects; one object might be empty list
     SA1 = 0
     if hasattr(sub_ob1, 'data'):
-        for f1 in sub_ob1.data.polygons:
-            SA1 += f1.area  # area uses local coordinates, okay as long as transform_apply()'d first
+        # area uses local coordinates, okay as long as transform_apply()'d first
+        SA1 = sum([f.area for f in sub_ob1.data.polygons])
 
     SA2 = 0
     if hasattr(sub_ob2, 'data'):
-        for f2 in sub_ob2.data.polygons:
-            SA2 += f2.area
+        SA2 = sum([f.area for f in sub_ob2.data.polygons])
 
     # Calculate centroid of all vertices involved in this interaction, both surfaces
     cntrd = Vector([0,0,0])
@@ -573,11 +541,84 @@ def get_SAs_and_centroid(sub_ob1, sub_ob2):
 
 
 
+def get_total_SA(SAs):
+
+    # Join separate surface area objects into single object
+    total_SA_ob1 = []
+    total_SA_ob2 = []
+    for SA in SAs:
+        ob1_name = SA[0]
+        ob2_name = SA[1]
+        ob1 = [ob for ob in bpy.data.objects if ob.name == ob1_name][0]
+        ob2 = [ob for ob in bpy.data.objects if ob.name == ob2_name][0]
+        total_SA_ob1 = join_obs(total_SA_ob1, ob1)
+        total_SA_ob2 = join_obs(total_SA_ob2, ob2)
+
+    # Remove duplicate faces
+    SA1 = get_nonoverlapping_area(total_SA_ob1)
+    SA2 = get_nonoverlapping_area(total_SA_ob2)
+
+    # Delete total_SA objects
+    bpy.ops.object.select_all(action='DESELECT')
+    total_SA_ob1.select = True
+    bpy.ops.object.delete()
+    bpy.ops.object.select_all(action='DESELECT')
+    total_SA_ob2.select = True
+    bpy.ops.object.delete()
+
+    return([SA1, SA2])
+
+
+
+def join_obs(total_SA, ob):
+    activate_an_object()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    ob.select = True
+
+    # Duplicate region (bpy.ops.object.duplicate() does not return new object when run in add-on)
+    ob_copy = ob.copy()
+    ob_copy.data = ob.data.copy()
+    bpy.context.scene.objects.link(ob_copy)
+    ob_copy.hide = False
+
+    if total_SA == []:
+        return(ob_copy)
+    bpy.ops.object.select_all(action='DESELECT')
+    total_SA.select = True
+    ob_copy.select = True
+    bpy.context.scene.objects.active = total_SA
+    bpy.ops.object.join()
+    total_SA_ob = bpy.context.object
+
+    return(total_SA_ob)
+
+def get_nonoverlapping_area(total_SA):
+    # Remove overlapping faces
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    total_SA.select = True
+    bpy.context.scene.objects.active = total_SA
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.remove_doubles()
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # Get SA
+    SA = 0
+    for f in total_SA.data.polygons:
+        SA += f.area
+    return(SA)
+
+
+
 # Write distances data to file 
 def write_data(SAs, self):
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
     filename = bpy.props.StringProperty(subtype="FILE_NAME")
     full_filename = bpy.context.scene.filename
+
+    [total_SA1, total_SA2] = get_total_SA(SAs)
 
     name1 = bpy.context.scene.name1
     name2 = bpy.context.scene.name2
@@ -590,11 +631,11 @@ def write_data(SAs, self):
         coord_str = "[" + str(cntrd[0]) + "," + str(cntrd[1]) + "," + str(cntrd[2]) + "]"  # use commas
         f.write(name1_here + ";" + str(SA1) + ";" + name2_here + ";" + str(SA2) + ";" + coord_str +"\n")
 
+    f.write("Total (non-overlapping) " + name1 + ";" + str(total_SA1) + ";" + \
+            "Total (non-overlapping) " + name2 + ";" + str(total_SA2) + ";\n")
     f.close()
     self.report({'INFO'}, "Finished exporting file.")
 
-
-# f = [f for f in bpy.context.object.data.polygons if (f.select==True)]  # from obj mode
 
 
 if __name__ == "__main__":
@@ -603,13 +644,6 @@ if __name__ == "__main__":
 
 def unregister():
     bpy.utils.unregister_module(__name__)
-
-
-
-
-
-
-
 
 
 
