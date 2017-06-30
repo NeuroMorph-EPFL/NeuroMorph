@@ -21,7 +21,7 @@ bl_info = {
     "location": "View3D > 3D Drawing",
     "description": "Place markers on images and draw lines to construct surfaces in 3D",
     "warning": "",  
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/visualization",  
+    "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/3D_Drawing",  
     "tracker_url": "",  
     "category": "Tool"}  
   

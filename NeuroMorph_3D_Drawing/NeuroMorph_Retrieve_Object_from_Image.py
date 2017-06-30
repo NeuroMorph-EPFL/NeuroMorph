@@ -21,7 +21,7 @@ bl_info = {
     "location": "View3D > Object Image Superposition",
     "description": "Retrieve object from point selection on image plane",  # "Superimposes image files over 3D objects interactively",
     "warning": "",  
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/visualization",  
+    "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/3D_Drawing",  
     "tracker_url": "",  
     "category": "Tool"}  
   
