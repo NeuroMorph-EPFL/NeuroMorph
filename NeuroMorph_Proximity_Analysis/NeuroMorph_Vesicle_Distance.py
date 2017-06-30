@@ -21,7 +21,7 @@ bl_info = {
     "location": "View3D > Vesicle to Synapse Distances",
     "description": "Calculate distances from vesicles to a synapse",
     "warning": "",  
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/visualization",  
+    "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Proximity_Analysis_Tools",  
     "tracker_url": "",  
     "category": "Tool"}  
   
