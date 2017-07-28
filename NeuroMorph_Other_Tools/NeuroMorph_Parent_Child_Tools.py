@@ -111,9 +111,9 @@ class SelectChildren(bpy.types.Operator):
 
 # Delete children of active object
 class DeleteChildren(bpy.types.Operator):
-    """Delete all children of acrove object (parent must be visible)"""
+    """Delete all children of active object (parent must be visible)"""
     bl_idname = "mesh.delete_all_children"
-    bl_label = "Delete all children of acrove object (parent must be visible)"
+    bl_label = "Delete all children of active object (parent must be visible)"
     bl_options = {"REGISTER", "UNDO"}
     
     def execute(self, context):
