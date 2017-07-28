@@ -1063,7 +1063,7 @@ def write_data(lengths, radii, areas, vcounts, area_sums, full_filename, self):
     if areas != []:
         outfile.write(";cross-sectional area at vertex")
     if vcounts != []:
-        outfile.write(";number of vesicles closest to this vertex")
+        outfile.write(";number of spheres (vesicles) closest to this vertex")
     if area_sums != []:
         outfile.write(";sum of surface areas projected to this vertex")
     outfile.write("\n\n")
