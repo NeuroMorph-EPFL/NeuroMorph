@@ -112,7 +112,7 @@ class CenterlinePanel(bpy.types.Panel):
         row.operator("object.get_surface_areas", text='Get Cross-sectional Surface Areas', icon='FACESEL_HLT')
 
         row = self.layout.row()
-        row.operator("object.project_vesicles", text='Project Vesicles to Centerline', icon="FULLSCREEN_EXIT")
+        row.operator("object.project_vesicles", text='Project Spheres to Centerline', icon="FULLSCREEN_EXIT")
 
         row = self.layout.row()
         row.operator("object.project_areas", text='Project Surface Areas to Centerline', icon="FULLSCREEN_EXIT")
@@ -659,9 +659,9 @@ def convert_to_global_coords(these_obs = []):
 
 # Count number of vesicles that project to each centerline point
 class ProjectVesicles(bpy.types.Operator):
-    """Project vesicles of selected vesicle object onto selected centerline object (2 objects selected)"""
+    """Project centers of distinct spheres (vesicles) of selected mesh object onto selected centerline object (2 objects selected)"""
     bl_idname = "object.project_vesicles"
-    bl_label = "Project vesicles onto centerline"
+    bl_label = "Project vesicle spheres onto centerline"
 
     # directory = bpy.props.StringProperty(subtype="FILE_PATH")
     # filename = bpy.props.StringProperty(subtype="FILE_NAME")
@@ -700,7 +700,7 @@ class ProjectVesicles(bpy.types.Operator):
 
 # Count number of vesicles that project to each centerline point
 class ProjectAreas(bpy.types.Operator):
-    """Project surface area regions of selected object onto selected centerline object (2 objects selected)"""
+    """Project surface area regions of selected mesh object onto selected centerline object (2 objects selected)"""
     bl_idname = "object.project_areas"
     bl_label = "Project surface areas onto centerline"
 
