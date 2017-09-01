@@ -117,33 +117,17 @@ class DeleteChildren(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
     
     def execute(self, context):
-                     
-      if bpy.ops.object.mode_set.poll():
-           bpy.ops.object.mode_set(mode='OBJECT')  
-      #   
-      objlist = [item for item in bpy.context.selected_objects if item.parent==None and item.type=="MESH"]   
-      
-          
-      bpy.ops.object.select_all(action='DESELECT')
-      for obj in objlist:
-          
-          bpy.context.scene.objects.active = obj
-             #mt = bpy.context.active_object
-          if obj.children!=None:
-                    
-            childlist=obj.children
-            obj.select=False
-            for child in childlist:
-                  
-                  if child.hide==True:
-                     child.hide=False
-                               
-                  if child.select==False:
-                     child.select=True
-                  bpy.context.scene.objects.active = child  
-                  #obj.select=False
-                  bpy.ops.object.delete() 
-      return {'FINISHED'}
+        bpy.ops.object.mode_set(mode='OBJECT') 
+        ob = bpy.context.object
+        bpy.ops.object.select_all(action='DESELECT')
+
+        for child in ob.children:
+            child.hide = False
+            child.select = True
+            bpy.context.scene.objects.active = child  
+            bpy.ops.object.delete()
+
+        return {'FINISHED'}
 
 
 # Assign parent object to all selected objects
