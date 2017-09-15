@@ -117,7 +117,8 @@ class DeleteChildren(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
     
     def execute(self, context):
-        bpy.ops.object.mode_set(mode='OBJECT') 
+        if bpy.ops.object.mode_set.poll():
+            bpy.ops.object.mode_set(mode='OBJECT') 
         ob = bpy.context.object
         bpy.ops.object.select_all(action='DESELECT')
 
