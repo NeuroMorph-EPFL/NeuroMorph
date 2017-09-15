@@ -59,6 +59,28 @@ bpy.types.Scene.search_radius = bpy.props.FloatProperty \
     default=1.0  # needed 1.67 once
 )
 
+bpy.types.Scene.bouton_distance_change = bpy.props.FloatProperty \
+(
+    name="Bouton: Distance for Area Change",
+    description = "Distance along centerline in which the cross-sectional area must change by a certain ratio to detect a bouton\n(centerline vertices marked with green/red spheres)", 
+    default=0.2
+)
+
+bpy.types.Scene.bouton_area_change = bpy.props.FloatProperty \
+(
+    name="Bouton: Area Change (ratio)",
+    description = "Ratio change in cross-sectional area, along set distance, that defines a bouton\n(centerline vertices marked with green/red spheres)", 
+    default=1.3
+)
+
+bpy.types.Scene.bouton_max_rad = bpy.props.FloatProperty \
+(
+    name="Bouton: Minimum Max Radius",
+    description = "Maximum radius of cross section (from centroid of cross section) must be at least this large to define a bouton\n(centerline vertices marked with blue spheres)", 
+    default=0.2
+)
+
+
 # store radii list as strings attached to each center line object
 bpy.types.Object.centerline_min_radii = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
@@ -121,6 +143,25 @@ class CenterlinePanel(bpy.types.Panel):
         row.operator("object.write_ctrline_data", text='Write Centerline Data', icon='FILESEL')
 
 
+        self.layout.label("---------- Detect Boutons ----------")
+        split = self.layout.row().split(percentage=0.1)
+        col1 = split.column()
+        col2 = split.column()
+        col2.prop(context.scene, "bouton_area_change")
+        split = self.layout.row().split(percentage=0.1)
+        col1 = split.column()
+        col2 = split.column()
+        col2.prop(context.scene, "bouton_distance_change")
+        split = self.layout.row().split(percentage=0.1)
+        col1 = split.column()
+        col2 = split.column()
+        col2.prop(context.scene, "bouton_max_rad")
+        row = self.layout.row()
+        row.operator("object.detect_boutons", text='Detect Boutons', icon="OUTLINER_DATA_META")  # OUTLINER_OB_META, MAN_SCALE
+
+        
+
+
         # self.layout.label("--Debugging--") 
         # row = self.layout.row()
         # row.operator("object.separate_spheres", text='Separate Vesicle Spheres')
@@ -132,6 +173,7 @@ class CenterlinePanel(bpy.types.Panel):
         #centerline:  CURVE_DATA, OUTLINER_DATA_CURVE, OUTLINER_OB_CURVE, MOD_CURVE
         #cross-sectional areas:  FACESEL_HLT, SNAP_FACE, HAIR
         #vesicle projection:  FORCE_HARMONIC, FULLSCREEN_EXIT, STICKY_UVS_DISABLE
+
 
 
 
@@ -156,6 +198,106 @@ class CenterlinePanel(bpy.types.Panel):
 
 #         # returns in edit mode, so can see points that were modified
 #         return {'FINISHED'}
+
+
+class DetectBoutons(bpy.types.Operator):
+    """Mark centerline vertices corresponding to large cross-sectional radius or large cross-sectional area change over short distances along centerline\n(1 centerline object selected, with cross-sections already calculated)"""
+    bl_idname = "object.detect_boutons"
+    bl_label = "Detect Boutons"
+
+    def execute(self, context):
+        centerline = bpy.context.object
+
+        areas = CollectionProperty2list(centerline.cross_sectional_areas, True)
+        if len(areas) == 0:
+            infostr = "No cross-sectional areas detected with this centerline, must get cross sectional surface areas first"
+            self.report({'INFO'}, infostr)
+            return {'FINISHED'}
+
+        # Extract necessary variables
+        lengths = get_length_along_crv(centerline)
+        distance_change = bpy.context.scene.bouton_distance_change
+        area_change_factor = bpy.context.scene.bouton_area_change
+        area_change_factor_inv = 1/area_change_factor
+        max_rad_thresh = bpy.context.scene.bouton_max_rad
+
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='DESELECT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        nverts = len(centerline.data.vertices)
+
+        # Define materials for increasing and decreasing markers
+        mat_inc = bpy.data.materials.new("area_increase_material")
+        mat_inc.diffuse_color = (0.0,1.0,0.0)
+        mat_dec = bpy.data.materials.new("area_decrease_material")
+        mat_dec.diffuse_color = (1.0,0.0,0.0)
+
+        mat_rad = bpy.data.materials.new("max_rad_material")
+        mat_rad.diffuse_color = (0.0, 0.0, 1.0)
+        mat_rad.use_transparency=True
+        mat_rad.transparency_method = 'Z_TRANSPARENCY'
+        mat_rad.alpha = 0.33
+
+        # Create empty child object of centerline, whose children will be the marker spheres
+        sphere_parent = bpy.data.objects.new("SphereMarkers", None)
+        bpy.context.scene.objects.link(sphere_parent)
+        sphere_parent.parent = centerline
+
+        # Get maximum radius of cross section at each centerline vertex
+        max_rads = get_max_rad(centerline)
+
+        # For each centerline vertex, detect points where ratio of change in area > area_change_factor and 
+        # distance along centerline < distance_change
+        # for v1 in range(0, nverts-1):
+        for v1 in range(0, nverts):
+            loc = centerline.data.vertices[v1].co
+
+            # Mark points of large radius
+            if max_rads[v1] > max_rad_thresh:
+                add_sphere_at_loc(loc, distance_change/4, mat_rad, sphere_parent)
+
+            if v1 < nverts-1:
+                v1_area = areas[v1]
+                v1_dist_start = lengths[v1]
+
+                v2 = v1+1
+                v2_dist = lengths[v2] - v1_dist_start
+                while (v2_dist < distance_change):
+                    v2_area = areas[v2]
+                    area_rat = v2_area / v1_area
+                    if area_rat > area_change_factor or area_rat < area_change_factor_inv:
+                        centerline.data.vertices[v1].select = True
+                        if area_rat > area_change_factor:
+                            add_sphere_at_loc(loc, distance_change/6, mat_inc, sphere_parent)
+                        if area_rat < area_change_factor_inv:
+                            add_sphere_at_loc(loc, distance_change/6, mat_dec, sphere_parent)
+                        break
+                    v2 += 1
+                    if v2 >= nverts:
+                        break
+                    v2_dist = lengths[v2] - v1_dist_start
+
+        # Hide dotted line between parent and child objects
+        for area in bpy.context.screen.areas:
+            if area.type == 'VIEW_3D':
+                area.spaces[0].show_relationship_lines = False
+
+        return {'FINISHED'}
+
+
+def get_max_rad(centerline):
+    children = centerline.children
+    csa_names = [elt for elt in children if elt.name[0:20] == "cross-sectional area"]
+    max_rads = []
+    for csa in csa_names:
+        # csa = bpy.context.scene.objects[this_name]
+        verts = [v.co for v in csa.data.vertices]
+        centroid = np.mean(verts, axis=0)
+        dists = [get_dist(v, centroid) for v in verts]
+        max_rads.append(max(dists))
+    return(max_rads)
+
+
 
 
 class PreProcessMesh(bpy.types.Operator):
@@ -250,7 +392,6 @@ class RedefineCenterline(bpy.types.Operator):
     bl_label = "Use modified centerline"
 
     def execute(self, context):
-        assign_selected_objects(self)
         err, objs = assign_selected_objects(self)
         if err < 0:
             return {'FINISHED'}
@@ -597,21 +738,28 @@ class RadiiSpheres(bpy.types.Operator):
         for ind in range(0,len(rs), step):
             loc = centerline.data.vertices[ind].co
             rad = rs[ind]
-            add_sphere_at_loc(loc, rad)
+            add_sphere_at_loc(loc, rad, [], [])
         return {'FINISHED'}
 
 
-def add_sphere_at_loc(loc, rad):
+def add_sphere_at_loc(loc, rad, mat, parent):
     # assumes image is selected?
     bpy.ops.mesh.primitive_uv_sphere_add(location=loc, size=rad)
     obj = bpy.context.object
-    mat = bpy.data.materials.new("sphere_material")
-    mat.diffuse_color = (1.0, 0.3, 0.0)
-    mat.use_transparency=True
-    mat.transparency_method = 'Z_TRANSPARENCY'
-    mat.alpha = 0.7
+    if mat == []:
+        mat = bpy.data.materials.new("sphere_material")
+        mat.diffuse_color = (1.0, 0.3, 0.0)
+        mat.use_transparency=True
+        mat.transparency_method = 'Z_TRANSPARENCY'
+        mat.alpha = 0.5
     obj.active_material = mat
+    obj.show_transparent = True
     obj.name = "sphere"  # "marker"
+
+    
+
+    if parent != []:
+        obj.parent = parent
 
     # turn off origin marker
     bpy.context.space_data.show_manipulator = False
