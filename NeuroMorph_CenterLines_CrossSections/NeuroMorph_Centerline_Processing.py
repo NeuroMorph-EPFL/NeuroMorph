@@ -61,21 +61,21 @@ bpy.types.Scene.search_radius = bpy.props.FloatProperty \
 
 bpy.types.Scene.bouton_distance_change = bpy.props.FloatProperty \
 (
-    name="Bouton: Distance for Area Change",
+    name="Distance for Area Change",
     description = "Distance along centerline in which the cross-sectional area must change by a certain ratio to detect a bouton\n(centerline vertices marked with green/red spheres)", 
     default=0.2
 )
 
 bpy.types.Scene.bouton_area_change = bpy.props.FloatProperty \
 (
-    name="Bouton: Area Change (ratio)",
+    name="Area Change (ratio)",
     description = "Ratio change in cross-sectional area, along set distance, that detects a bouton\n(centerline vertices marked with green/red spheres)", 
     default=1.3
 )
 
 bpy.types.Scene.bouton_max_rad = bpy.props.FloatProperty \
 (
-    name="Bouton: Minimum Max Radius",
+    name="Minimum Max Radius",
     description = "Maximum radius of cross section must be at least this large to detect a bouton\n(centerline vertices marked with blue spheres)", 
     default=0.2
 )
