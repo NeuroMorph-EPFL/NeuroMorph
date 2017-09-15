@@ -69,20 +69,23 @@ bpy.types.Scene.bouton_distance_change = bpy.props.FloatProperty \
 bpy.types.Scene.bouton_area_change = bpy.props.FloatProperty \
 (
     name="Bouton: Area Change (ratio)",
-    description = "Ratio change in cross-sectional area, along set distance, that defines a bouton\n(centerline vertices marked with green/red spheres)", 
+    description = "Ratio change in cross-sectional area, along set distance, that detects a bouton\n(centerline vertices marked with green/red spheres)", 
     default=1.3
 )
 
 bpy.types.Scene.bouton_max_rad = bpy.props.FloatProperty \
 (
     name="Bouton: Minimum Max Radius",
-    description = "Maximum radius of cross section (from centroid of cross section) must be at least this large to define a bouton\n(centerline vertices marked with blue spheres)", 
+    description = "Maximum radius of cross section must be at least this large to detect a bouton\n(centerline vertices marked with blue spheres)", 
     default=0.2
 )
 
 
-# store radii list as strings attached to each center line object
+# store min radii list as strings attached to each center line object
 bpy.types.Object.centerline_min_radii = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+
+# store max radii list as strings attached to each center line object
+bpy.types.Object.centerline_max_radii = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
 
 # store cross-sectional area as strings attached to each center line object
 bpy.types.Object.cross_sectional_areas = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
@@ -132,6 +135,9 @@ class CenterlinePanel(bpy.types.Panel):
 
         row = self.layout.row()
         row.operator("object.get_surface_areas", text='Get Cross-sectional Surface Areas', icon='FACESEL_HLT')
+
+        row = self.layout.row()
+        row.operator("object.max_radii", text='Get Maximum Radius of each Cross Section', icon='FORCE_FORCE')
 
         row = self.layout.row()
         row.operator("object.project_vesicles", text='Project Spheres to Centerline', icon="FULLSCREEN_EXIT")
@@ -296,6 +302,28 @@ def get_max_rad(centerline):
         dists = [get_dist(v, centroid) for v in verts]
         max_rads.append(max(dists))
     return(max_rads)
+
+
+
+class CalcMaxRadii(bpy.types.Operator):
+    """Calculate the maximum radius of each cross section (centerline object selected)"""
+    bl_idname = "object.max_radii"
+    bl_label = "Calculate the maximum radius of each cross section (centerline object selected)"
+
+    def execute(self, context):
+        centerline = bpy.context.object
+
+        areas = CollectionProperty2list(centerline.cross_sectional_areas, True)
+        if len(areas) == 0:
+            infostr = "No cross-sectional areas detected with this centerline, must get cross sectional surface areas first"
+            self.report({'INFO'}, infostr)
+            return {'FINISHED'}
+
+        max_rads = get_max_rad(centerline)
+        list2CollectionProperty(max_rads, centerline.centerline_max_radii)
+
+        return {'FINISHED'}
+
 
 
 
@@ -1200,16 +1228,18 @@ def read_vtp(filename):
 
 
 # Write data to file 
-def write_data(lengths, radii, areas, vcounts, area_sums, full_filename, self):
+def write_data(lengths, minradii, areas, maxradii, vcounts, area_sums, full_filename, self):
     # directory = bpy.props.StringProperty(subtype="FILE_PATH")
     # filename = bpy.props.StringProperty(subtype="FILE_NAME")
     outfile = open(full_filename, 'w')
 
     outfile.write("distance along curve")
-    if radii != []:
+    if minradii != []:
         outfile.write(";minimum radius at vertex")
     if areas != []:
         outfile.write(";cross-sectional area at vertex")
+    if maxradii != []:
+        outfile.write(";maximum radius at vertex")
     if vcounts != []:
         outfile.write(";number of spheres (vesicles) closest to this vertex")
     if area_sums != []:
@@ -1217,10 +1247,12 @@ def write_data(lengths, radii, areas, vcounts, area_sums, full_filename, self):
     outfile.write("\n\n")
     for v_ind in range(0, len(lengths)):
         outfile.write(str(lengths[v_ind]))
-        if radii != []:
-            outfile.write(";" + str(radii[v_ind]))
+        if minradii != []:
+            outfile.write(";" + str(minradii[v_ind]))
         if areas != []:
             outfile.write(";" + str(areas[v_ind]))
+        if maxradii != []:
+            outfile.write(";" + str(maxradii[v_ind]))
         if vcounts != []:
             outfile.write(";" + str(vcounts[v_ind]))
         if area_sums != []:
@@ -1233,7 +1265,7 @@ def write_data(lengths, radii, areas, vcounts, area_sums, full_filename, self):
 
 
 class WriteCtrlineData(bpy.types.Operator):
-    """Write all calculated data of selected centerline (min radii, vesicle projections, areas)"""
+    """Write all calculated data of selected centerline"""
     bl_idname = "object.write_ctrline_data"
     bl_label = "Write data of selected centerline"
 
@@ -1253,11 +1285,12 @@ class WriteCtrlineData(bpy.types.Operator):
         convert_to_global_coords()
 
         lengths = get_length_along_crv(centerline)
-        radii = CollectionProperty2list(centerline.centerline_min_radii, True)
+        minradii = CollectionProperty2list(centerline.centerline_min_radii, True)  # might be []
         areas = CollectionProperty2list(centerline.cross_sectional_areas, True)  # might be []
+        maxradii = CollectionProperty2list(centerline.centerline_max_radii, True)  # might be []
         vcounts = CollectionProperty2list(centerline.vesicle_counts, True)  # might be []
         area_sums = CollectionProperty2list(centerline.area_sums, True)  # might be []
-        write_data(lengths, radii, areas, vcounts, area_sums, full_filename, self)
+        write_data(lengths, minradii, areas, maxradii, vcounts, area_sums, full_filename, self)
         return {'FINISHED'}
 
 
