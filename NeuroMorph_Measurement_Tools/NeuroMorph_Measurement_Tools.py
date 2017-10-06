@@ -1184,7 +1184,7 @@ class WriteData(bpy.types.Operator):
     def execute(self, context):
         directory = self.directory
         filename = self.filename
-        fname = filename + '.txt'
+        fname = filename + '.csv'
         the_name=os.path.join(directory,fname)
         f = open(the_name, 'w')
         f.write('Object Name,Parent,Surface Area,Volume,Number of Vertices,Length\n\n')
@@ -1219,7 +1219,7 @@ class Write_Selected_Data(bpy.types.Operator):
 
         directory = self.directory
         filename = self.filename
-        fname = filename + '.txt'
+        fname = filename + '.csv'
         the_name=os.path.join(directory,fname)
         f = open(the_name, 'w')
         f.write('Object Name,Parent,Surface Area,Volume,Number of Vertices,Length\n\n')
@@ -1258,18 +1258,11 @@ def write_obj_info(obj, f):
             f.write(' ,')
         else:
             f.write(str(obj.vol) + ',')
-        f.write(str(obj.nverts) + '\n')
-    if hasattr(obj.data, 'splines'):  # curve objects
-        f.write(obj.name + ',')
-        if obj.parent is None:
-            f.write('none ,')
+        f.write(str(obj.nverts) + ',')
+        if obj.curvelength != "property not available":
+        	f.write(str(obj.curvelength) + ' \n')
         else:
-            f.write(str(obj.parent.name) + ',')
-        f.write(' ,')  # SA
-        f.write(' ,')  # vol
-        f.write(' ,')  # nverts
-        f.write(str(obj.curvelength) + ' \n')
-        #f.write(str(obj.pathlength) + '\n')
+        	f.write(' \n')
     return
 
 
