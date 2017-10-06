@@ -16,7 +16,7 @@ A. Jorstad, B. Nigro, C. Cali, M. Wawrzyniak, P. Fua, G. Knott.  (2014).  "Neuro
 Download individual tools from the following folders:  
 * [NeuroMorph_Measurement_Tools](NeuroMorph_Measurement_Tools)
 * [NeuroMorph_3D_Drawing](NeuroMorph_3D_Drawing)
-* [NeuroMorph_CenterLines_CossSections](NeuroMorph_CenterLines_CossSections)
+* [NeuroMorph_CenterLines_CrossSections](NeuroMorph_CenterLines_CrossSections)
 * [NeuroMorph_Proximity_Analysis](NeuroMorph_Proximity_Analysis)
 * [NeuroMorph_Other_Tools](NeuroMorph_Other_Tools)
 
