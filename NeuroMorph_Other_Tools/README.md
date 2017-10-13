@@ -26,4 +26,11 @@ Import one or many object models from .obj files obtained through 3D image segme
 
 Previously part of the deprecated NeuroMorph Measurement Tools, allows objects to be named according to a naming convention developed for neural structures.
 
+#### IMOD to Blender (correct_Y_mirroring.py)
+[Download](https://raw.githubusercontent.com/ajorstad/NeuroMorph/master/NeuroMorph_Other_Tools/correct_Y_mirroring.py)  
+[Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Other_Tools)  
+
+Tool to correct IMOD-exported meshes by rotating in the Y dimension, so that they can be processed correctly in Blender.  See the [Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Other_Tools) for a description of the complete pipeline for importing IMOD meshes into Blender.
+
+
 [![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph_Other_Tools?pixel)](https://github.com/ajorstad/NeuroMorph/tree/master/NeuroMorph_Other_Tools)
