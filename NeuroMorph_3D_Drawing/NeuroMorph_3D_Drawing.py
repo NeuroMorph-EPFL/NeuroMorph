@@ -1254,6 +1254,8 @@ class RemTranspButton(bpy.types.Operator):
 def insert_image_stack_ladder():
     # insert bar of image stack height with vertex at each z value in stack
 
+    bpy.ops.object.mode_set(mode='OBJECT')
+
     # If ImageStackLadder already exists, remove it and replace with new one
     if bpy.data.objects.get("ImageStackLadder") is not None:
         if bpy.ops.object.mode_set.poll():
