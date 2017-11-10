@@ -7,7 +7,7 @@
   })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
   ga('create', 'UA-99596205-1', 'auto');
   ga('send', 'pageview');
-  ga('send', 'event', 'Download', 'Download code', '3D Drawing');" href="http://raw.githubusercontent.com/ajorstad/NeuroMorph/master/NeuroMorph_3D_Drawing/NeuroMorph_3D_Drawing.py">Download</a><br>
+  ga('send', 'event', 'Download', 'Download code', '3D Drawing');" href="http://raw.githubusercontent.com/NeuroMorph-EPFL/NeuroMorph/master/NeuroMorph_3D_Drawing/NeuroMorph_3D_Drawing.py">Download</a><br>
 <a onmousedown="(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
   (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
   m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
@@ -19,9 +19,9 @@
 Scroll through image stacks in 3D. Place spherical markers (eg vesicles) on images, and draw lines that can be constructed into both open surfaces (eg synapses) and closed surfaces (eg mitochondria) in 3D. Open surfaces with holes are handled. Closed surfaces that branch are not handled.
 
 #### NeuroMorph Retrieve Object from Image   
-<a onmousedown="ga('send', 'event', 'Download', 'Download code', 'Retrieve Object from Image');" href="http://raw.githubusercontent.com/ajorstad/NeuroMorph/master/NeuroMorph_3D_Drawing/NeuroMorph_Retrieve_Object_from_Image.py">Download</a><br>
+<a onmousedown="ga('send', 'event', 'Download', 'Download code', 'Retrieve Object from Image');" href="http://raw.githubusercontent.com/NeuroMorph-EPFL/NeuroMorph/master/NeuroMorph_3D_Drawing/NeuroMorph_Retrieve_Object_from_Image.py">Download</a><br>
 <a onmousedown="ga('send', 'event', 'Link', 'Link to Blender Wiki', 'Retrieve Object from Image');" href="https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/3D_Drawing">Full Documentation</a>
 
 Objects existing at any image point can be retrieved (made visible), allowing for easy navigation of object connectivity. Requires the 3D Drawing tool to be loaded.
 
-[![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph_3D_Drawing?pixel)](https://github.com/ajorstad/NeuroMorph/tree/master/NeuroMorph_3D_Drawing)
+[![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph_3D_Drawing?pixel)](https://github.com/NeuroMorph-EPFL/NeuroMorph/tree/master/NeuroMorph_3D_Drawing)
