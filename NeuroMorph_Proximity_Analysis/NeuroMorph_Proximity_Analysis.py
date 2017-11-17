@@ -16,7 +16,7 @@
 bl_info = {  
     "name": "NeuroMorph Proximity Analysis",
     "author": "Anne Jorstad",
-    "version": (0, 0, 3),
+    "version": (1, 0, 1),
     "blender": (2, 7, 7),
     "location": "View3D > Proximity Analysis",
     "description": "Calculate regions of surface within a given distance of each other",
@@ -45,6 +45,13 @@ import datetime
 
 # Define scene variables
 bpy.types.Scene.filename = bpy.props.StringProperty \
+(
+    name = "Output file", 
+    description = "Set file name and path for output data", 
+    default = "/"
+)
+
+bpy.types.Scene.filename2 = bpy.props.StringProperty \
 (
     name = "Output file", 
     description = "Set file name and path for output data", 
@@ -97,6 +104,22 @@ class ProximityAnalysisPanel(bpy.types.Panel):
 
         row = self.layout.row()
         row.operator("object.get_distances", text='Compute Interactions', icon='ARROW_LEFTRIGHT')  # 'ARROW_LEFTRIGHT', 'MESH_DATA'
+
+
+
+        self.layout.label("----- Sphere to Surface Distances -----")
+
+        row = self.layout.row()
+        row.operator("object.reduce_spheres", text='Reduce Spheres to Points')
+
+        row = self.layout.row(align=True)
+        row.prop(context.scene, "filename2")
+        row.operator("file.set_filename2", text='', icon='FILESEL')
+
+        row = self.layout.row()
+        row.operator("object.get_distances2", text='Calculate Distances to Active Object')
+
+
 
 
         # self.layout.label("----------- for debugging -----------")
@@ -549,10 +572,13 @@ def get_total_SA(SAs):
     for SA in SAs:
         ob1_name = SA[0]
         ob2_name = SA[1]
-        ob1 = [ob for ob in bpy.data.objects if ob.name == ob1_name][0]
-        ob2 = [ob for ob in bpy.data.objects if ob.name == ob2_name][0]
-        total_SA_ob1 = join_obs(total_SA_ob1, ob1)
-        total_SA_ob2 = join_obs(total_SA_ob2, ob2)
+        if ob1_name != "":
+            ob1 = [ob for ob in bpy.data.objects if ob.name == ob1_name][0]
+            total_SA_ob1 = join_obs(total_SA_ob1, ob1)
+
+        if ob2_name != "":
+            ob2 = [ob for ob in bpy.data.objects if ob.name == ob2_name][0]
+            total_SA_ob2 = join_obs(total_SA_ob2, ob2)
 
     # Remove duplicate faces
     SA1 = get_nonoverlapping_area(total_SA_ob1)
@@ -638,19 +664,6 @@ def write_data(SAs, self):
 
 
 
-if __name__ == "__main__":
-    register()
-
-
-def unregister():
-    bpy.utils.unregister_module(__name__)
-
-
-
-
-
-
-
 def get_dist_sq(coord1, coord2):  # distance is monotonic, take square root at end for efficiency
     d = (coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2 + (coord1[2] - coord2[2])**2
     return d
@@ -658,6 +671,228 @@ def get_dist_sq(coord1, coord2):  # distance is monotonic, take square root at e
 def get_dist(coord1, coord2):
     d = math.sqrt((coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2 + (coord1[2] - coord2[2])**2)
     return d
+
+
+
+
+
+
+
+
+
+#######################################################################################################
+################################ Sphere to Surface Distances ##########################################
+#######################################################################################################
+
+
+# Define file name and path for export
+class DefineFile2(bpy.types.Operator):
+    """Define file name and path for distance measurement export"""
+    bl_idname = "file.set_filename2"
+    bl_label = "Define file path and name"
+
+    directory = bpy.props.StringProperty(subtype="FILE_PATH")
+    filename = bpy.props.StringProperty(subtype="FILE_NAME")
+
+    def execute(self, context):
+        directory = self.directory
+        filename = self.filename
+        fname = filename + '.csv'
+        full_filename = os.path.join(directory, fname)
+        bpy.context.scene.filename = full_filename
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        WindowManager = context.window_manager
+        WindowManager.fileselect_add(self)
+        return {"RUNNING_MODAL"}
+
+
+# Write distances data to file
+def write_distance_data(dists, all_vesicles, synapse_name, mean_dist):
+    directory = bpy.props.StringProperty(subtype="FILE_PATH")
+    filename = bpy.props.StringProperty(subtype="FILE_NAME")
+    full_filename = bpy.context.scene.filename
+
+    f = open(full_filename, 'w')
+    f.write('Vesicle Name,Distance to ' + synapse_name + '\n\n')
+
+    for ind, d in enumerate(dists):
+        f.write(all_vesicles[ind].name + "," + str(d) + '\n')
+
+    f.write('\n')
+    f.write('mean distance,' + str(mean_dist))
+    f.close()
+
+
+# Calculate distance from center of every child object to the active object, and write file
+class CalculateVesicleDistances(bpy.types.Operator):
+    """Calculate distances to the selected surface (synapse) from each of its child spheres (vesicles)"""
+    bl_idname = "object.get_distances2"
+    bl_label = "Calculate distances to the selected surface (synapse) from each of its child spheres (vesicles)"
+    
+    def execute(self, context):
+
+        # Assign objects considered here
+        the_synapse = bpy.context.object
+        all_vesicles = the_synapse.children
+
+        if all_vesicles == ():
+            self.report({'ERROR'}, 'Active object has no children.')
+            return {'FINISHED'}
+
+        # Calculate center coordinates of each vesicle
+        vesicle_centers = []
+        for vscl in all_vesicles:
+            mat_vscl = vscl.matrix_world
+            these_verts = vscl.data.vertices
+            nverts = len(these_verts)
+            v_sum = Vector([0,0,0])
+            for vert in these_verts:
+                these_global_coords = mat_vscl * vert.co
+                v_sum += these_global_coords
+            this_mean = v_sum / nverts
+            vesicle_centers.append(this_mean)
+
+        # Calculate distance from each vesicle center to each vertex on synapse
+        dists = []
+        inds = []
+        mat_syn = the_synapse.matrix_world
+        for v_ind, v_ctr in enumerate(vesicle_centers):
+            this_min = sys.maxsize
+            this_ind = -1
+            for s_ind, s_vrt in enumerate(the_synapse.data.vertices):
+                this_dist = get_dist_sq(v_ctr, mat_syn*s_vrt.co)
+                if this_dist < this_min:
+                    this_min = this_dist
+                    this_ind = s_ind
+                    
+            dists.append(math.sqrt(this_min))
+            inds.append(this_ind)
+
+        mean_dist = sum(dists) / len(dists)
+        # mean_3D = [sum(col) / float(len(col)) for col in zip(*dists)]
+
+        # Write file containing all distances and mean
+        write_distance_data(dists, all_vesicles, the_synapse.name, mean_dist)
+
+        return {'FINISHED'}
+
+
+# Calculate distance from center of every child object to the active object, and write file
+class Sphere2Point(bpy.types.Operator):
+    """Optional: Replace each child mesh of selected object by single point at the mesh's center \n(useful for slow scenes containing many objects)"""
+    bl_idname = "object.reduce_spheres"
+    bl_label = "Optional: Replace each child mesh of selected object by single point at the mesh's center \n(useful for slow scenes containing many objects)"
+    
+    def execute(self, context):
+        vscls_as_children = True
+        
+        # Assumes active object is parent, with many child meshes
+        if vscls_as_children:
+            parent_ob = bpy.context.object
+            vscl_list = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH' \
+                                                            and ob_i.parent == parent_ob]
+            if len(vscl_list) == 0:
+                self.report({'INFO'}, "Selected object has no mesh children.")
+
+            else:
+                # Convert to world coordinates
+                bpy.ops.object.mode_set(mode='OBJECT')
+                bpy.ops.object.select_all(action='DESELECT')
+                parent_ob.select = True
+                bpy.context.scene.objects.active = parent_ob
+                bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+                for ob in vscl_list:
+                    ob.select = True
+                    bpy.context.scene.objects.active = ob
+                    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+                # Convert to points
+                vert_ob_list = spheres2pts(vscl_list)
+
+                # Reassign parent object
+                for vert_ob in vert_ob_list:
+                    vert_ob.parent = parent_ob
+
+
+        # # Assumes active object is single object consisting of many joined distinct vescile meshes
+        # else:
+        #     vscl_ob = bpy.context.object
+        #     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+        #     # Store list of already-existing objects
+        #     ob_list_before = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH']
+
+        #     # Separate into distinct sphere objects
+        #     bpy.ops.object.mode_set(mode='EDIT')
+        #     bpy.ops.mesh.select_all(action='SELECT')  # edit mode
+        #     bpy.ops.object.mode_set(mode='OBJECT')
+        #     bpy.ops.mesh.separate(type='LOOSE')     # each discontiguous region is a separate object
+
+        #     # Get list of only new objects = the spheres
+        #     ob_list_after = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH']
+        #     for ob_i in ob_list_before:
+        #         ob_list_after.remove(ob_i)
+
+        #     ob_list_after.append(vscl_ob)  # is now just one of the spheres
+
+        #     # Replace each sphere with only its centerpoint
+        #     vert_ob_list = spheres2pts(ob_list_after)
+
+        #     # Return new vertex objects joined into single object
+        #     bpy.ops.object.mode_set(mode='OBJECT')
+        #     bpy.ops.object.select_all(action='DESELECT')
+        #     for vert_ob in vert_ob_list:
+        #         vert_ob.select = True
+        #     bpy.context.scene.objects.active = vert_ob_list[0]
+        #     bpy.ops.object.join()
+
+        return {'FINISHED'}
+
+
+
+# Calculate center of sphere, delete sphere, add new object 
+# with single vertex at center of sphere, same name as sphere
+def spheres2pts(spherelist):
+    vert_ob_list = []
+    for vscl in spherelist:
+        # Select object and all vertices
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        vscl.select = True
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+
+        these_verts = vscl.data.vertices
+        nverts = len(these_verts)
+        v_sum = Vector([0,0,0])
+        for vert in these_verts:
+            v_sum += vert.co
+
+        this_mean = v_sum / nverts
+
+        # Delete vscl object
+        # To delete selected vertices:  bpy.ops.mesh.delete(type='VERT')
+        this_name = vscl.name
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.delete()
+
+        # Create new single vertex object at vscl_mean
+        me = bpy.data.meshes.new(this_name)
+        vscl_ctr_ob = bpy.data.objects.new(this_name, me)
+        bpy.context.scene.objects.link(vscl_ctr_ob)
+        me.from_pydata([this_mean], [], [])
+        me.update()
+        vert_ob_list.append(vscl_ctr_ob)
+
+    # Return an active object
+    vert_ob_list[0].select = True
+    bpy.context.scene.objects.active = vert_ob_list[0]
+
+    return(vert_ob_list)
+
+
 
 
 
