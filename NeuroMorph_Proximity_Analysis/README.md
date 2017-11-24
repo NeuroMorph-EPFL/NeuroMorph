@@ -8,11 +8,8 @@ This module calculates the surface regions of two surfaces that are within a giv
 <br>
 
 
-#### NeuroMorph Synapse Vesicle Distances   
-[Download](http://raw.githubusercontent.com/NeuroMorph-EPFL/NeuroMorph/master/NeuroMorph_Proximity_Analysis/NeuroMorph_Vesicle_Distance.py)  
-[Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Proximity_Analysis_Tools)  
 
-The Synaptic Vesicle Distance Measure add-on computes and outputs the closest distance from the center of each vesicle to a synapse, given a 3D mesh representation of a synapse and balls marking the synaptic vesicles.  The tool expects each vesicle to be a distinct child object of the parent synapse object.
+Also includes the <b>Sphere to Surface Distances</b> tool, which computes the closest distance from each vesicle sphere to a synapse mesh. Outputs list of distances from each vesicle. 
 
 <img src="synapse_and_vesicles.png" width="200" align="left">
 
