@@ -5,13 +5,12 @@
 [Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Proximity_Analysis_Tools)  
 
 This module calculates the surface regions of two surfaces that are within a given distance of each other.  
-<br>
+<br><br><br><br><br>
 
-
-
-Also includes the <b>Sphere to Surface Distances</b> tool, which computes the closest distance from each vesicle sphere to a synapse mesh. Outputs list of distances from each vesicle. 
 
 <img src="synapse_and_vesicles.png" width="200" align="left">
+
+Also includes the <b>Sphere to Surface Distances</b> tool, which computes the closest distance from each vesicle sphere to a synapse mesh. Outputs list of distances from each vesicle. 
 
 *Initially developed to provide analysis for the [paper](http://www.jneurosci.org/content/35/24/9024):*
 
