@@ -35,7 +35,7 @@ import sys
 import re
 from os import listdir
 
-import NeuroMorph_Stack_Notation as nmsn  # This module requires NeuroMorph_Stack_Notation loaded to run
+import NeuroMorph_3D_Drawing as nmsn  # This module requires NeuroMorph_Stack_Notation loaded to run
 
 
 
