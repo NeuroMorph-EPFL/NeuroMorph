@@ -1,5 +1,6 @@
 This GitHub site provides all NeuroMorph software and datasets for download.  
-Please visit the [NeuroMorph project website](http://neuromorph.epfl.ch) for more information.
+
+<b><i>Please visit the [NeuroMorph for Blender project website](http://neuromorph.epfl.ch) for more information.</i></b>
 
 
 ### NeuroMorph Toolkit
