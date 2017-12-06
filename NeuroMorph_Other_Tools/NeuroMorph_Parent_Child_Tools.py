@@ -104,6 +104,7 @@ class SelectChildren(bpy.types.Operator):
     def execute(self, context):
         active_ob = bpy.context.object
         children = [ob for ob in bpy.context.scene.objects if ob.parent == active_ob]
+        bpy.ops.object.select_all(action='DESELECT')
         for ob in children:
             ob.select = True
         return {'FINISHED'}
