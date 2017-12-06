@@ -16,10 +16,10 @@
 bl_info = {  
     "name": "NeuroMorph 3D Drawing",
     "author": "Anne Jorstad, Tom Boissonnet",
-    "version": (1, 0, 0),
-    "blender": (2, 7, 6),
+    "version": (1, 1, 0),
+    "blender": (2, 7, 9),
     "location": "View3D > 3D Drawing",
-    "description": "Place markers on images and draw lines to construct surfaces in 3D",
+    "description": "Place markers on images and draw curves to construct surfaces in 3D",
     "warning": "",  
     "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/3D_Drawing",  
     "tracker_url": "",  
@@ -146,6 +146,13 @@ bpy.types.Scene.scene_precision = bpy.props.IntProperty \
         max = 10000,
       )
 
+bpy.types.Scene.coarse_marker = bpy.props.BoolProperty \
+(
+    name = "Coarse Markers",
+    description = "Create marker spheres with fewer vertices, keep checked if using scene with many markers",
+    default = True
+)
+
 bpy.types.Scene.center_view = bpy.props.BoolProperty \
     (
     name = "Center to Image",
@@ -156,7 +163,7 @@ bpy.types.Scene.center_view = bpy.props.BoolProperty \
 bpy.types.Scene.closed_curve = bpy.props.BoolProperty \
     (
     name = "Closed Curve",
-    description = "Check if curve is closed, leave unchecked if curve is open",
+    description = "Check if curve is closed (for making tubes), leave unchecked if curve is open (for making surfaces)",
     default = False
     )
 
@@ -171,7 +178,6 @@ bpy.types.Scene.marker_prefix = StringProperty(name = "Marker Prefix", default="
 bpy.types.Scene.surface_prefix = StringProperty(name = "Surface Prefix", default="surface")
 
 bpy.types.Object.image_from_stack_notation = bpy.props.BoolProperty(name = "Image created from Stack Notation tool", default=False)
-
 
 
 def update_render_images(self, context):
@@ -248,21 +254,27 @@ class StackNotationPanel(bpy.types.Panel):
         row = self.layout.row()
         row.prop(context.scene , "render_images")
         
-        # ----------------------------
-        self.layout.label("---------- Annotation Parameters ----------")
-        row = self.layout.row()
-        row.prop(context.scene, "scene_precision")
+        # # ----------------------------
+        # self.layout.label("---------- Annotation Parameters ----------")
+        # row = self.layout.row()
+        # row.prop(context.scene, "scene_precision")
 
-        row = self.layout.row()
-        self.layout.prop(context.scene, 'marker_prefix')
+        
 
-        row = self.layout.row()
-        self.layout.prop(context.scene, 'surface_prefix')
+        # row = self.layout.row()
+        # row.prop(context.scene, 'surface_prefix')
 
         # ----------------------------
         self.layout.label("---------- Mark Points on Image (Click) ----------")
+
+        row = self.layout.row()
+        row.prop(context.scene, 'marker_prefix')
+
         row = self.layout.row()
         row.operator("object.add_sphere", text='Add Marker', icon='MESH_UVSPHERE')
+
+        row = self.layout.row()
+        row.prop(context.scene , "coarse_marker")
 
         row = self.layout.row()
         row.prop(context.scene, "pt_radius")
@@ -270,8 +282,13 @@ class StackNotationPanel(bpy.types.Panel):
             row = self.layout.row()
             row.operator("mesh.update_marker_radius", text = "Update Marker Radius")
 
+        
         # ----------------------------
         self.layout.label("---------- Mark Region on Image (Draw) ----------")
+
+        row = self.layout.row()
+        row.prop(context.scene, 'surface_prefix')
+
         split = self.layout.row().split(percentage=0.6)
         colL = split.column()
         colR = split.column()
@@ -287,6 +304,7 @@ class StackNotationPanel(bpy.types.Panel):
         split = self.layout.row().split(percentage=0.6)
         colL = split.column()
         colR = split.column()
+        colL.prop(context.scene, "scene_precision")
         colR.prop(context.scene , "closed_curve")
 
         row = self.layout.row()
@@ -1172,15 +1190,30 @@ def place_marker_at_mouse(context, im_ob, coord, orientation):
     # any point on plane, regardless of whether inside this triangle
     add_sphere_at_loc(loc) 
 
+
 def add_sphere_at_loc(loc):
     # assumes image is selected?
+
+    if bpy.context.scene.coarse_marker:
+        segs = 5
+        rings = 4
+    else:
+        segs = 32
+        rings = 16
+
     scl = bpy.context.scene.pt_radius
-    bpy.ops.mesh.primitive_uv_sphere_add(location=loc, size=scl)
+    bpy.ops.mesh.primitive_uv_sphere_add(location=loc, size=scl, segments=segs, ring_count=rings)
     obj = bpy.context.object
-    mat = bpy.data.materials.new("sphere_material")
-    mat.diffuse_color = (1.0, 0.3, 0.0)
-    mat.alpha = .5
-    obj.active_material = mat
+
+    sphere_mat_list = [mat for mat in bpy.data.materials if mat.name == "sphere_material"]
+    if len(sphere_mat_list) == 0:
+        sphere_mat = bpy.data.materials.new("sphere_material")
+        sphere_mat.diffuse_color = (1.0, 0.3, 0.0)
+        sphere_mat.alpha = .5
+    else:
+        sphere_mat = sphere_mat_list[0]
+
+    obj.active_material = sphere_mat
     bpy.ops.object.add_transparency()
     obj.name = bpy.context.scene.marker_prefix  # "marker"
 
@@ -1880,10 +1913,16 @@ class MeshFromCurves(bpy.types.Operator):
         # Return transparent mesh
         bpy.ops.object.mode_set(mode = 'OBJECT')
         obj = bpy.context.object
-        mat = bpy.data.materials.new("surf_material")
-        mat.diffuse_color = (0.67, 0.0, 1.0)
-        mat.alpha = .75
-        obj.active_material = mat
+
+        surf_mat_list = [mat for mat in bpy.data.materials if mat.name == "surf_material"]
+        if len(surf_mat_list) == 0:
+            surf_mat = bpy.data.materials.new("surf_material")
+            surf_mat.diffuse_color = (0.67, 0.0, 1.0)
+            surf_mat.alpha = .75
+        else:
+            surf_mat = surf_mat_list[0]
+
+        obj.active_material = surf_mat
         bpy.ops.object.add_transparency()
         obj.name = obj.name = bpy.context.scene.surface_prefix  # "new_surf"
 
