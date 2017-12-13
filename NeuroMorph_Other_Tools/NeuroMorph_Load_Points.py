@@ -172,7 +172,7 @@ class LoadPoints(bpy.types.Operator):
         x_scl = bpy.context.scene.x_microns / bpy.context.scene.x_pixels
         y_scl = bpy.context.scene.y_microns / bpy.context.scene.y_pixels
         z_scl = bpy.context.scene.z_microns / bpy.context.scene.z_pixels
-        ave_scl = (x_scl + y_scl + z_scl) / 3
+        ave_scl = (x_scl + y_scl + z_scl) / 3  # only used for ball radius
         bpy.context.scene.ball_radius *= ave_scl
 
         pts_scaled = []
@@ -191,6 +191,15 @@ class LoadPoints(bpy.types.Operator):
 def read_xml_points(filename):
     tree = ET.parse(filename)
     root = tree.getroot()
+
+    # Get offset from transform matrix [1,0,0,1, x_off, y_off]
+    ball_root = [elt for elt in root.findall('.//t2_ball')][0]
+    trans_mat_str = ball_root.attrib['transform'][7:-1]  # Remove "matrix()" text
+    trans_mat = trans_mat_str.split(',')
+    x_off = float(trans_mat[4])
+    y_off = float(trans_mat[5])
+
+    # Loop through balls
     balls = [elt for elt in root.findall('.//t2_ball_ob')]
 
     rad = float(balls[0].attrib['r'])
@@ -198,7 +207,7 @@ def read_xml_points(filename):
 
     pts = []
     for ball in balls:
-        pts.append([float(ball.attrib['x']), float(ball.attrib['y']), float(ball.attrib['layer_id'])])
+        pts.append([float(ball.attrib['x'])+x_off, float(ball.attrib['y'])+y_off, float(ball.attrib['layer_id'])])
 
     return(pts)
 
