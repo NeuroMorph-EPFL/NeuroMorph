@@ -8,11 +8,10 @@ A blender file containing axons, dendrites, and synapses that were reconstructed
 
 
 #### EM_stack folder  ([download](http://github.com/NeuroMorph-EPFL/NeuroMorph/tree/master/NeuroMorph_Datasets/EM_stack))
-Image stack source folder for NeuroMorph_sample.blend.  Contains 272 serial tiff images in 5 zip files. These are serial electron micrographs taken with a focused ion beam scanning electron microscope. Each image is 700 pixels by 700 pixels, and each pixel has a dimension of 5 x 5 nm, so the width of each image is 3500 nm.  The pixels have a depth of 7.4 nm.
+Image stack source folder for NeuroMorph_sample.blend.  Contains 272 serial tiff images in 5 zip files. These are serial electron micrographs taken with a focused ion beam scanning electron microscope. Each image is 700 pixels by 700 pixels, and each pixel has a dimension of 5 x 5 nm, so the width of each image is 3500 nm.  The pixels have a depth of 7.4 nm.  This corresponds to Image Stack Dimensions (microns) of x: 3.5, y: 3.5, z: 2.0.
 
 *(For use as the image source folder using the NeuroMorph_3D_Drawing.py add-on,  
-corresponds to the objects in NeuroMorph_sample.blend,  
-enter the Image Stack Dimensions (microns) as x: 3.5, y: 3.5, z: 2.0.)*
+corresponds to the objects in NeuroMorph_sample.blend.)*
 
 
 #### sample_object_files folder  ([download](http://github.com/NeuroMorph-EPFL/NeuroMorph/raw/master/NeuroMorph_Datasets/sample_object_files.zip))
