@@ -85,19 +85,19 @@ bpy.types.Scene.image_ext_Y = bpy.props.StringProperty \
     )
 bpy.types.Scene.image_path_Z = bpy.props.StringProperty \
       (
-        name = "Source_Z",
+        name = "Source-Z",
         description = "Select location of the Z stack images (original image stack)",
         default = "/"
       )
 bpy.types.Scene.image_path_X = bpy.props.StringProperty \
         (
-        name = "(Source_X)",
+        name = "(Source-X)",
         description = "Select location of the X stack images (OPTIONAL)",
         default = "/"
     )
 bpy.types.Scene.image_path_Y = bpy.props.StringProperty \
         (
-        name="(Source_Y)",
+        name="(Source-Y)",
         description="Select location of the Y stack images (OPTIONAL)",
         default="/"
     )
@@ -234,10 +234,10 @@ class StackNotationPanel(bpy.types.Panel):
         row.prop(context.scene, "image_path_Z")
         row.operator("importfolder_z.tif", text='', icon='FILESEL')
 
-        split = self.layout.row().split(percentage=0.6)  # percentage=0.53
-        colL = split.column()
-        colR = split.column()
-        colR.operator("object.clear_images", text='Clear Images')
+        # split = self.layout.row().split(percentage=0.6)  # percentage=0.53
+        # colL = split.column()
+        # colR = split.column()
+        # colR.operator("object.clear_images", text='Clear Images')
 
         split = self.layout.row().split(percentage=0.6)  # percentage=0.53
         colL = split.column()
@@ -542,57 +542,123 @@ def set_texture(im_ob):
 
 
 
+# Sometimes this is necessary before changing modes
+def activate_an_object():
+    if bpy.context.active_object is not None:
+        if bpy.context.object.mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+    # ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide == False][0]
+    ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.hide == False][0]
+    bpy.context.scene.objects.active = ob_0
+    ob_0.select = True
+
+def delete_an_object(ob):
+    activate_an_object()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.scene.objects.active = ob
+    ob.select = True
+    bpy.ops.object.delete()
+    activate_an_object()
 
 
+# Call this before loading any new image stack folders 
+def clear_ims(orientation):
+    # orientation in {"X","Y","Z"}
 
+    activate_an_object()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.select_all(action='DESELECT')
 
-
-
-class ClearImages(bpy.types.Operator):
-    """Clear all images and image directories in memory"""
-    # clearing names is necessary if new image folder contains same names as previous folder
-    bl_idname = "object.clear_images"
-    bl_label = "Clear all images in memory (necessary if new image folder contains same names as previous folder)"
-    bl_options = {"REGISTER", "UNDO"}
-
-    def execute(self, context):
-        any_ob = bpy.context.scene.objects[0]
-        any_ob.select = True
-        bpy.context.scene.objects.active = any_ob
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-        im_ob_list = [ob for ob in bpy.context.scene.objects if ob.name == "Image"]
-        if len(im_ob_list) > 0:  # delete it
-            for im_ob in im_ob_list:
-                bpy.context.scene.objects.active = im_ob
-                im_ob.select = True
-                bpy.ops.object.delete()
-
-            # Activate an object so other functions have appropriate modes
-            ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide == False][0]
-            bpy.context.scene.objects.active = ob_0
-            ob_0.select = True
-
-        for f in bpy.data.images:
-            f.user_clear()
-            bpy.data.images.remove(f)
-
-        # Also clear image directories
+    if orientation == "X":
+        im_name = "Image X"
         bpy.context.scene.image_path_X = "/"
-        bpy.context.scene.image_path_Y = "/"
-        bpy.context.scene.image_path_Z = "/"
-        bpy.context.scene.imagefilepaths_x.clear()
-        bpy.context.scene.imagefilepaths_y.clear()
-        bpy.context.scene.imagefilepaths_z.clear()
+        image_files_full = bpy.context.scene.imagefilepaths_x
 
-        # Remove ImageStackLadder
+    elif orientation == "Y":
+        im_name = "Image Y"
+        bpy.context.scene.image_path_Y = "/"
+        image_files_full = bpy.context.scene.imagefilepaths_y
+
+    elif orientation == "Z":
+        im_name = "Image Z"
+        bpy.context.scene.image_path_Z = "/"
+        image_files_full = bpy.context.scene.imagefilepaths_z
+
+        # Also remove ImageStackLadder if Z
         isl = [ob for ob in bpy.data.objects if ob.name == "ImageStackLadder"]
         if isl != []:
             isl = isl[0]
-            isl.select = True
-            bpy.ops.object.delete() 
+            delete_an_object(isl)
 
-        return {'FINISHED'}
+    # Delete image objects
+    im_ob_list = [ob for ob in bpy.context.scene.objects if ob.name == im_name]
+    if len(im_ob_list) > 0:
+        for im_ob in im_ob_list:
+            delete_an_object(im_ob)
+
+    # Delete loaded images
+    image_files_names = [os.path.split(imf.name)[1] for imf in image_files_full]  # File names only
+    for f in bpy.data.images:
+        this_name = f.name
+        if this_name in image_files_names:
+            f.user_clear()
+            bpy.data.images.remove(f)
+    image_files_full.clear()
+
+
+
+
+# class ClearImages(bpy.types.Operator):
+#     """Clear all images and image directories in memory"""
+#     # clearing names is necessary if new image folder contains same names as previous folder
+#     bl_idname = "object.clear_images"
+#     bl_label = "Clear all images in memory (necessary if new image folder contains same names as previous folder)"
+#     bl_options = {"REGISTER", "UNDO"}
+
+#     def execute(self, context):
+#         # any_ob = bpy.context.scene.objects[0]
+#         # any_ob.select = True
+#         # bpy.context.scene.objects.active = any_ob
+#         # bpy.ops.object.mode_set(mode='OBJECT')
+#         # bpy.ops.object.select_all(action='DESELECT')
+#         # im_ob_list = [ob for ob in bpy.context.scene.objects if ob.name == "Image"]
+#         # if len(im_ob_list) > 0:  # delete it
+#         #     for im_ob in im_ob_list:
+#         #         bpy.context.scene.objects.active = im_ob
+#         #         im_ob.select = True
+#         #         bpy.ops.object.delete()
+
+#         #     # Activate an object so other functions have appropriate modes
+#         #     ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide == False][0]
+#         #     bpy.context.scene.objects.active = ob_0
+#         #     ob_0.select = True
+
+#         # for f in bpy.data.images:
+#         #     f.user_clear()
+#         #     bpy.data.images.remove(f)
+
+#         # # Also clear image directories
+#         # bpy.context.scene.image_path_X = "/"
+#         # bpy.context.scene.image_path_Y = "/"
+#         # bpy.context.scene.image_path_Z = "/"
+#         # bpy.context.scene.imagefilepaths_x.clear()
+#         # bpy.context.scene.imagefilepaths_y.clear()
+#         # bpy.context.scene.imagefilepaths_z.clear()
+
+#         # # Remove ImageStackLadder
+#         # isl = [ob for ob in bpy.data.objects if ob.name == "ImageStackLadder"]
+#         # if isl != []:
+#         #     isl = isl[0]
+#         #     isl.select = True
+#         #     bpy.ops.object.delete() 
+
+#         clear_ims("X")
+#         clear_ims("Y")
+#         clear_ims("Z")
+
+#         return {'FINISHED'}
 
 
 class ImageScrollOperator(bpy.types.Operator):
@@ -853,6 +919,7 @@ class SelectStackFolderZ(bpy.types.Operator):  # adjusted
 
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
     def execute(self, context):
+        clear_ims("Z")
         select_folder_execute(self, "Z", "image_path_Z", "imagefilepaths_z", "image_ext_Z")
 
         # Insert bar of image stack height with vertex at each z,
@@ -872,6 +939,7 @@ class SelectStackFolderX(bpy.types.Operator):  # adjusted
 
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
     def execute(self, context):
+        clear_ims("X")
         select_folder_execute(self, "X", "image_path_X", "imagefilepaths_x", "image_ext_X")
         return {'FINISHED'}
     def invoke(self, context, event):
@@ -885,6 +953,7 @@ class SelectStackFolderY(bpy.types.Operator):  # adjusted
 
     directory = bpy.props.StringProperty(subtype="FILE_PATH")
     def execute(self, context):
+        clear_ims("Y")
         select_folder_execute(self, "Y", "image_path_Y", "imagefilepaths_y", "image_ext_Y")
         return {'FINISHED'}
     def invoke(self, context, event):
