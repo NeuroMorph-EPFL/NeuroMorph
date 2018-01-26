@@ -143,7 +143,7 @@ bpy.types.Scene.scene_precision = bpy.props.IntProperty \
         description = "Adjust number of points to use when creating curves and surfaces (points per image length, eg 500)",
         default = 500,
         min = 10,
-        max = 10000,
+        max = 1000000,
       )
 
 bpy.types.Scene.coarse_marker = bpy.props.BoolProperty \
@@ -670,14 +670,14 @@ class ImageScrollOperator(bpy.types.Operator):
 
     @classmethod
     def poll(self, context):
-        # print("in poll from ImageScrollOperator")
-        if bpy.context.scene.grease_pencil is not None and \
-            bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
-            hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
-            len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
-                print("should convert curve now, but can't modify data from poll() function...")
-                # bpy.ops.ed.undo_push(message="convert curve")
-                # convert_curve_fcn(self)  # "can't modify blend data in this state (drawing/rendering)""
+        # # print("in poll from ImageScrollOperator")
+        # if bpy.context.scene.grease_pencil is not None and \
+        #     bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
+        #     hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
+        #     len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
+        #         print("should convert curve now, but can't modify data from poll() function...")
+        #         # bpy.ops.ed.undo_push(message="convert curve")
+        #         # convert_curve_fcn(self)  # "can't modify blend data in this state (drawing/rendering)""
         return True  # always
 
 
@@ -785,7 +785,8 @@ class ImageScrollOperator(bpy.types.Operator):
             draw_curve_fcn(self)
 
         # Erase grease pencil
-        elif event.type == 'E' and event.ctrl and event.value == 'PRESS':
+        elif event.type == 'E' and event.ctrl and event.value == 'PRESS' or \
+            (event.type == 'E' and event.value == 'PRESS' and not event.shift):
             bpy.ops.ed.undo_push(message="erase curve")
             erase_curve_fcn(self)
 
@@ -1466,7 +1467,7 @@ class UpdateMarkerRadius(bpy.types.Operator):
         return {'FINISHED'}
 
 class DrawCurve(bpy.types.Operator):
-    """Draw object outline"""
+    """Draw object outline (from scroll mode, Shortcut: D)"""
     bl_idname = "object.draw_curve"
     bl_label = "draw curve with grease pencil"
     bl_options = {"REGISTER", "UNDO"}
@@ -1516,7 +1517,7 @@ def draw_curve_fcn(self):
 
 
 class EraseCurve(bpy.types.Operator):
-    """Erase (a portion of) drawn curve"""
+    """Erase (a portion of) drawn curve (from scroll mode, Shortcut: E)"""
     bl_idname = "object.erase_curve"
     bl_label = "erase (a portion of) drawn curve"
     bl_options = {"REGISTER", "UNDO"}
