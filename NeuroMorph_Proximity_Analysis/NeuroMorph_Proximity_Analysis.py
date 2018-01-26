@@ -699,7 +699,7 @@ class DefineFile2(bpy.types.Operator):
         filename = self.filename
         fname = filename + '.csv'
         full_filename = os.path.join(directory, fname)
-        bpy.context.scene.filename = full_filename
+        bpy.context.scene.filename2 = full_filename
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -710,11 +710,9 @@ class DefineFile2(bpy.types.Operator):
 
 # Write distances data to file
 def write_distance_data(dists, all_vesicles, synapse_name, mean_dist):
-    directory = bpy.props.StringProperty(subtype="FILE_PATH")
-    filename = bpy.props.StringProperty(subtype="FILE_NAME")
-    full_filename = bpy.context.scene.filename
+    full_filename2 = bpy.context.scene.filename2
 
-    f = open(full_filename, 'w')
+    f = open(full_filename2, 'w')
     f.write('Vesicle Name,Distance to ' + synapse_name + '\n\n')
 
     for ind, d in enumerate(dists):
