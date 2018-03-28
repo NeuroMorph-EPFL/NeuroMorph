@@ -1,4 +1,4 @@
-#    NeuroMorph_3D_Drawing.py (C) 2017,  Anne Jorstad
+#    NeuroMorph_3D_Drawing.py (C) 2018,  Anne Jorstad
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -41,168 +41,8 @@ import bmesh  # for looptools
 from bpy_extras.view3d_utils import region_2d_to_vector_3d, region_2d_to_location_3d, region_2d_to_origin_3d
 # from collections import Counter
 from statistics import median
-
 from bpy.types import Operator, Macro
 
-
-# Define properties
-bpy.types.Scene.x_side = bpy.props.FloatProperty \
-      (
-        name = "x",
-        description = "x-dimension of image stack (microns)",
-        default = 1
-      )
-bpy.types.Scene.y_side = bpy.props.FloatProperty \
-      (
-        name = "y",
-        description = "y-dimension of image stack (microns)",
-        default = 1
-      )
-bpy.types.Scene.z_side = bpy.props.FloatProperty \
-      (
-        name = "z",
-        description = "z-dimension of image stack (microns)",
-        default = 1
-      )
-
-bpy.types.Scene.image_ext_Z = bpy.props.StringProperty \
-      (
-        name = "extZ",
-        description = "Image Extension Z",
-        default = ".tif"
-      )
-bpy.types.Scene.image_ext_X = bpy.props.StringProperty \
-        (
-        name = "extX",
-        description = "Image Extension X",
-        default = ".tif"
-    )
-bpy.types.Scene.image_ext_Y = bpy.props.StringProperty \
-        (
-        name="extY",
-        description="Image Extension Y",
-        default=".tif"
-    )
-bpy.types.Scene.image_path_Z = bpy.props.StringProperty \
-      (
-        name = "Source-Z",
-        description = "Select location of the Z stack images (original image stack)",
-        default = "/"
-      )
-bpy.types.Scene.image_path_X = bpy.props.StringProperty \
-        (
-        name = "(Source-X)",
-        description = "Select location of the X stack images (OPTIONAL)",
-        default = "/"
-    )
-bpy.types.Scene.image_path_Y = bpy.props.StringProperty \
-        (
-        name="(Source-Y)",
-        description="Select location of the Y stack images (OPTIONAL)",
-        default="/"
-    )
-bpy.types.Scene.file_min_Z = bpy.props.IntProperty \
-      (
-        name = "file_min_Z",
-        description = "min Z file number",
-        default = 0
-      )
-bpy.types.Scene.file_min_X = bpy.props.IntProperty \
-        (
-        name = "file_min_X",
-        description = "min X file number",
-        default=0
-    )
-bpy.types.Scene.file_min_Y = bpy.props.IntProperty \
-        (
-        name="file_min_Y",
-        description="min Y file number",
-        default=0
-    )
-bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
-
-
-bpy.types.Scene.shift_step = bpy.props.IntProperty \
-      (
-            name="Shift step",
-            description="Step size for scrolling through image stack while holding shift",
-            default=10
-      )
-bpy.types.Scene.pt_radius = bpy.props.FloatProperty \
-      (
-        name = "marker radius (microns)",
-        description = "Radius of sphere marking point location (microns)",
-        default = 0.01,
-        min = 10**-20,
-      )
-bpy.types.Scene.scene_precision = bpy.props.IntProperty \
-      (
-        name = "drawing precision",
-        description = "Adjust number of points to use when creating curves and surfaces (points per image length, eg 500)",
-        default = 500,
-        min = 10,
-        max = 1000000,
-      )
-
-bpy.types.Scene.coarse_marker = bpy.props.BoolProperty \
-(
-    name = "Coarse Markers",
-    description = "Create marker spheres with fewer vertices, keep checked if using scene with many markers",
-    default = True
-)
-
-bpy.types.Scene.center_view = bpy.props.BoolProperty \
-    (
-    name = "Center to Image",
-    description = "Center view to image each time a new image is added",
-    default = True
-    )
-
-bpy.types.Scene.closed_curve = bpy.props.BoolProperty \
-    (
-    name = "Closed Curve",
-    description = "Check if curve is closed (for making tubes), leave unchecked if curve is open (for making surfaces)",
-    default = False
-    )
-
-bpy.types.Scene.convert_curve_on_release = bpy.props.BoolProperty \
-    (
-    name = "Convert Curve on Release",
-    description = "Convert grease pencil drawing to mesh curve immediately on mouse release",
-    default = True
-    )
-
-bpy.types.Scene.marker_prefix = StringProperty(name = "Marker Prefix", default="marker")
-bpy.types.Scene.surface_prefix = StringProperty(name = "Surface Prefix", default="surface")
-
-bpy.types.Object.image_from_stack_notation = bpy.props.BoolProperty(name = "Image created from Stack Notation tool", default=False)
-
-
-def update_render_images(self, context):
-# Must appear before bpy.types.Scene.render_images declaration
-    im_ob_list = [item for item in bpy.data.objects if (item.name =='Image Z' or item.name =='Image X' or item.name =='Image Y')]
-    for im_ob in im_ob_list:
-       if(bpy.context.scene.render_images):
-            create_plane(im_ob)
-       else :
-            delete_plane(im_ob)  
-bpy.types.Scene.render_images = bpy.props.BoolProperty \
-    (
-    name="Include images in render",
-    description="Must be checked to have images rendered as visible textured planes in an animation",
-    default=False,
-    update=update_render_images
-    )
-
-
-# bpy.types.Scene.currently_drawing = bpy.props.BoolProperty \
-#     (
-#     name = "Currently in grease pencil drawing session",
-#     description = "Currently in grease pencil drawing session",
-#     default = False
-#     )
 
 
 # Define the panel
@@ -212,7 +52,6 @@ class StackNotationPanel(bpy.types.Panel):
     bl_region_type = "TOOLS"
     bl_category = "NeuroMorph"
 
-# find icon names here:  http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/3D_interaction/Icon_Tools
     def draw(self, context):
         self.layout.label("---------- Display Images from Stack ----------")
 
@@ -253,16 +92,7 @@ class StackNotationPanel(bpy.types.Panel):
 
         row = self.layout.row()
         row.prop(context.scene , "render_images")
-        
-        # # ----------------------------
-        # self.layout.label("---------- Annotation Parameters ----------")
-        # row = self.layout.row()
-        # row.prop(context.scene, "scene_precision")
 
-        
-
-        # row = self.layout.row()
-        # row.prop(context.scene, 'surface_prefix')
 
         # ----------------------------
         self.layout.label("---------- Mark Points on Image (Click) ----------")
@@ -308,7 +138,12 @@ class StackNotationPanel(bpy.types.Panel):
         colR.prop(context.scene , "closed_curve")
 
         row = self.layout.row()
-        row.operator("mesh.curves2object", text='Construct Mesh Surface from Curves', icon="OUTLINER_OB_MESH")
+        row.operator("mesh.curves2object", text='Construct Mesh Surface from Curves', icon="OUTLINER_OB_SURFACE")
+
+        split = self.layout.row().split(percentage=0.6)
+        colL = split.column()
+        colR = split.column()
+        colR.operator("object.close_tube", text='Close Open Tube', icon="MESH_CYLINDER")
 
         # self.layout.label("--For Debugging--")
         # row = self.layout.row()
@@ -335,6 +170,8 @@ class StackNotationPanel(bpy.types.Panel):
 
 
 # ###################### See if can use invoke() somehow to wait until GP operation finishes before calling convert curve...
+# # unsolved problem:  convert grease pencil curve on mouse click release while in modal,
+# #                    currently must move mouse to activate convert curve on release functionality
 # # want to run in modal until GP finishes, then interpret the "FINISHED", and call the next operation:  possible?
 # # class TestGreasePencilReleaseDetection(bpy.types.Operator):
 # #     """Testing"""
@@ -376,6 +213,15 @@ class StackNotationPanel(bpy.types.Panel):
 
 
 
+
+def update_render_images(self, context):
+# Must appear before bpy.types.Scene.render_images declaration
+    im_ob_list = [item for item in bpy.data.objects if (item.name =='Image Z' or item.name =='Image X' or item.name =='Image Y')]
+    for im_ob in im_ob_list:
+       if(bpy.context.scene.render_images):
+            create_plane(im_ob)
+       else :
+            delete_plane(im_ob)  
 
  
 
@@ -1063,14 +909,6 @@ class DisplayImageButton(bpy.types.Operator):  # adjusted
     
     def execute(self, context):
         if bpy.context.mode == 'EDIT_MESH':
-            Nz = len(bpy.context.scene.imagefilepaths_z)
-            if Nz > 0:
-                if (bpy.context.active_object.type=='MESH'):
-                    DisplayImageFunction('Z')
-                else:
-                    self.report({'INFO'},"Select a vertex on a mesh object")
-            else:
-                self.report({'INFO'},"No image files found in the Z directory")
             Nx = len(bpy.context.scene.imagefilepaths_x)
             if Nx > 0:
                 if (bpy.context.active_object.type == 'MESH'):
@@ -1087,8 +925,17 @@ class DisplayImageButton(bpy.types.Operator):  # adjusted
                     self.report({'INFO'}, "Select a vertex on a mesh object")
             else:
                 self.report({'INFO'},"No image files found in the Y directory")
+            Nz = len(bpy.context.scene.imagefilepaths_z)
+            if Nz > 0:
+                if (bpy.context.active_object.type=='MESH'):
+                    DisplayImageFunction('Z')  # must call Z last as this might return image as active object
+                else:
+                    self.report({'INFO'},"Select a vertex on a mesh object")
+            else:
+                self.report({'INFO'},"No image files found in the Z directory")
             if (Ny <= 0 and Nz <=0 and Nx <=0):
                 self.report({'INFO'},"No image files found in the selected directories")
+            
         return {'FINISHED'}
 
 def DisplayImageFunction(orientation):
@@ -1226,10 +1073,18 @@ def DisplayImageFunction(orientation):
        bpy.ops.object.select_all(action='TOGGLE')
        bpy.ops.object.select_all(action='DESELECT')
 
-    # set original object to active, selects it, place back into editmode
-    bpy.context.scene.objects.active = myob
-    myob.select = True
-    bpy.ops.object.mode_set(mode = 'OBJECT')
+
+    if orientation == 'Z' and bpy.context.scene.center_view:
+        # Move cursor to center of image and center view to cursor
+        z_coord = coord
+        loc = (x_max/2, y_max/2, z_coord)
+        bpy.context.scene.cursor_location = loc
+        bpy.ops.view3d.view_center_cursor()
+    else:
+        # Set original object to active, selects it, place back into editmode
+        bpy.context.scene.objects.active = myob
+        myob.select = True
+        bpy.ops.object.mode_set(mode = 'OBJECT')
   
 
 
@@ -1513,7 +1368,6 @@ def draw_curve_fcn(self):
     bpy.context.area.type = original_type  # maybe not necessary anymore, v2.78?
     bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
     self.report({'INFO'},"Drawing...")
-    # bpy.context.scene.currently_drawing = True
 
 
 class EraseCurve(bpy.types.Operator):
@@ -2582,6 +2436,22 @@ def order_curves(crv_list, orientation):
 
 
 
+class CloseOpenTube(bpy.types.Operator):
+    """Close ends of selected open tubular surface"""
+    bl_idname = "object.close_tube"
+    bl_label = "Close ends of selected open tubular surface"
+
+    def execute(self, context):
+        mesh = bpy.context.object
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.region_to_loop()
+        bpy.ops.mesh.edge_face_add()
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.object.mode_set(mode='OBJECT')
+        return {'FINISHED'}
+
+
 class LineOfBestFit_button(bpy.types.Operator):
     """Create line of best fit in z-dimension through list of curves"""
     bl_idname = "object.line_of_best_fit"
@@ -2932,11 +2802,9 @@ def register():
     # change color of wire mesh line for better visibility on image
     bpy.context.user_preferences.themes[0].view_3d.wire = (0.0, 1.0, 1.0)
 
-
     # # test using macros for grease pencil release
     # OperatorAfterGreasePencilMacro.define("OBJECT_OT_draw_curve")
     # OperatorAfterGreasePencilMacro.define("OBJECT_OT_convert_curve")
-
 
     bpy.app.handlers.scene_update_post.append(setLight)
     bpy.app.handlers.load_post.append(setLightLoad)
@@ -2944,14 +2812,184 @@ def register():
     bpy.app.handlers.scene_update_post.append(print_updated_objects)
 
 
+    # Define properties
+    bpy.types.Scene.x_side = bpy.props.FloatProperty \
+    (
+        name = "x",
+        description = "x-dimension of image stack (microns)",
+        default = 1
+    )
+    bpy.types.Scene.y_side = bpy.props.FloatProperty \
+    (
+        name = "y",
+        description = "y-dimension of image stack (microns)",
+        default = 1
+    )
+    bpy.types.Scene.z_side = bpy.props.FloatProperty \
+    (
+        name = "z",
+        description = "z-dimension of image stack (microns)",
+        default = 1
+    )
+
+    bpy.types.Scene.image_ext_Z = bpy.props.StringProperty \
+    (
+        name = "extZ",
+        description = "Image Extension Z",
+        default = ".tif"
+    )
+    bpy.types.Scene.image_ext_X = bpy.props.StringProperty \
+    (
+        name = "extX",
+        description = "Image Extension X",
+        default = ".tif"
+    )
+    bpy.types.Scene.image_ext_Y = bpy.props.StringProperty \
+    (
+        name="extY",
+        description="Image Extension Y",
+        default=".tif"
+    )
+    bpy.types.Scene.image_path_Z = bpy.props.StringProperty \
+    (
+        name = "Source-Z",
+        description = "Select location of the Z stack images (original image stack)",
+        default = "/"
+    )
+    bpy.types.Scene.image_path_X = bpy.props.StringProperty \
+    (
+        name = "(Source-X)",
+        description = "Select location of the X stack images (OPTIONAL)",
+        default = "/"
+    )
+    bpy.types.Scene.image_path_Y = bpy.props.StringProperty \
+    (
+        name="(Source-Y)",
+        description="Select location of the Y stack images (OPTIONAL)",
+        default="/"
+    )
+    bpy.types.Scene.file_min_Z = bpy.props.IntProperty \
+    (
+        name = "file_min_Z",
+        description = "min Z file number",
+        default = 0
+    )
+    bpy.types.Scene.file_min_X = bpy.props.IntProperty \
+    (
+        name = "file_min_X",
+        description = "min X file number",
+        default=0
+    )
+    bpy.types.Scene.file_min_Y = bpy.props.IntProperty \
+    (
+        name="file_min_Y",
+        description="min Y file number",
+        default=0
+    )
+    bpy.types.Scene.imagefilepaths_z = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+    bpy.types.Scene.imagefilepaths_x = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+    bpy.types.Scene.imagefilepaths_y = bpy.props.CollectionProperty(type=bpy.types.PropertyGroup)
+
+    bpy.types.Scene.shift_step = bpy.props.IntProperty \
+    (
+        name="Shift step",
+        description="Step size for scrolling through image stack while holding shift",
+        default=10
+    )
+    bpy.types.Scene.pt_radius = bpy.props.FloatProperty \
+    (
+        name = "marker radius (microns)",
+        description = "Radius of sphere marking point location (microns)",
+        default = 0.01,
+        min = 10**-20,
+    )
+    bpy.types.Scene.scene_precision = bpy.props.IntProperty \
+    (
+        name = "drawing precision",
+        description = "Adjust number of points to use when creating curves and surfaces (points per image length, eg 500)",
+        default = 500,
+        min = 10,
+        max = 1000000,
+    )
+    bpy.types.Scene.coarse_marker = bpy.props.BoolProperty \
+    (
+        name = "Coarse Markers",
+        description = "Create marker spheres with fewer vertices, keep checked if using scene with many markers",
+        default = True
+    )
+    bpy.types.Scene.center_view = bpy.props.BoolProperty \
+    (
+        name = "Center to Image",
+        description = "Center view to image each time a new image is added",
+        default = True
+    )
+    bpy.types.Scene.closed_curve = bpy.props.BoolProperty \
+    (
+        name = "Closed Curve",
+        description = "Check if curve is closed (for making tubes), leave unchecked if curve is open (for making surfaces)",
+        default = False
+    )
+    bpy.types.Scene.convert_curve_on_release = bpy.props.BoolProperty \
+    (
+        name = "Convert Curve on Release",
+        description = "Convert grease pencil drawing to mesh curve immediately on mouse release",
+        default = True
+    )
+
+    bpy.types.Scene.marker_prefix = StringProperty(name = "Marker Prefix", default="marker")
+    bpy.types.Scene.surface_prefix = StringProperty(name = "Surface Prefix", default="surface")
+
+    bpy.types.Object.image_from_stack_notation = bpy.props.BoolProperty \
+    (
+        name = "Image created from Stack Notation tool", 
+        description = "This tool was only relevant when images could also be created in other tools",
+        default=False
+    )
+    bpy.types.Scene.render_images = bpy.props.BoolProperty \
+    (
+        name="Include images in render",
+        description="Must be checked to have images rendered as visible textured planes in an animation",
+        default=False,
+        update=update_render_images
+    )
+
+
 def unregister():
-    bpy.utils.unregister_module(__name__)
-    # del bpy.types.Scene.imagefilepaths
+    
+    del bpy.types.Scene.render_images
+    del bpy.types.Object.image_from_stack_notation
+    del bpy.types.Scene.surface_prefix
+    del bpy.types.Scene.marker_prefix
+    del bpy.types.Scene.convert_curve_on_release
+    del bpy.types.Scene.closed_curve
+    del bpy.types.Scene.center_view
+    del bpy.types.Scene.coarse_marker
+    del bpy.types.Scene.scene_precision
+    del bpy.types.Scene.pt_radius
+    del bpy.types.Scene.shift_step
+    del bpy.types.Scene.imagefilepaths_y
+    del bpy.types.Scene.imagefilepaths_x
+    del bpy.types.Scene.imagefilepaths_z
+    del bpy.types.Scene.file_min_Y
+    del bpy.types.Scene.file_min_X
+    del bpy.types.Scene.file_min_Z
+    del bpy.types.Scene.image_path_Y
+    del bpy.types.Scene.image_path_X
+    del bpy.types.Scene.image_path_Z
+    del bpy.types.Scene.image_ext_Y
+    del bpy.types.Scene.image_ext_X
+    del bpy.types.Scene.image_ext_Z
+    del bpy.types.Scene.z_side
+    del bpy.types.Scene.y_side
+    del bpy.types.Scene.x_side
 
     bpy.app.handlers.scene_update_post.remove(print_updated_objects)
     bpy.app.handlers.frame_change_post.remove(set_image_for_frame)
     bpy.app.handlers.load_post.remove(setLightLoad)
     # bpy.app.handlers.scene_update_post.remove(setLight)  # ???? why didn't this exist?
+
+    bpy.utils.unregister_module(__name__)
+
 
 if __name__ == "__main__":
     register()
