@@ -1,6 +1,6 @@
 *These files have been deprecated.  They are provided only for legacy purposes, as they were released with our 2014 Neuroinformatics paper.*
 
-[Legacy Blender Wiki](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool)  (including installation instructions)
+<!--[Legacy Blender Wiki](http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool)  (including installation instructions) -->
 
 
 #### NeuroMorph Measurement Tools   ([download](https://raw.githubusercontent.com/NeuroMorph-EPFL/NeuroMorph/master/Legacy_NeuroMorph_Toolkit/NeuroMorph_Measurement_Tools.py))
