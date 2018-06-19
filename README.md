@@ -27,7 +27,7 @@ Download example meshes, objects, and image files for use with the add-ons:
 
 ### Documentation
 
-[Blender Wiki](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph)  
+[Blender Wiki](https://en.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph)  
 Detailed instructions for each tool.
 
 [Video Tutorial](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
