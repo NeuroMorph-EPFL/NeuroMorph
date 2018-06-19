@@ -2,7 +2,7 @@
 
 #### NeuroMorph Proximity Analysis   
 [Download](http://raw.githubusercontent.com/NeuroMorph-EPFL/NeuroMorph/master/NeuroMorph_Proximity_Analysis/NeuroMorph_Proximity_Analysis.py)  
-[Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Proximity_Analysis_Tools)  
+<!--[Full Documentation](https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Proximity_Analysis_Tools) --> 
 
 This module calculates the surface regions of two surfaces that are within a given distance of each other.  
 <br><br><br><br><br>
