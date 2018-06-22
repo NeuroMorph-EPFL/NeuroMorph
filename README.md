@@ -14,10 +14,11 @@ NeuroMorph is a toolset designed to import, analyze, and visualize mesh models i
 
 *If you find our tool useful, please cite the [NeuroMorph paper](http://link.springer.com/article/10.1007%2Fs12021-014-9242-5):*  
 A. Jorstad, B. Nigro, C. Cali, M. Wawrzyniak, P. Fua, G. Knott.  (2014).  "NeuroMorph: A Toolset for the Morphometric Analysis and Visualization of 3D Models Derived from Electron Microscopy Image Stacks." Neuroinformatics.
+<br><br>
 
 # Download
 
-Download individual tools from the following folders:  
+Download the full repository using the green download button above.  Or Download individual tools from the following folders:  
 * [NeuroMorph_Measurement_Tools](NeuroMorph_Measurement_Tools)
 * [NeuroMorph_3D_Drawing](NeuroMorph_3D_Drawing)
 * [NeuroMorph_CenterLines_CrossSections](NeuroMorph_CenterLines_CrossSections)
