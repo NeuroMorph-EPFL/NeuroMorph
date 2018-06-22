@@ -5,7 +5,7 @@ This GitHub site provides all NeuroMorph software and datasets for download.
 <br>
 
 <b><i>Please visit the [NeuroMorph project website](http://neuromorph.epfl.ch) for more information.</i></b>
-<br><br><br><br>
+<br><br><br><br><br><br>
 
 
 # NeuroMorph Analysis and Visualization Toolkit
