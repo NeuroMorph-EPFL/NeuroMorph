@@ -8,7 +8,7 @@ Macro for [Fiji](http://fiji.sc/) creates image stacks in the X and Y dimensions
 
 The voxel dimensions from the imaging procedure for the provided sample EM stack [5, 5, 7.4] nm.
 
-*Macro courtesy of Tom Boissonnet.*
+*Macro courtesy of Tom Boissonnet.*  
 <br>
 
 #### NeuroMorph Parent-Child Tools   
