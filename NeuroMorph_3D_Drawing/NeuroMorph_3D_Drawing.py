@@ -2340,7 +2340,7 @@ def order_curves(crv_list, orientation):
 # for consistency with neighboring curves (outside this function)
 
     # Generate mesh line of best fit
-    npts = 5000  # arbitrary, is for length of whole image, not number returned
+    npts = 100000  # arbitrary, is for length of whole image, not number returned
     pts_LoBF = get_LineOfBestFit([crv_list], orientation, npts = npts)  #, add_LoBF_to_scene = True)
 
     # print(pts_LoBF)
@@ -2696,7 +2696,6 @@ def LoBF_code(xs, ys, z, npts, add_LoBF_to_scene, orientation):
     xmax = max(xs)
     ymin = min(ys)
     ymax = max(ys)
-
     subpts = []
     subpt_inds = []
     for ii, pt in enumerate(pts_LoBF):
