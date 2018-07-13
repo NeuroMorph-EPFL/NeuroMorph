@@ -41,69 +41,6 @@ import xml.etree.ElementTree as ET
 import datetime
 
 
-
-
-bpy.types.Scene.x_microns = bpy.props.FloatProperty \
-(
-    name = "x",
-    description = "x-dimension of image stack (microns)",
-    default = 1
-)
-bpy.types.Scene.y_microns = bpy.props.FloatProperty \
-(
-    name = "y",
-    description = "y-dimension of image stack (microns)",
-    default = 1
-)
-bpy.types.Scene.z_microns = bpy.props.FloatProperty \
-(
-    name = "z",
-    description = "z-dimension of image stack (microns)",
-    default = 1
-)
-
-bpy.types.Scene.x_pixels = bpy.props.FloatProperty \
-(
-    name = "x",
-    description = "x-dimension of image stack (pixels)",
-    default = 1
-)
-bpy.types.Scene.y_pixels = bpy.props.FloatProperty \
-(
-    name = "y",
-    description = "y-dimension of image stack (pixels)",
-    default = 1
-)
-bpy.types.Scene.z_pixels = bpy.props.FloatProperty \
-(
-    name = "z",
-    description = "z-dimension of image stack (pixels)",
-    default = 1
-)
-
-bpy.types.Scene.pt_name = bpy.props.StringProperty \
-(
-    name="Point Obj Name",
-    description = "Name given to 3D point objects being loaded", 
-    default="vesicle"
-)
-
-bpy.types.Scene.ball_radius = bpy.props.FloatProperty \
-(
-    name="Ball Radius",
-    description = "Radius to use when converting points to balls (registers radius from XML file if available)", 
-    default=0.01
-)
-
-bpy.types.Scene.coarse_sphere = bpy.props.BoolProperty \
-(
-    name = "Coarse Balls",
-    description = "Create coarse balls with fewer vertices, keep checked if using scene with many balls",
-    default = True
-)
-
-
-
 # Define the panel
 class LoadPointsPanel(bpy.types.Panel):
     bl_label = "Load Points"
@@ -175,6 +112,12 @@ class LoadPoints(bpy.types.Operator):
         ave_scl = (x_scl + y_scl + z_scl) / 3  # only used for ball radius
         bpy.context.scene.ball_radius *= ave_scl
 
+        # scl_ext = [.877, .967, 1.33]
+        scl_ext = [1,1,1]
+        x_scl *= scl_ext[0]
+        y_scl *= scl_ext[1]
+        z_scl *= scl_ext[2]
+
         pts_scaled = []
         for pt in pts:
             pt_sc = [pt[0]*x_scl, pt[1]*y_scl, pt[2]*z_scl]
@@ -199,15 +142,37 @@ def read_xml_points(filename):
     x_off = float(trans_mat[4])
     y_off = float(trans_mat[5])
 
+    # # width and height in t2_ball are this much greater than true bounding box in both x and y
+    # other_off = 9.244877324554409
+    # x_off += other_off
+    # y_off += other_off
+
     # Loop through balls
     balls = [elt for elt in root.findall('.//t2_ball_ob')]
 
     rad = float(balls[0].attrib['r'])
     bpy.context.scene.ball_radius = rad
 
+    # minx = 1000
+    # maxx = -1000
+    # miny = 1000
+    # maxy = -1000
+
     pts = []
     for ball in balls:
         pts.append([float(ball.attrib['x'])+x_off, float(ball.attrib['y'])+y_off, float(ball.attrib['layer_id'])])
+
+    #     pt = [float(ball.attrib['x']), float(ball.attrib['y'])]
+    #     if pt[0] < minx:
+    #         minx = pt[0]
+    #     if pt[0] > maxx:
+    #         maxx = pt[0]
+    #     if pt[1] < miny:
+    #         miny = pt[1]
+    #     if pt[1] > maxy:
+    #         maxy = pt[1]
+    # print(minx, maxx, miny, maxy)
+
 
     return(pts)
 
@@ -286,6 +251,77 @@ if __name__ == "__main__":
 def register():
     bpy.utils.register_module(__name__)
 
+    bpy.types.Scene.x_microns = bpy.props.FloatProperty \
+    (
+        name = "x",
+        description = "x-dimension of image stack (microns)",
+        default = 1
+    )
+    bpy.types.Scene.y_microns = bpy.props.FloatProperty \
+    (
+        name = "y",
+        description = "y-dimension of image stack (microns)",
+        default = 1
+    )
+    bpy.types.Scene.z_microns = bpy.props.FloatProperty \
+    (
+        name = "z",
+        description = "z-dimension of image stack (microns)",
+        default = 1
+    )
+
+    bpy.types.Scene.x_pixels = bpy.props.FloatProperty \
+    (
+        name = "x",
+        description = "x-dimension of image stack (pixels)",
+        default = 1
+    )
+    bpy.types.Scene.y_pixels = bpy.props.FloatProperty \
+    (
+        name = "y",
+        description = "y-dimension of image stack (pixels)",
+        default = 1
+    )
+    bpy.types.Scene.z_pixels = bpy.props.FloatProperty \
+    (
+        name = "z",
+        description = "z-dimension of image stack (pixels)",
+        default = 1
+    )
+
+    bpy.types.Scene.pt_name = bpy.props.StringProperty \
+    (
+        name="Point Obj Name",
+        description = "Name given to 3D point objects being loaded", 
+        default="vesicle"
+    )
+
+    bpy.types.Scene.ball_radius = bpy.props.FloatProperty \
+    (
+        name="Ball Radius",
+        description = "Radius to use when converting points to balls (registers radius from XML file if available)", 
+        default=0.01
+    )
+
+    bpy.types.Scene.coarse_sphere = bpy.props.BoolProperty \
+    (
+        name = "Coarse Balls",
+        description = "Create coarse balls with fewer vertices, keep checked if using scene with many balls",
+        default = True
+    )
+
+
+
+
 def unregister():
     bpy.utils.unregister_module(__name__)
 
+    del bpy.types.Scene.coarse_sphere
+    del bpy.types.Scene.ball_radius
+    del bpy.types.Scene.pt_name
+    del bpy.types.Scene.z_pixels
+    del bpy.types.Scene.y_pixels
+    del bpy.types.Scene.x_pixels
+    del bpy.types.Scene.z_microns
+    del bpy.types.Scene.y_microns
+    del bpy.types.Scene.x_microns

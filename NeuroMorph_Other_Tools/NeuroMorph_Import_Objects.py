@@ -28,39 +28,6 @@ bl_info = {
 import bpy
 import os
 
-# Define import properties
-bpy.types.Scene.remesh_when_importing = bpy.props.BoolProperty \
-    (
-    name = "Use Remesh",
-    description = "Add 'Remesh' modifier to imported meshes in smooth mode",
-    default = True
-    )
-bpy.types.Scene.apply_remesh = bpy.props.BoolProperty \
-    (
-    name = "Finalize Remesh",
-    description = "Apply 'Remesh' modifier without editable preview; original meshes will be deleted",
-    default = False
-    )
-bpy.types.Scene.use_smooth_shade = bpy.props.BoolProperty \
-    (
-    name = "Smooth Shading",
-    description = "Smooth the output faces (recommended)",
-    default = True
-    )
-bpy.types.Scene.remesh_octree_depth = bpy.props.IntProperty \
-    (
-    name = "Remesh Resolution",
-    description = "Octree resolution: higher values result in finer details",
-    default = 7
-    )
-bpy.types.Scene.pix_scale = bpy.props.FloatProperty \
-    (
-    name = "Scale (microns per pixel)",
-    description = "Scale used to resize object during in import (number of microns per pixel in the image stack)",
-    default = 1.0,
-    min = 1e-100,
-    precision=4
-    )
 
 # Highlight either use_size_rescaling or use_microns_per_pix_rescaling, but not both
 def _gen_order_update(name1, name2):
@@ -119,7 +86,6 @@ class ObjImportButton(bpy.types.Operator):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}         
 
-bpy.types.Scene.source =  bpy.props.StringProperty(subtype="FILE_PATH")
 
 def ObjBatchImport(dir,files):
     if bpy.ops.object.mode_set.poll():
@@ -159,10 +125,53 @@ def ObjBatchImport(dir,files):
 def register():
     bpy.utils.register_module(__name__)
 
+    # Define import properties
+    bpy.types.Scene.remesh_when_importing = bpy.props.BoolProperty \
+        (
+        name = "Use Remesh",
+        description = "Add 'Remesh' modifier to imported meshes in smooth mode",
+        default = True
+        )
+    bpy.types.Scene.apply_remesh = bpy.props.BoolProperty \
+        (
+        name = "Finalize Remesh",
+        description = "Apply 'Remesh' modifier without editable preview; original meshes will be deleted",
+        default = False
+        )
+    bpy.types.Scene.use_smooth_shade = bpy.props.BoolProperty \
+        (
+        name = "Smooth Shading",
+        description = "Smooth the output faces (recommended)",
+        default = True
+        )
+    bpy.types.Scene.remesh_octree_depth = bpy.props.IntProperty \
+        (
+        name = "Remesh Resolution",
+        description = "Octree resolution: higher values result in finer details",
+        default = 7
+        )
+    bpy.types.Scene.pix_scale = bpy.props.FloatProperty \
+        (
+        name = "Scale (microns per pixel)",
+        description = "Scale used to resize object during in import (number of microns per pixel in the image stack)",
+        default = 1.0,
+        min = 1e-100,
+        precision=4
+        )
+
+    bpy.types.Scene.source =  bpy.props.StringProperty(subtype="FILE_PATH")
+
     pass
     
 def unregister():
     bpy.utils.unregister_module(__name__)
+
+    del bpy.types.Scene.source
+    del bpy.types.Scene.pix_scale
+    del bpy.types.Scene.remesh_octree_depth
+    del bpy.types.Scene.use_smooth_shade
+    del bpy.types.Scene.apply_remesh
+    del bpy.types.Scene.remesh_when_importing
 
     pass
     

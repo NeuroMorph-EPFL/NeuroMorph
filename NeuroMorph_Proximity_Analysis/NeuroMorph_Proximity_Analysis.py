@@ -43,42 +43,6 @@ import numpy as np  # must have Blender > 2.7
 import datetime
 
 
-# Define scene variables
-bpy.types.Scene.filename = bpy.props.StringProperty \
-(
-    name = "Output file", 
-    description = "Set file name and path for output data", 
-    default = "/"
-)
-
-bpy.types.Scene.filename2 = bpy.props.StringProperty \
-(
-    name = "Output file", 
-    description = "Set file name and path for output data", 
-    default = "/"
-)
-
-bpy.types.Scene.name1 = bpy.props.StringProperty \
-(
-    name = "Object 1", 
-    description = "Name (prefix) of first type of object", 
-    default = ""
-)
-bpy.types.Scene.name2 = bpy.props.StringProperty \
-(
-    name = "Object 2", 
-    description = "Name (prefix) of second type of object", 
-    default = ""
-)
-
-bpy.types.Scene.dist_thresh = bpy.props.FloatProperty \
-(
-    name = "Max Distance",
-    description = "The distance threshold: find all interactions less than this distance apart",
-    default = 0.1  # todo:  deal with units
-)
-
-
 # Define the panel
 class ProximityAnalysisPanel(bpy.types.Panel):
     bl_label = "Proximity Analysis"
@@ -897,8 +861,49 @@ def spheres2pts(spherelist):
 def register():
     bpy.utils.register_module(__name__)
 
+    # Define scene variables
+    bpy.types.Scene.filename = bpy.props.StringProperty \
+    (
+        name = "Output file", 
+        description = "Set file name and path for output data", 
+        default = "/"
+    )
+
+    bpy.types.Scene.filename2 = bpy.props.StringProperty \
+    (
+        name = "Output file", 
+        description = "Set file name and path for output data", 
+        default = "/"
+    )
+
+    bpy.types.Scene.name1 = bpy.props.StringProperty \
+    (
+        name = "Object 1", 
+        description = "Name (prefix) of first type of object", 
+        default = ""
+    )
+    bpy.types.Scene.name2 = bpy.props.StringProperty \
+    (
+        name = "Object 2", 
+        description = "Name (prefix) of second type of object", 
+        default = ""
+    )
+
+    bpy.types.Scene.dist_thresh = bpy.props.FloatProperty \
+    (
+        name = "Max Distance",
+        description = "The distance threshold: find all interactions less than this distance apart",
+        default = 0.1  # todo:  deal with units
+    )
+
 def unregister():
     bpy.utils.unregister_module(__name__)
+
+    del bpy.types.Scene.dist_thresh
+    del bpy.types.Scene.name2
+    del bpy.types.Scene.name1 
+    del bpy.types.Scene.filename2
+    del bpy.types.Scene.filename
 
 
 if __name__ == "__main__":

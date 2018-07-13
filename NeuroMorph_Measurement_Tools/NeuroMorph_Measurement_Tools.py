@@ -1363,18 +1363,20 @@ def register():
 def unregister():
     bpy.utils.unregister_module(__name__)
 
-    del bpy.types.Scene.float_scale
-    del bpy.types.Scene.remesh_octree_depth
-    del bpy.types.Object.string_name
-    del bpy.types.Object.SA
-    del bpy.types.Object.vol
-    del bpy.types.Object.nverts
-    del bpy.types.Object.curvelength
-    del bpy.types.Object.length
-    del bpy.types.Object.is_open
-    del bpy.types.Object.has_vol
+    del bpy.types.Scene.create_length_obj
+    del bpy.types.Scene.last_len
     # del bpy.types.Object.vertex_collection
     # del bpy.types.Object.vertex_collection_index
+    del bpy.types.Object.has_vol
+    del bpy.types.Object.is_open
+    del bpy.types.Object.length
+    del bpy.types.Object.curvelength
+    del bpy.types.Object.nverts
+    del bpy.types.Object.vol
+    del bpy.types.Object.SA
+    del bpy.types.Object.string_name
+    del bpy.types.Scene.remesh_octree_depth
+    del bpy.types.Scene.float_scale
     
 
 if __name__ == "__main__":

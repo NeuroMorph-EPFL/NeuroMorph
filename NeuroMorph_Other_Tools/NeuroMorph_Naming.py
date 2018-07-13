@@ -48,29 +48,6 @@ def get_name(self):
 def set_name(self, value):
     return
 
-bpy.types.Object.string_name = StringProperty(name = "obj name", default="submesh", get=get_name, set=set_name)
-bpy.types.Object.string_name_in = StringProperty(name = "obj name", default="submesh")
-
-obj_types_enum = [("other","other","",1),("axon","axon","",2),("dendrite","dendrite","",3),\
-                  ("synapse","synapse","",4),("bouton","bouton","",5),("spine","spine","",6)]
-axon_types_enum = [("other","other","",1),("_E","excitatory","",2),("_I", "inhibitory","",3),("_U", "unknown","",4)]
-synapse_types_enum = [("other","other","",1),("_E","excitatory","",2),("_I", "inhibitory","",3),("_U", "unknown","",4)]
-Completeness_types_enum = [(" ","complete","",1), ("_in","incomplete","",2)]
-bpy.types.Scene.obj_type = EnumProperty(name = 'Obj Type', default = "other", items = obj_types_enum)
-bpy.types.Scene.axon_type = EnumProperty(name = 'axon type', default = "other", items = axon_types_enum)
-bpy.types.Scene.axon_index = IntProperty(name = 'axon index', default=0, min=0)
-bpy.types.Scene.dendrite_index = IntProperty(name = 'dendrite index', default=0, min=0)
-bpy.types.Scene.synapse_d_ind = IntProperty(name = 'dendrite index', default=0, min=0)
-bpy.types.Scene.synapse_s_ind = IntProperty(name = 'spine index', default=0, min=0)
-bpy.types.Scene.synapse_a_ind = IntProperty(name = 'axon index', default=0, min=0)
-bpy.types.Scene.synapse_b_ind = IntProperty(name = 'bouton index', default=0, min=0)
-bpy.types.Scene.synapse_type = EnumProperty(name = 'synapse type', default = "other", items = synapse_types_enum)
-bpy.types.Scene.bouton_index = IntProperty(name = 'bouton index', default=0, min=0)
-bpy.types.Scene.spine_index = IntProperty(name = 'spine index', default=0, min=0)
-bpy.types.Scene.Completeness_types = EnumProperty(name = 'Complete?', items = Completeness_types_enum, \
-                                                  description="Mark object as not completely contained in the scene (optional)")
-
-
 class NamingPanel(bpy.types.Panel):
     bl_label = "Object Naming Convention"
     bl_space_type = "VIEW_3D"
@@ -162,9 +139,46 @@ class Update_Name(bpy.types.Operator):
 def register():
     bpy.utils.register_module(__name__)
 
+    bpy.types.Object.string_name = StringProperty(name = "obj name", default="submesh", get=get_name, set=set_name)
+    bpy.types.Object.string_name_in = StringProperty(name = "obj name", default="submesh")
+
+    obj_types_enum = [("other","other","",1),("axon","axon","",2),("dendrite","dendrite","",3),\
+                      ("synapse","synapse","",4),("bouton","bouton","",5),("spine","spine","",6)]
+    axon_types_enum = [("other","other","",1),("_E","excitatory","",2),("_I", "inhibitory","",3),("_U", "unknown","",4)]
+    synapse_types_enum = [("other","other","",1),("_E","excitatory","",2),("_I", "inhibitory","",3),("_U", "unknown","",4)]
+    Completeness_types_enum = [(" ","complete","",1), ("_in","incomplete","",2)]
+    bpy.types.Scene.obj_type = EnumProperty(name = 'Obj Type', default = "other", items = obj_types_enum)
+    bpy.types.Scene.axon_type = EnumProperty(name = 'axon type', default = "other", items = axon_types_enum)
+    bpy.types.Scene.axon_index = IntProperty(name = 'axon index', default=0, min=0)
+    bpy.types.Scene.dendrite_index = IntProperty(name = 'dendrite index', default=0, min=0)
+    bpy.types.Scene.synapse_d_ind = IntProperty(name = 'dendrite index', default=0, min=0)
+    bpy.types.Scene.synapse_s_ind = IntProperty(name = 'spine index', default=0, min=0)
+    bpy.types.Scene.synapse_a_ind = IntProperty(name = 'axon index', default=0, min=0)
+    bpy.types.Scene.synapse_b_ind = IntProperty(name = 'bouton index', default=0, min=0)
+    bpy.types.Scene.synapse_type = EnumProperty(name = 'synapse type', default = "other", items = synapse_types_enum)
+    bpy.types.Scene.bouton_index = IntProperty(name = 'bouton index', default=0, min=0)
+    bpy.types.Scene.spine_index = IntProperty(name = 'spine index', default=0, min=0)
+    bpy.types.Scene.Completeness_types = EnumProperty(name = 'Complete?', items = Completeness_types_enum, \
+                                                      description="Mark object as not completely contained in the scene (optional)")
 
 def unregister():
     bpy.utils.unregister_module(__name__)
+
+    del bpy.types.Scene.Completeness_types
+    del bpy.types.Scene.spine_index
+    del bpy.types.Scene.bouton_index
+    del bpy.types.Scene.synapse_type
+    del bpy.types.Scene.synapse_b_ind
+    del bpy.types.Scene.synapse_a_ind
+    del bpy.types.Scene.synapse_s_ind
+    del bpy.types.Scene.synapse_d_ind
+    del bpy.types.Scene.dendrite_index
+    del bpy.types.Scene.axon_index
+    del bpy.types.Scene.axon_type
+    del bpy.types.Scene.obj_type
+    del bpy.types.Object.string_name_in
+    del bpy.types.Object.string_name
+
 
 if __name__ == "__main__":
     register()
