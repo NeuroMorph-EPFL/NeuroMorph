@@ -22,7 +22,8 @@ Detailed instructions for each tool.
 [Video Tutorial](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
 Not up-to-date, but still helpful for the measurement and image stack interaction tools.  
 
-*Installation Note: NeuroMorph tools are found in the "NeuroMorph" tab on the far left in Blender.*
+*Installation Note: NeuroMorph tools are found in the "NeuroMorph" tab on the far left in Blender.*  
+<br>
 
 **Publications:**
 
