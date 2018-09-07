@@ -53,11 +53,10 @@ class MitoPanel(bpy.types.Panel):
         row.operator("file.set_filename", text='', icon='FILESEL')
 
         row = self.layout.row()
-        row.operator("object.get_geometry", text='Get Geometries', icon='MESH_CUBE')
+        row.operator("object.get_geometry", text='Get Bounding Boxes', icon='MESH_CUBE')
 
-        row = self.layout.row()
-        row.operator("object.get_geometry_single", text='Get Single Geometry', icon='MESH_CUBE')
-
+        # row = self.layout.row()
+        # row.operator("object.get_geometry_single", text='Get Single Bounding Box', icon='MESH_CUBE')
 
 
 
@@ -69,20 +68,23 @@ class MitoPanel(bpy.types.Panel):
 # - ratio of major axis length to mean of other 2 axis lengths
 # - volume
 class GetGeometry(bpy.types.Operator):
-    """Get geometry of each distinct object of input object or set of objects"""
+    """Get geometry of each distinct object of input object or its children"""
     bl_idname = "object.get_geometry"
-    bl_label = "Get geometry of each distinct object of input object or set of objects"
+    bl_label = "Get geometry of each distinct object of input object or its childen"
 
     def execute(self, context):
-        ob_list = [ob for ob in bpy.data.objects if ob.select == True]
+        # # Separate into distinct objects if input is single joined object
+        # ob_list = [ob for ob in bpy.data.objects if ob.select == True]
+        # if len(ob_list) == 1:
 
-        # Separate into distinct objects if input is single joined object
-        if len(ob_list) == 1:
+        ob_orig = bpy.context.object
+        name_orig = ob_orig.name
+        if name_orig[-7:] == "_parent":
+            name_orig = name_orig[0:-7]
 
+        # Separate into distinct child objects if input has no children
+        if len(ob_orig.children) == 0:
             t0 = datetime.datetime.now()
-
-            ob_orig = bpy.context.object
-            name_orig = ob_orig.name
 
             # Store list of current objects
             ob_list_before = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH']
@@ -95,11 +97,36 @@ class GetGeometry(bpy.types.Operator):
             ob_list_after = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH']
             for ob_i in ob_list_before:
                 ob_list_after.remove(ob_i)
+
             ob_list_after.insert(0, bpy.data.objects[name_orig])
             ob_list = ob_list_after
 
+            # Make new separated objects children of an empty parent object
+            fullname = name_orig + "_parent"
+            ob_parent = bpy.data.objects.new(fullname, None)
+            bpy.context.scene.objects.link(ob_parent)
+
+            for ob in ob_list:
+                ob.parent = ob_parent
+
+            # Create bounding box object
+            fullname_bbox = "BBox_" + name_orig + "_parent"
+            bbox_parent = bpy.data.objects.new(fullname_bbox, None)
+            bpy.context.scene.objects.link(bbox_parent)
+
             t1 = datetime.datetime.now()
             print("time to separate: ", t1-t0)
+
+        else:
+            ob_parent = ob_orig
+            ob_list = ob_parent.children
+            fullname_bbox = "BBox_" + name_orig + "_parent"
+            bbox_parent_list = [ob_i for ob_i in bpy.data.objects if ob_i.name == fullname_bbox]
+            if bbox_parent_list == []:
+                bbox_parent = bpy.data.objects.new(fullname_bbox, None)
+                bpy.context.scene.objects.link(bbox_parent)
+            else:
+                bbox_parent = bbox_parent_list[0]
 
 
         t2 = datetime.datetime.now()
@@ -108,7 +135,7 @@ class GetGeometry(bpy.types.Operator):
         geom_props = []
         for ob in ob_list:
             # ob = bpy.data.objects[ob_name]
-            this_data = get_geom_properties(ob)
+            this_data = get_geom_properties(ob, bbox_parent)
             geom_props.append(this_data)  # [max_length, length_ratio, volume]
 
         ob_names = [ob.name for ob in ob_list]
@@ -121,21 +148,29 @@ class GetGeometry(bpy.types.Operator):
 
 
 
-class GetGeometrySingle(bpy.types.Operator):
-    """Get geometry of single object"""
-    bl_idname = "object.get_geometry_single"
-    bl_label = "Get geometry of single object"
+# class GetGeometrySingle(bpy.types.Operator):
+#     """Get geometry of single object"""
+#     bl_idname = "object.get_geometry_single"
+#     bl_label = "Get geometry of single object"
 
-    def execute(self, context):
-        ob_orig = bpy.context.object
-        name_orig = ob_orig.name
-        this_data = get_geom_properties(ob_orig)
-        # write_data(self, [this_data], [name_orig])
-        return {'FINISHED'}
+#     def execute(self, context):
+#         ob_orig = bpy.context.object
+#         name_orig = ob_orig.name
+
+#         # Get bounding box parent object  <-- todo: not sure this is the desired behavior
+#         fullname_bbox = "BBox_" + ob_name + "_parent"
+#         bbox_parent = [ob_i for ob_i in bpy.data.objects if ob_i.name == fullname_bbox]
+#         if bbox_parent == []:
+#             bbox_parent = bpy.data.objects.new(fullname_bbox, None)
+#             bpy.context.scene.objects.link(bbox_parent)
+
+#         this_data = get_geom_properties(ob_orig, bbox_parent)
+#         # write_data(self, [this_data], [name_orig])
+#         return {'FINISHED'}
 
 
 
-def get_geom_properties(ob):
+def get_geom_properties(ob, bbox_parent):
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
     mat = bpy.data.materials.new("transparent")
@@ -165,7 +200,14 @@ def get_geom_properties(ob):
     # Get axis-aligned bounding box
     bbox_minmax = get_bounding_box(vert_coords_orig, rot_mat)  # rotates pts, finds bbox
     bbox = add_box(bbox_minmax)
-    # bbox.name = "bbox"  # results in the last obj created having no .00n, so names are misalligned
+    bbox.parent = bbox_parent
+
+    # Give the bounding box the correctly indexed name
+    name_split = ob.name.split(".")
+    if len(name_split) == 2:
+        bbox.name = "BBox." + name_split[1]
+    else:
+        bbox.name = "BBox"
 
     # Rotate bbox back to object location
     rot_inv = Matrix(np.linalg.inv(rot_mat))
