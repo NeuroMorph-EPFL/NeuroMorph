@@ -298,6 +298,14 @@ class UpdateApproxCenterline(bpy.types.Operator):
         # Update number of centerline points
         bpy.context.scene.npts_centerline = len(centerline.data.vertices)
 
+        # Instantiate data containers
+        centerline["centerline_min_radii"] = []
+        centerline["cross_sectional_areas"] = []
+        centerline["centerline_max_radii"] = []
+        centerline["vesicle_counts"] = []
+        centerline["area_sums"] = []
+        centerline["vesicle_list"] = []
+
         return {'FINISHED'}
 
 
@@ -1495,9 +1503,10 @@ class WriteCtrlineData(bpy.types.Operator):
 
     def invoke(self, context, event):
         # Check if active object is a centerline with centerline data attached
-        if "centerline_min_radii" not in bpy.context.object:
-            self.report({'INFO'}, "Must select Centerline object for exporting.")
-            return {'FINISHED'}
+        if (("centerline_min_radii" not in bpy.context.object) and 
+            ("cross_sectional_areas" not in bpy.context.object)):
+                self.report({'INFO'}, "Must select Centerline object for exporting.")
+                return {'FINISHED'}
 
         # Define export file
         WindowManager = context.window_manager
