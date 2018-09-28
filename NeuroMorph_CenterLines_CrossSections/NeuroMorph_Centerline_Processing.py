@@ -291,6 +291,10 @@ class UpdateApproxCenterline(bpy.types.Operator):
             bpy.ops.mesh.vertices_smooth()
             bpy.ops.object.mode_set(mode='OBJECT')
 
+        # Reorder indices to be linear down curve
+        bpy.ops.object.convert(target='CURVE')
+        bpy.ops.object.convert(target='MESH')
+
         # Update number of centerline points
         bpy.context.scene.npts_centerline = len(centerline.data.vertices)
 
@@ -760,7 +764,6 @@ def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
 
     nverts_not_enough = 12
 
-    # plane = bpy.data.objects["Plane"]
     plane = make_plane(centerline, ind)
     select_obj(plane)
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
@@ -804,13 +807,13 @@ def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
     select_obj(cross_section)
 
     # Cut mesh at plane, create new cross sectional face (can take a couple seconds)
-    thresh = 1e-4
+    thresh = 1e-5
     apply_intersect(cross_section, plane, thresh = thresh)
 
     if len(cross_section.data.polygons) == 0 or len(cross_section.data.vertices) < nverts_not_enough:
         no_intersect_area = True
+        thresh /= 10
         while (no_intersect_area):
-            thresh /= 10
             print("bad threshold? nverts =", str(len(cross_section.data.vertices)), ", trying thresh =", str(thresh))
             # Delete incorrect intersection object
             select_obj(cross_section)
@@ -823,11 +826,22 @@ def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
             select_obj(cross_section)
             # Try a smaller threshold
             apply_intersect(cross_section, plane, thresh = thresh)
-            if len(cross_section.data.polygons) > 0 or len(cross_section.data.vertices) < nverts_not_enough or thresh < 1e-10:
-                no_intersect_area = False
-                select_obj(cross_section_backup)
-                bpy.ops.object.delete() 
-                select_obj(cross_section)
+            
+            if thresh < 1e-10:
+                thresh = 1e-4
+            elif thresh >= 1e-4:
+                thresh *= 10
+            else:
+                thresh /= 10
+
+            if (len(cross_section.data.polygons) > 0 or 
+                len(cross_section.data.vertices) < nverts_not_enough or 
+                # thresh < 1e-10 or 
+                thresh > 1e-2):
+                    no_intersect_area = False
+                    select_obj(cross_section_backup)
+                    bpy.ops.object.delete() 
+                    select_obj(cross_section)
 
     else:
         select_obj(cross_section_backup)
@@ -1592,64 +1606,5 @@ def unregister():
     del bpy.types.Scene.npts_centerline
 
     bpy.utils.unregister_module(__name__)
-
-
-
-
-
-
-
-
-
-# # old code
-
-# def reorder_crv_verts_old_not_finished(crv):
-#     # assumes crv is linear object, reorders indices to be 0,1,...,n
-#     verts = crv.data.vertices
-#     edges = crv.data.edges
-
-#     # Find an endpoint (only in one edge)
-#     for v_ind in range(0, len(verts)):
-#         e_inds = []
-#         # for e_ind, ee in enumerate(crv.data.edges):
-#         for e_ind in range(0, len(edges)):
-#             if v_ind in edges[e_ind].vertices:
-#                 e_inds.append(e_ind)
-#         if len(e_inds) < 2:  # v_ind is the index of an endpoint  
-#             break
-
-#     # Iterate down curve to determine vertex ordering
-#     edge_chain = e_inds  # contains the single edge connected to v_ind
-#     next_vert = [vv for vv in edges[e_inds[0]].vertices if vv != v_ind][0]
-#     vert_chain = [v_ind, next_vert]
-#     while (True):
-#         edges_this_v = [ee.index for ee in edges if next_vert in ee.vertices]
-#         if (len(edges_this_v) < 2):
-#             break
-#         next_edge = [ee for ee in edges_this_v if ee not in edge_chain][0]
-#         edge_chain.append(next_edge)
-#         next_vert = [vind for vind in edges[next_edge].vertices if vind != vert_chain[-1]][0]
-#         vert_chain.append(next_vert)
-
-#     # Assign new vertex order in bmesh
-#     crv = bpy.context.object
-#     bpy.ops.object.mode_set(mode='EDIT')
-#     me = crv.data
-#     bm = bmesh.from_edit_mesh(me)
-#     for v in bm.verts:
-#         print(v.index)
-
-#     new_order = vert_chain  # no: need inverse mapping: true ind of vert 0, true ind of vert 1, ...
-#     for ii, vv in zip(new_order, bm.verts):
-#         vv.index = ii
-
-#     bm.verts.sort()
-#     for v in bm.verts:
-#         print(v.index)
-
-#     # bm.verts.index_update()  # necessary?
-
-#     bmesh.update_edit_mesh(me)
-#     bpy.ops.object.mode_set(mode='OBJECT')
 
 
