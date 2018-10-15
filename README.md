@@ -1,7 +1,7 @@
 <img src="https://github.com/NeuroMorph-EPFL/NeuroMorph/raw/master/NeuroMorph_screenshot.png" alt="NeuroMorph screenshot" height="300px" align="left"/>
 
 <br><br>
-This GitHub site provides all NeuroMorph software and datasets for download.  
+This GitHub site provides all NeuroMorph software, datasets, and documentation.
 <br>
 
 <b><i>Please visit the [NeuroMorph project website](http://neuromorph.epfl.ch) for more information.</i></b>
