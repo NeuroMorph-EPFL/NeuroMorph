@@ -21,7 +21,7 @@ bl_info = {
     "location": "Scene > Wavefront (.obj) Batch Import",
     "description": "Imports .obj files in batch, with option of applying a Remesh modifier",  
     "warning": "",  
-    "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/Neuro_tool/import",  
+    "wiki_url": "",  
     "tracker_url": "",  
     "category": "Import-Export"}  
 

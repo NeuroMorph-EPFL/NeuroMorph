@@ -21,7 +21,7 @@ bl_info = {
     "location": "View3D > NeuroMorph > Parent-Child Tools",
     "description": "Parent-Child Tools",
     "warning": "",  
-    "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Other_Tools",  
+    "wiki_url": "",  
     "tracker_url": "",  
     "category": "Tool"}  
   

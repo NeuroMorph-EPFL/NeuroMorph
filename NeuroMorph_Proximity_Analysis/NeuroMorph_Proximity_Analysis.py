@@ -21,7 +21,7 @@ bl_info = {
     "location": "View3D > Proximity Analysis",
     "description": "Calculate regions of surface within a given distance of each other",
     "warning": "",  
-    "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Proximity_Analysis_Tools",  
+    "wiki_url": "",  
     "tracker_url": "",  
     "category": "Tool"}  
   

@@ -1,4 +1,4 @@
-#    NeuroMorph_Measurements.py (C) 2016,  Anne Jorstad, Biagio Nigro, Diego Marcos
+#    NeuroMorph_Measurements.py (C) 2018,  Anne Jorstad, Biagio Nigro, Diego Marcos
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ bl_info = {
     "blender": (2, 7, 8),
     "location": "View3D > Add > Mesh",
     "warning": "",
-    "wiki_url": "https://wiki.blender.org/index.php/Extensions:2.6/Py/Scripts/NeuroMorph/Measurement_Tools",
+    "wiki_url": "",
     "tracker_url": "",
     "category": "Mesh"}
 
