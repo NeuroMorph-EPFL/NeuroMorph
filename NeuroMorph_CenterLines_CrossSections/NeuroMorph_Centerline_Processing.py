@@ -204,6 +204,7 @@ class ApproxCenterline(bpy.types.Operator):
         crv.name = "curve"
 
         # Reorder indices to be linear down curve
+        select_obj(crv)
         bpy.ops.object.convert(target='CURVE')
         bpy.ops.object.convert(target='MESH')
 
@@ -292,6 +293,7 @@ class UpdateApproxCenterline(bpy.types.Operator):
             bpy.ops.object.mode_set(mode='OBJECT')
 
         # Reorder indices to be linear down curve
+        select_obj(centerline)
         bpy.ops.object.convert(target='CURVE')
         bpy.ops.object.convert(target='MESH')
 
@@ -865,26 +867,32 @@ def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
 
 
     # Find area of new face with lots of verts
-    cap_inds = []
+    # cap_inds = []
+    big_poly_inds = []
     polys = cross_section.data.polygons
     for f_ind in range(0, len(polys)):
         this_face = polys[f_ind]
         if len(this_face.vertices) > 6:  # the cutting plane causes some quads to now have 5 edges, +1 for good measure
-            cap_inds.append(f_ind)
+            big_poly_inds.append(f_ind)
 
-    if len(cap_inds) == 1:
-        cap_ind = cap_inds[0]
+    if len(big_poly_inds) == 1:
+        # cap_ind = big_poly_inds[0]
+        cap_inds = big_poly_inds
 
-    elif len(cap_inds) > 1:
-        print("Warning:  " + str(len(cap_inds)) + " polys with > 6 verts, making selection")
-        # This can happen when axon bends with high curvature:  find face closest to this centerline point
-        # or if geometry is strange and the entire plane is kept
+
+    elif len(big_poly_inds) > 1:
+        print("Warning:  " + str(len(big_poly_inds)) + " polys with > 6 verts, making selection")
+        # This can happen when axon bends with high curvature and the plane intersects the mesh twice,
+        # or if there is a hole in the cross section, as individual faces cannot have holes, 
+        # or if geometry is strange and the entire plane is kept:
+        # find face closest to this centerline point;
+        # if there is a hole, also find the other part of the cross section on the other side of the hole
 
         # Remove any faces that contains points on the original plane
         plane_verts = [v.co for v in plane.data.vertices]
         remove_inds = []
         break_flag = False
-        for c_ind in cap_inds:
+        for c_ind in big_poly_inds:
             break_flag = False
             for v_ind in polys[c_ind].vertices:
                 if not break_flag:
@@ -893,33 +901,64 @@ def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
                         remove_inds.append(c_ind)
                         break_flag = True
         for bad_ind in remove_inds:
-            cap_inds.remove(bad_ind)
+            big_poly_inds.remove(bad_ind)
 
         # Save the face closest to the centerline point
         min_dist = 1000
         cap_ind = -1
-        for c_ind in cap_inds:
+        for c_ind in big_poly_inds:
             this_dist = get_dist(ctrline_vert, polys[c_ind].center)
             if this_dist < min_dist:
                 min_dist = this_dist
                 cap_ind = c_ind
-        # print("chose face with center at ", polys[cap_ind].center)
+        #print("chose face with center at ", polys[cap_ind].center)
+        # this_area = polys[cap_ind].area
+        
+        # If cross section has a hole, the found cross section poly will not be complete, 
+        # as single faces cannot have holes; check if there is another poly with >6 verts 
+        # that shares at least 2 edges with found poly
+        other_inds = [ii for ii in big_poly_inds if ii != cap_ind]
+        cap_edges = polys[cap_ind].edge_keys
+        cap_inds = [cap_ind]
+        for o_ind in other_inds:
+            poly2_edges = polys[o_ind].edge_keys
+            overlapping_edges = set(poly2_edges).intersection(set(cap_edges))
+            if len(overlapping_edges) >= 2:  # There is a hole, join this face!
+                cap_inds.append(o_ind)
+        # Now cap_inds is a list of >= 1 face index
+        
 
     else:
         print("ERROR:  found no polys with > 6 verts, something went wrong <-- investigate")
-        print(len(cap_inds), "/", len(cross_section.data.polygons))
+        print(len(big_poly_inds), "/", len(cross_section.data.polygons))
         x = intentional_crash  # force crash
 
+    # Create new object as child object of centerline
+    new_face_ob = new_obj_from_polys(cross_section, cap_inds)
+    new_face_ob.parent = centerline
 
-    this_area = polys[cap_ind].area
+    # Calculate area
+    this_area = sum(polys[ii].area for ii in cap_inds)
 
-    # Create single face object at child object of centerline
+    # Delete temporary plane object and mesh objects
+    select_obj(plane)
+    bpy.ops.object.delete()
+    select_obj(cross_section)
+    bpy.ops.object.delete()
+
+    return(this_area)
+
+
+
+def new_obj_from_polys(cross_section, cap_inds):
+    # Create new cross-section object, often a single face (but not necessarily)
     select_obj(cross_section)
     ob_list_before = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH']
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.object.mode_set(mode='OBJECT')
-    cross_section.data.polygons[cap_ind].select = True
+    for ii in cap_inds:
+        cross_section.data.polygons[ii].select = True
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.duplicate_move()
     bpy.ops.mesh.separate(type='SELECTED')
@@ -930,15 +969,7 @@ def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
     mat = bpy.data.materials["cross_section_material"]
     new_face_ob.data.materials.append(mat)  # added for 2.79
     new_face_ob.material_slots[0].material = mat
-    new_face_ob.parent = centerline
-
-    # Delete temporary plane object and mesh objects
-    select_obj(plane)
-    bpy.ops.object.delete()
-    select_obj(cross_section)
-    bpy.ops.object.delete()
-
-    return(this_area)
+    return(new_face_ob)
 
 
 def apply_intersect(obj, plane, thresh = .0001):
