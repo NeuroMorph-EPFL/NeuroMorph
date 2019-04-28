@@ -16,7 +16,7 @@
 bl_info = {  
     "name": "NeuroMorph Centerline Processing",
     "author": "Anne Jorstad",
-    "version": (1, 3, 0),
+    "version": (1, 4, 0),
     "blender": (2, 7, 9),
     "location": "View3D > NeuroMorph > Centerline Processing",
     "description": "Process centerlines",
@@ -40,6 +40,7 @@ import numpy as np  # must have Blender > 2.7
 import csv
 import xml.etree.ElementTree as ET
 import datetime
+from mathutils.bvhtree import BVHTree
 
 
 # Define the panel
@@ -175,6 +176,15 @@ class CenterlinePanel(bpy.types.Panel):
 
 
 
+def order_verts(crv_obj):
+# Reorder indices to be ordered 0..N along curve
+# Assumes crv_obj is a 1D set of connected edges
+    select_obj(crv_obj)
+    bpy.ops.object.convert(target='CURVE')
+    bpy.ops.object.convert(target='MESH')
+
+
+
 class ApproxCenterline(bpy.types.Operator):
     """Heuristic to provide approximate centerline (input mesh object with two endpoints selected)"""
     bl_idname = "object.approx_centerline"
@@ -186,7 +196,21 @@ class ApproxCenterline(bpy.types.Operator):
         
         convert_to_global_coords()
 
+        ################################################################################
+        # Known starting points, to test for specific errors, todo:  turn this off!
+        debug_pts = False
+        if debug_pts:
+            inds_debug = [210, 5757]  # long angled cross section: [751, 5584];  outside point: [704, 5647]
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='DESELECT')
+            bpy.ops.object.mode_set(mode='OBJECT')
+            for ind in inds_debug:
+                mesh.data.vertices[ind].select = True
+        ################################################################################
+
+
         pts = [v for v in mesh.data.vertices if v.select == True]
+        print("input indices: ", str([p.index for p in pts]))
         if len(pts) != 2:
             self.report({'INFO'},"Must select exactly 2 endpoints")
 
@@ -201,19 +225,23 @@ class ApproxCenterline(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='OBJECT')
         obs_after = list(bpy.context.scene.objects)
         crv = [elt for elt in obs_after if elt not in obs_before][0]
-        crv.name = "curve"
+        crv.name = "curve_on_mesh"
 
         # Reorder indices to be linear down curve
-        select_obj(crv)
-        bpy.ops.object.convert(target='CURVE')
-        bpy.ops.object.convert(target='MESH')
+        order_verts(crv)
+
+        # Predefine some variables
+        small_step = .000001  # something small
+        ninds_initial_bdry = round(bpy.context.scene.npts_centerline / 4)
+        # ninds_initial_bdry = 50  # if cross sections are too close together, might intersect, these are removed later
+        # ninds_initial_bdry = 120
+
 
         # Sample indices
-        ninds = 25  # if cross sections are too close together, might intersect
         nverts = len(crv.data.vertices)
-        delta = math.floor(nverts / (ninds - 1))
+        delta = math.floor(nverts / (ninds_initial_bdry - 1))
         inds = list(range(2, nverts, delta))
-        inds.append(nverts-3)
+        # inds.append(nverts-3)  # why is this here??
 
         # Create cross sections at indices
 
@@ -228,31 +256,162 @@ class ApproxCenterline(bpy.types.Operator):
         mat = bpy.data.materials.new("cross_section_material")
         mat.diffuse_color = (0.0,1.0,1.0)
 
-        # Interate down curve
-        bpy.context.scene.search_radius *= 2
+        # Iterate down curve
+        bpy.context.scene.search_radius *= 2  # A bit dangerous, as might reach other parts of mesh
         t0 = datetime.datetime.now()
         for ind in inds:
             print(ind)
-            this_area = get_cross_sectional_area(crv, ind, mesh, kd_mesh, self)  # not always correct, working here
+            this_area, this_poly = get_cross_section(crv, ind, mesh, kd_mesh, self)
+            # Normal is weighted average of two prior and two next normals
         t3 = datetime.datetime.now()
         print("total time: ", t3-t0)
         bpy.context.scene.search_radius /= 2
 
+        # Remove points that are not consistent with the "forward" direction of the curve, 
+        # by checking if the next point is on correct side of cross section 
+        # Use norm = average of previous 2 and next 2 cross-section normals (normal is already the average)
+        #      dir = vector from this point to next point
+        # Direction condition:  dot(norm, dir) > 0
+        pts_to_remove_normals = []
+        n_0 = crv.children[0].data.polygons[0].normal
+        c_0 = crv.children[0].data.polygons[0].center
+        for ii in range(1, len(crv.children)):
+            c_ii = crv.children[ii].data.polygons[0].center  # Still works when cross-section has multiple polys
+            dir_to_ii = c_ii - c_0
+            d = np.dot(n_0, dir_to_ii)
+            if d < 0:
+                pts_to_remove_normals.append(ii)
+            else:
+                n_0 = crv.children[ii].data.polygons[0].normal
+                c_0 = c_ii
+
+            # # Could also look at the normal of cross sections on either side of this cross section,
+            # # if they are both similar, but this one is quite far away, delete it
+            # if ii < len(crv.children)-1:
+                # n0 = crv.children[ii-1].data.polygons[0].normal
+                # n1 = crv.children[ii].data.polygons[0].normal
+                # n2 = crv.children[ii+1].data.polygons[0].normal
+                # a01 = math.acos(n0*n1)  # arccos(dot product) = angle between normals
+                # a12 = math.acos(n1*n2)
+                # a02 = math.acos(n0*n2)
+                # d_allowed = .15  # ~pi/20 == 9 degrees  # this isn't big enough, but the situation seems to be better detected by looking for intersects instead
+                # if ((a02 < (min(a01, a12) - d_allowed))):
+                #     print(ii, a01, a12, a02)
+
+
+        # Check if cross section intersects with >3 other cross sections, and if so, remove it
+        pts_to_remove_intersections = []
+        too_many_intersects = 3  # 3 or 4
+        for ii in range(0, len(crv.children)):
+            intersect_counts_ii = 0
+            bm1 = bmesh.new()  # Create bmesh object
+            bm1.from_mesh(crv.children[ii].data)  # Fill bmesh data from object
+            obj_now_BVHtree = BVHTree.FromBMesh(bm1) # Make BVH tree from BMesh of objects
+            for jj in range(0, len(crv.children)):
+                if jj != ii:
+                    bm2 = bmesh.new()
+                    bm2.from_mesh(crv.children[jj].data)            
+                    obj_next_BVHtree = BVHTree.FromBMesh(bm2)
+                    inter = obj_now_BVHtree.overlap(obj_next_BVHtree)  # Get intersecting pairs
+                    if inter != []:
+                        intersect_counts_ii += 1
+
+            if intersect_counts_ii > 1:
+                print("intersect counts: ", crv.children[ii].name, str(ii), str(intersect_counts_ii))
+            if intersect_counts_ii >= too_many_intersects:
+                pts_to_remove_intersections.append(ii)
+
+        print("deleting indices", str(pts_to_remove_normals), str(pts_to_remove_intersections))
+        pts_to_remove = pts_to_remove_normals + pts_to_remove_intersections
+        pts_to_remove = list(set(pts_to_remove))  # remove duplicates
+        pts_to_remove.sort()
+
+
+        # tmp_var = [Vector([-1,-1,-1]), Vector([-1,-1,-1]), Vector([-1,-1,-1])]
+
+        # Delete the offending children
+        pts_to_remove.reverse()  # Must delete largest index first, to not affect other indices
+        for ii in pts_to_remove:
+            select_obj(crv.children[ii])
+            bpy.ops.object.delete()
+            # crv.children[ii].parent = bpy.data.objects['Cube']  # for debugging, instead of the above two lines
+
         # Connect centroids of cross sections for approximate centerline
+        # If centroid is outside mesh, find an internal point to use instead
+        print("Connecting centroids")
         ninds = len(crv.children)
         centers = []
         edges = []
         for ii, cross_section in enumerate(crv.children):
-            centers.append(cross_section.data.polygons[0].center)
-            if ii < (ninds-1):
-                edges.append([ii,ii+1])  # todo:  missing one edge?
+            print(str(ii), cross_section.name)
+            # Check if centroid of cross section is inside cross section
+            ctr = cross_section.data.polygons[0].center.copy()
+            print("calculating if inside")
+            is_inside = check_is_inside(mesh, ctr)
+            if is_inside:
+                centers.append(ctr)
+            else:
+                # If outside, find appropriate central point inside cross section
+                print("Adjusting centroid location on ", cross_section.name)
+                ctr_adjusted = get_ctr_pt_from_ext_pt(mesh, cross_section, ctr, small_step, self, opt = "use_perimeter")
+                centers.append(ctr_adjusted)
 
-        # Delete crv and cross sections
-        for cross_sec in crv.children:
-            select_obj(cross_sec)
-            bpy.ops.object.delete() 
-        select_obj(crv)
-        bpy.ops.object.delete() 
+            # Add edge
+            if ii < (ninds-1):
+                edges.append([ii,ii+1])
+
+        # Smooth the curve:
+        # Take midpoint from the previous to the next centerpoints inside each cross section, 
+        # Average this location with this centroid for the final centerline point
+        # Leave end points as they are
+        print("Smoothing the curve, while keeping vertices inside mesh")
+        centers_new = [centers[0]]
+        for ii in range(1,ninds-1):
+            cross_section = crv.children[ii]
+            ctr_here = centers[ii]
+            ctr_prev = centers[ii-1]
+            ctr_next = centers[ii+1]
+            segment = ctr_next - ctr_prev
+            seg_length = segment.length
+            seg_dir = segment / seg_length
+
+            # Check if segment from previous center to next center intersects the cross section
+            result, loc, face_normal, face_idx = cross_section.ray_cast(ctr_prev, seg_dir, distance=seg_length)
+            if result == False:  # Segment does not intersect cross section, move midpoint inside
+                print("pre-next segment midpoint OUTSIDE for", cross_section.name, ", index", str(ii))
+
+                # for debugging
+                inspect_locs = False
+                if inspect_locs:
+                    bpy.ops.mesh.primitive_uv_sphere_add(size = .01, location = ctr_prev)
+                    bpy.ops.mesh.primitive_uv_sphere_add(size = .01, location = ctr_next)
+
+                midpt_seg = ctr_prev + seg_dir * seg_length/2
+                return_edge_pt = True
+                # midpt_inside = get_ctr_pt_from_ext_pt(mesh, cross_section, midpt_seg, small_step, self, opt = "return_edge_pt")
+                midpt_inside = get_ctr_pt_from_ext_pt(mesh, cross_section, midpt_seg, small_step, self, opt = "use_bdry_normal")
+
+            else:
+                # midpt_inside = loc
+                # Maybe would be better to always move new point closer to the center?  # todo: further investigate if this is a good idea
+                # Problem is that this adjusted point is often less smooth than just using loc
+                midpt_inside = get_ctr_pt_from_ext_pt(mesh, cross_section, loc, small_step, self, opt = "use_bdry_normal")
+
+
+            # Average this midpoint location with this centroid for the final centerline point
+            mid_center = (midpt_inside + ctr_here)/2
+            is_inside = check_is_inside(mesh, mid_center)
+            if is_inside:
+                centers_new.append(mid_center)
+            else:
+                print("During smoothing, adjusting location of", cross_section.name)
+                mid_ctr_adjusted = get_ctr_pt_from_ext_pt(mesh, cross_section, mid_center, small_step, self, opt = "use_perimeter")
+                centers_new.append(mid_ctr_adjusted)
+
+        # Append last point
+        centers_new.append(centers[-1])  # todo: this adds the boundary point not the centerpoint
+        centers = centers_new
+
 
         # Create new mesh object
         mesh_data = bpy.data.meshes.new("centerline_approx")
@@ -265,15 +424,340 @@ class ApproxCenterline(bpy.types.Operator):
         scene.objects.link(centerline_approx)
         select_obj(centerline_approx)
 
-        # Add more centerline points and smooth
+        # Reorder indices to be linear down curve
+        order_verts(centerline_approx)
+
+        # x = break_code
+
+        ### Detect if/where centerline exits the mesh
+        # All vertices should now be inside the mesh, loop through edges to check for
+        # when edge intersects mesh, and warn user; For now, add red ball near 
+        # intersection location, working on algorithm to move these points automatically
+        print("Detecting edge-mesh intersections")
+        mat_edge_intersect = bpy.data.materials.new("edge_intersect_material")
+        mat_edge_intersect.diffuse_color = (1.0,0.0,0.0)
+        verts = centerline_approx.data.vertices
+        n_edge_intersections = check_edge_internal(verts, mesh, mat_edge_intersect)
+        if n_edge_intersections > 0:
+            infostr = "There are still " + str(n_edge_intersections) + " centerline edges that intersect with the mesh!  See red balls and adjust by hand."
+            self.report({'INFO'}, infostr)
+
+        # Delete crv and cross sections
+        for cross_sec in crv.children:
+            select_obj(cross_sec)
+            bpy.ops.object.delete() 
+        select_obj(crv)
+        bpy.ops.object.delete() 
+
+
+        # If no edge intersections, accept as final centerline and do same processing as in "Update Approx. Centerline",
+        # Otherwise, adding more point will makes it more difficult to adjust by hand, 
+        # user should first adjust curve for intersections, then click button
+        if n_edge_intersections == 0:
+            # Add more centerline points and smooth
+            smooth_and_subdivide_centerline(centerline_approx)
+
+
+        # Update relevant variables in scene
+        update_scene_for_approx_centerline(centerline_approx)
+
+        # Prepare for return
         bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.subdivide()
-        bpy.ops.mesh.vertices_smooth()
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')  # For visibility
 
         return {'FINISHED'}
+
+
+def check_is_inside(mesh, v_co):
+# Check if ray from v_co intersects mesh
+    direction = Vector([1,0,0])
+    dist = 100000  # something big
+    small_step = .000001  # something small
+    vi_co = v_co
+    count = 0
+    count_max = 8
+    result = True
+    while result == True and count < count_max:
+        result, loc, face_normal, face_idx = mesh.ray_cast(vi_co, direction, distance=dist)
+        count += 1
+        vi_co = loc + small_step * direction
+
+    if count == count_max:
+        print("Inside check failed!  Assuming inside")
+
+    if count % 2 == 0:
+        is_inside = True
+    else:
+        is_inside = False
+    return(is_inside)
+
+
+def get_ctr_pt_from_ext_pt(mesh, cross_section, v_co, small_step, self, opt): 
+# Find a good central point inside cross_section, given a representative point v_co
+# Input point v_co might be cross-section centroid known to be outside the mesh, or might be 
+#                  midpoint of segment connecting centroids of previous and next cross-section
+# opt =  "return_edge_pt": return boundary point closest to v_co
+#     =   "use_perimeter": connect closest boundary point to point halfway around the perimeter of cross-section,
+#                          return the midpoint of this segment
+#     = "use_bdry_normal": connect closest boundary point to point immediately across the cross-section,
+#                          defined in the direction normal to the boundary at the boundary point,
+#                          return the midpoint of this segment
+
+    # print("  vert to move:", str(v_co))
+
+    # Preconstruct kd tree of cross section
+    nverts_cs = len(cross_section.data.vertices)
+    kd_cs = mathutils.kdtree.KDTree(nverts_cs)
+    for i1, v1 in enumerate(cross_section.data.vertices):
+        kd_cs.insert(v1.co, i1)
+    kd_cs.balance()
+
+    is_inside = False
+    iter_count = 0
+    iter_max = 10
+    v_co = v_co.copy()
+
+    inspect_new_locs = False  # add spheres at points used in defining locations
+    if inspect_new_locs:
+        bpy.ops.mesh.primitive_uv_sphere_add(size = .02, location = v_co)
+
+    while is_inside == False and iter_count < iter_max:
+        # Find closest point on cross section boundary
+        closest_csvert_co, closest_vind, dist = kd_cs.find(v_co)
+
+        if opt == "return_edge_pt":
+            v_co = closest_csvert_co
+            is_inside = True
+            if inspect_new_locs:
+                bpy.ops.mesh.primitive_uv_sphere_add(size = .02, location = v_co)
+
+        else:
+            if opt == "use_perimeter":
+                # Find point halfway around the perimeter of cross section
+                all_perimeter_dists = []
+                all_perimeter_inds = []
+                for vind in range(0, len(cross_section.data.vertices)):
+                    if vind == closest_vind:
+                        this_dist = 0
+                    else:
+                        select_shortest_path(cross_section, [closest_vind, vind])
+                        this_dist = get_total_length_of_edges(cross_section)
+
+                    all_perimeter_dists.append(this_dist)
+                    all_perimeter_inds.append(vind)  # in case cross_section.data.vertices not ordered
+
+                max_dist_ind = np.argmax(all_perimeter_dists)
+                furthest_vert_ind = all_perimeter_inds[max_dist_ind]
+                furthest_csvert_co = cross_section.data.vertices[furthest_vert_ind].co
+
+            elif opt == "use_bdry_normal":
+                # Define boundary normal using a couple neighboring points from closest_csvert_co
+                edges = cross_section.data.edges
+                verts = cross_section.data.vertices
+
+                # Find vertices on the other end of the edges containing closest_vind
+                vs = [list(ee.vertices) for ee in edges if closest_vind in ee.vertices]
+                v0 = vs[0][np.where(np.array(vs[0]) != closest_vind)[0][0]]  # extract other vertex index of edge
+                v1 = vs[1][np.where(np.array(vs[1]) != closest_vind)[0][0]]
+
+                # Define the vectors from closest_vind to its neighboring vertices
+                dir1 = verts[v0].co - closest_csvert_co
+                dir2 = closest_csvert_co - verts[v1].co
+                # dir1 = verts[v0].co - verts[closest_vind].co  # delete
+                # dir2 = verts[closest_vind].co - verts[v1].co  # delete
+                dir1 = dir1 / dir1.length
+                dir2 = dir2 / dir2.length
+                dir_ave = (dir1 + dir2) / 2
+                dir_ave = dir_ave / dir_ave.length  # This is roughly the tangent direction to the cross section at closest_csvert_co
+
+                # Calculate normal to cross section plane
+                # norm_xsec = Vector(np.cross(dir1, dir2))
+                # norm_xsec = norm_xsec / norm_xsec.length
+                norm_xsec = cross_section.data.polygons[0].normal
+
+                # Calculate normal to boundary direction in the plane
+                norm_dir = Vector(np.cross(dir_ave, norm_xsec))  # don't know if this points in or out
+                norm_dir = norm_dir / norm_dir.length
+
+                # Shoot ray in this direction, find intersection with mesh 
+                # Compare direction to normal of face to see if ray was inside or outside mesh
+                # If dot product is negative, use negative ray direction
+                adj_start = closest_csvert_co + small_step*norm_dir
+                # adj_start = verts[closest_vind].co + small_step*norm_dir  # delete
+                dist_large = 100000  # something big
+                result, loc, face_normal, face_idx = mesh.ray_cast(adj_start, norm_dir, distance=dist_large)
+                dot_angle = np.dot(norm_dir, face_normal)  # if < 0, normal points towards this bdry, meaning approached from outside
+                if (result == False or dot_angle < 0):  # Use negative normal
+                    adj_start = closest_csvert_co - small_step*norm_dir
+                    result, loc, face_normal, face_idx = mesh.ray_cast(adj_start, -norm_dir, distance=dist_large)
+                    dot_angle = np.dot(-norm_dir, face_normal)
+                    if result == False:
+                        print(cross_section.name, "found no intersection in either direction, this should not happen!")
+                    if dot_angle < 0:
+                        print(cross_section.name, "both directions were outside mesh, this should not happen!")
+
+
+                    # bpy.ops.mesh.primitive_uv_sphere_add(size = .01, location = closest_csvert_co)
+                    # bpy.ops.mesh.primitive_uv_sphere_add(size = .01, location = closest_csvert_co - .1*Vector(norm_dir))
+                    # print(bpy.context.object.name)
+
+
+                        # x = break_code
+                furthest_csvert_co = loc
+
+
+            # Find midpoint on cross section area connecting the two opposite points
+            # Test if this point is inside, if not, repeat loop
+            midpt_co = (closest_csvert_co + furthest_csvert_co) / 2
+            is_inside = check_is_inside(mesh, midpt_co)
+            iter_count += 1
+            v_co = midpt_co
+
+            if inspect_new_locs:  # add spheres on either side of new point
+                bpy.ops.mesh.primitive_uv_sphere_add(size = .02, location = closest_csvert_co)
+                bpy.ops.mesh.primitive_uv_sphere_add(size = .02, location = furthest_csvert_co)
+                bpy.ops.mesh.primitive_uv_sphere_add(size = .02, location = midpt_co)
+
+    if is_inside == False:
+        infostr = "Returning at least one vertex outside the mesh, sorry about that!"
+        self.report({'INFO'}, infostr)
+        print(infostr)
+
+    return(v_co)
+
+
+def select_shortest_path(obj, vinds):
+# Select shortest path on obj between the (2) vertices with indices in vinds
+    select_obj(obj)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    for vind in vinds:
+        obj.data.vertices[vind].select = True
+    bpy.ops.object.mode_set(mode='EDIT')
+    err = bpy.ops.mesh.shortest_path_select()  
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # shortest_path_select() returns nothing if points are neighbors, so select them again
+    verts_out = [v for v in obj.data.vertices if v.select == True]
+    if len(verts_out) == 0:
+        for vind in vinds:
+            obj.data.vertices[vind].select = True
+
+
+
+def get_total_length_of_edges(ob):
+# Get length of all elected edges on an object
+    bpy.ops.object.mode_set(mode='EDIT')
+    select_as_vert = tuple(bpy.context.scene.tool_settings.mesh_select_mode)[1]
+    bpy.ops.mesh.select_mode(type="EDGE")
+    bpy.ops.object.mode_set(mode='OBJECT')
+    edges = [ed for ed in ob.data.edges if ed.select == True]
+
+    total_len = 0
+    for ed in edges:
+        v1 = ob.data.vertices[ed.vertices[0]].co
+        v2 = ob.data.vertices[ed.vertices[1]].co
+        total_len += (v1-v2).length
+    # bpy.context.scene.last_len = total_len
+
+    if not select_as_vert:
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_mode(type="VERT")
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+    return(total_len)
+
+
+
+def check_edge_internal(verts, mesh, mat_edge_intersect):
+# Check if edges intersect mesh, assumes all vertices already inside mesh,              
+    n_edge_intersections = 0
+    for ii in range(0, len(verts)-1):  # process edge [vi, vi+1]
+        v0_co = verts[ii].co
+        v1_co = verts[ii+1].co
+        v1_ind = ii+1
+        direction = v1_co - v0_co
+        dist = direction.length
+        direction = direction / dist
+        result, loc, face_normal, face_idx = mesh.ray_cast(v0_co, direction, distance=dist)  # loc = edge-mesh intersection
+
+        if result == True:  # Edge intersects mesh
+            print("Edge intersects mesh at edge", str(ii), ", currently no further processing")
+            n_edge_intersections += 1
+
+            # Add sphere marker at edge to help user
+            ave_loc = (v0_co + v1_co)/2
+            bpy.ops.mesh.primitive_uv_sphere_add(size = .05, location = ave_loc)
+            marking_sphere = bpy.context.object
+            marking_sphere.active_material = mat_edge_intersect
+            marking_sphere.show_transparent = True
+            marking_sphere.name = "Edge Intersects Mesh Near Here"
+
+    return(n_edge_intersections)
+
+
+
+def get_internal_point_from_closest_ctrline_pts(centerline_approx, mesh, v1_ind, v1_co, small_step):
+# Find point vmid_co between vertex v0 and v2, find direction v1->vmid_co, 
+# find the two intersections with the mesh in this direction, move v1 to center of these intersections
+# If v0 and v2 aren't reliable, could use average locations of v0/v-1 and v2/v3
+    v0_co = centerline_approx.data.vertices[v1_ind-1].co  # Can count on this being inside
+    v2_co = centerline_approx.data.vertices[v1_ind+1].co  # Do not know that this is inside
+    vmid_co = (v0_co + v2_co)/2
+    direction2mid = vmid_co - v1_co
+    direction2mid = direction2mid / direction2mid.length
+    dist = 100000  # something big
+    result1, loc1, face_normal1, face_idx1 = mesh.ray_cast(v1_co, direction2mid, distance=dist)
+    just_inside = loc1 + small_step * direction2mid
+    result2, loc2, face_normal2, face_idx2 = mesh.ray_cast(just_inside, direction2mid, distance=dist)
+
+    inspect_new_vert_loc = False
+    if inspect_new_vert_loc:  # add spheres on either side of new point
+        print(v1_ind, result1, loc1)
+        print(v1_ind, result2, loc2)
+        bpy.ops.mesh.primitive_uv_sphere_add(size = .02, location = loc1)
+        bpy.ops.mesh.primitive_uv_sphere_add(size = .02, location = loc2)
+
+    if result1 == False or result2 == False:
+        x = intentional_error_expected_2_intersections
+
+    center_loc = (loc1 + loc2)/2
+    return(center_loc)
+
+
+def get_internal_point_from_closest_vertex_on_mesh(mesh, kd_mesh, v1_co, small_step):
+# Find vertex on mesh closest to v1_co, move v1 inside mesh in direction of this point
+    meshvert_co, ii, dist = kd_mesh.find(v1_co)  # meshvert_co is closest point on mesh
+    direction2mesh = meshvert_co - v1_co
+    direction2mesh = direction2mesh / direction2mesh.length
+    meshvert_co = meshvert_co + small_step * direction2mesh  # ensure is inside mesh
+
+    # Find intersection on opposite side of mesh, to be able to place vertex in center of mesh:  too often backwards
+    dist = 100000
+    result_opp, loc_opp, face_normal_opp, face_idx_opp = mesh.ray_cast(meshvert_co, direction2mesh, distance=dist)
+    if result_opp == False:
+        x = intentional_error_something_went_wrong_no_opposite_intersection
+    else:
+        center_loc = (loc_opp + meshvert_co) / 2
+        # verts[ii+1].co = center_loc  # This updates object in scene
+    return(center_loc)
+
+
+def add_vert_on_edge(crv, v0_ind, v1_ind, pt_co):
+# Add vertex to crv by splitting edge connecting v0_ind and v1_ind at location pt_co
+    select_obj(crv)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    crv.data.vertices[v0_ind].select = True
+    crv.data.vertices[v1_ind].select = True
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.subdivide()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    nverts = len(crv.data.vertices)
+    crv.data.vertices[nverts-1].co = pt_co
+
 
 
 class UpdateApproxCenterline(bpy.types.Operator):
@@ -282,33 +766,43 @@ class UpdateApproxCenterline(bpy.types.Operator):
     bl_label = "After you have adjusted the approximate centerline by hand, add more points and smooth"
 
     def execute(self, context):
-        centerline = bpy.context.object
+        centerline_approx = bpy.context.object
 
         # Add more centerline points and smooth
-        while (len(centerline.data.vertices) < 1.1*(bpy.context.scene.npts_centerline/2)):
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.select_all(action='SELECT')
-            bpy.ops.mesh.subdivide()
-            bpy.ops.mesh.vertices_smooth()
-            bpy.ops.object.mode_set(mode='OBJECT')
+        smooth_and_subdivide_centerline(centerline_approx)
 
-        # Reorder indices to be linear down curve
-        select_obj(centerline)
-        bpy.ops.object.convert(target='CURVE')
-        bpy.ops.object.convert(target='MESH')
-
-        # Update number of centerline points
-        bpy.context.scene.npts_centerline = len(centerline.data.vertices)
-
-        # Instantiate data containers
-        centerline["centerline_min_radii"] = []
-        centerline["cross_sectional_areas"] = []
-        centerline["centerline_max_radii"] = []
-        centerline["vesicle_counts"] = []
-        centerline["area_sums"] = []
-        centerline["vesicle_list"] = []
+        # Update relevant variables in scene
+        update_scene_for_approx_centerline(centerline_approx)
 
         return {'FINISHED'}
+
+
+def smooth_and_subdivide_centerline(centerline_approx):
+    select_obj(centerline_approx)
+    while len(centerline_approx.data.vertices) < .75 * bpy.context.scene.npts_centerline:
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.mesh.subdivide()
+        bpy.ops.mesh.vertices_smooth()
+        bpy.ops.object.mode_set(mode='OBJECT')
+        
+    # Update number of centerline points
+    bpy.context.scene.npts_centerline = len(centerline_approx.data.vertices)
+    
+
+def update_scene_for_approx_centerline(centerline_approx):
+    # Reorder indices to be linear down curve
+    order_verts(centerline_approx)
+
+    # Instantiate data containers
+    centerline_approx["centerline_min_radii"] = []
+    centerline_approx["cross_sectional_areas"] = []
+    centerline_approx["centerline_max_radii"] = []
+    centerline_approx["vesicle_counts"] = []
+    centerline_approx["area_sums"] = []
+    centerline_approx["vesicle_list"] = []
+
+
 
 
 
@@ -665,9 +1159,7 @@ class RedefineCenterline(bpy.types.Operator):
 
 
         # Reorder vertices along curve to run from 0 to nverts
-        activate_an_object(centerline)
-        bpy.ops.object.convert(target='CURVE')
-        bpy.ops.object.convert(target='MESH')
+        order_verts(centerline)
 
         # Reassign number of centerline points
         nverts = len(centerline.data.vertices)
@@ -757,7 +1249,7 @@ class GetSurfaceAreas(bpy.types.Operator):
         t0 = datetime.datetime.now()
         for ind in range(0, len(centerline.data.vertices)):
             print(ind)
-            this_area = get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self)
+            this_area, this_poly = get_cross_section(centerline, ind, meshobj, kd_mesh, self)
             areas.append(this_area)
         t3 = datetime.datetime.now()
         print("total time: ", t3-t0)
@@ -768,20 +1260,25 @@ class GetSurfaceAreas(bpy.types.Operator):
         return {'FINISHED'}
 
 
-def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
+def get_cross_section(centerline, ind, meshobj, kd_mesh, self):
 # Create perpindicular plane to centerline at ind
+# Normal is weighted average of two prior and two next normals
 # Get area of intersection of plane with mesh
 
-    nverts_not_enough = 12
+    # Define minimum number of vertices acceptable in a cross section polygon
+    nverts_not_enough = 8  # had case where needed at least 7
 
-    plane = make_plane(centerline, ind)
+    # Define the plane object to intersect the mesh object
+    plane = make_plane(centerline, ind)  # Normal is weighted average of two prior and two next normals
     select_obj(plane)
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
+    # Duplicate the mesh object, for processing
     select_obj(meshobj)
     bpy.ops.object.duplicate()
     cross_section = bpy.context.object
     select_obj(cross_section)
+    ctrline_vert = centerline.data.vertices[ind].co
 
     # # for debugging
     # cross_section = bpy.context.object
@@ -791,94 +1288,99 @@ def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
     # 
     # kd_mesh.balance()
 
-    # Delete vertices far away from centerline point
-    ctrline_vert = centerline.data.vertices[ind].co
-    rad = bpy.context.scene.search_radius  # distance is arbitrary
-    close_pts = kd_mesh.find_range(ctrline_vert, rad)  # max_rad*4
-    if len(close_pts) > 100:
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_mode(type="VERT")  # need to be in vertex select mode for this to work
-        bpy.ops.mesh.select_all(action='DESELECT')
-        bpy.ops.object.mode_set(mode='OBJECT')
-        for cp in close_pts:
-            ind = cp[1]  # vector, ind, dist
-            cross_section.data.vertices[ind].select = True
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='INVERT')
-        bpy.ops.mesh.delete(type='VERT')
-        bpy.ops.object.mode_set(mode='OBJECT')
-        select_obj(cross_section)
-    else:
-        print("found ", str(len(close_pts)), " close points, expecting more;  deleting nothing")
-        x = crash  # deliberatly crash
-
-    bpy.ops.object.duplicate()
-    cross_section_backup = bpy.context.object
-    select_obj(cross_section)
+    # # Delete vertices far away from centerline point
+    # # Turns out to be faster to not do this, it can also result in some non-manifold geometry
+    # delete_far_away_points = False
+    # if delete_far_away_points:
+    #     rad = bpy.context.scene.search_radius  # distance is arbitrary
+    #     close_pts = kd_mesh.find_range(ctrline_vert, rad)  # max_rad*4
+    #     if len(close_pts) > 100:
+    #         bpy.ops.object.mode_set(mode='EDIT')
+    #         bpy.ops.mesh.select_mode(type="VERT")  # need to be in vertex select mode for this to work
+    #         bpy.ops.mesh.select_all(action='DESELECT')
+    #         bpy.ops.object.mode_set(mode='OBJECT')
+    #         for cp in close_pts:
+    #             ind = cp[1]  # vector, ind, dist
+    #             cross_section.data.vertices[ind].select = True
+    #         bpy.ops.object.mode_set(mode='EDIT')
+    #         bpy.ops.mesh.select_all(action='INVERT')
+    #         bpy.ops.mesh.delete(type='VERT')
+    #         bpy.ops.object.mode_set(mode='OBJECT')
+    #         select_obj(cross_section)
+    #     else:
+    #         print("found ", str(len(close_pts)), " close points, expecting more;  deleting nothing")
+    #         x = crash  # deliberatly crash
 
     # Cut mesh at plane, create new cross sectional face (can take a couple seconds)
+    cross_section_backup = create_backup_obj(cross_section)
+    print("trying first thresh")
     thresh = 1e-5
     apply_intersect(cross_section, plane, thresh = thresh)
 
-    if len(cross_section.data.polygons) == 0 or len(cross_section.data.vertices) < nverts_not_enough:
+    # The bool_mod.double_threshold variable is finicky, with bad cases returning a small number of vertices/edges 
+    # instead of a cross-section, and sometimes several values must be tried
+    if not cross_section_check_passed(cross_section, cross_section_backup, nverts_not_enough):
         no_intersect_area = True
         thresh /= 10
         while (no_intersect_area):
-            print("bad threshold? nverts =", str(len(cross_section.data.vertices)), ", trying thresh =", str(thresh))
-            # Delete incorrect intersection object
-            select_obj(cross_section)
-            bpy.ops.object.delete() 
-            cross_section = cross_section_backup
-            select_obj(cross_section)
-            # Copy a new backup object
-            bpy.ops.object.duplicate()
-            cross_section_backup = bpy.context.object
-            select_obj(cross_section)
+            print("bad threshold? trying new threshold =", str(thresh))
+            cross_section = delete_bad_intersect(cross_section, cross_section_backup)
+            cross_section_backup = create_backup_obj(cross_section)
             # Try a smaller threshold
             apply_intersect(cross_section, plane, thresh = thresh)
+            print("nverts =", str(len(cross_section.data.vertices)))
             
-            if thresh < 1e-10:
-                thresh = 1e-4
-            elif thresh >= 1e-4:
-                thresh *= 10
-            else:
-                thresh /= 10
+            # Test all thresholds 1e-2 to 1e-10
+            thresh = update_thresh(thresh)
 
-            if (len(cross_section.data.polygons) > 0 or 
-                len(cross_section.data.vertices) < nverts_not_enough or 
-                # thresh < 1e-10 or 
-                thresh > 1e-2):
-                    no_intersect_area = False
-                    select_obj(cross_section_backup)
-                    bpy.ops.object.delete() 
-                    select_obj(cross_section)
+            if cross_section_check_passed(cross_section, cross_section_backup, nverts_not_enough) or thresh > 1e-2:
+                if thresh < 1e-2:
+                    print("test passed with thresh =", str(thresh))
+                    delete_backup(cross_section, cross_section_backup)
+                else:
+                    print("found no appropriate threshold, possibly a result of non-manifold geometry, code will intentionally error")
+                    infostr = "Could not calculate intersection at vertex" + str(ind) + "- check for non-manifold geometry"
+                    self.report({'INFO'}, infostr)
+                    # Keep cross_section_backup for inspection
+                    # todo: decide with user if they would prefer to have the code not break, and instead continue
+                    #       with potentially several missing cross-sections.  Dangerous for later analysis.
+                    x = break_code
+
+                no_intersect_area = False  # end the while loop
+                # If this is never reached although the if statement was entered, code will intentionally error later
 
     else:
-        select_obj(cross_section_backup)
-        bpy.ops.object.delete() 
-        select_obj(cross_section)
+        delete_backup(cross_section, cross_section_backup)
 
 
-    # # this second modifier isn't working
+    # # This second modifier isn't working; 
+    # # Instead, find poly with the most vertices and return this as the intersection.
     # bool_mod = cross_section.modifiers.new('modifier2', 'BOOLEAN')
     # bool_mod.operation = 'DIFFERENCE'
     # bool_mod.object = plane
     # bpy.ops.object.modifier_apply(apply_as='DATA', modifier = 'modifier2')
 
 
-    # Find area of new face with lots of verts
+    # Find the intersection face, which is the face with many vertices
     # cap_inds = []
     big_poly_inds = []
     polys = cross_section.data.polygons
     for f_ind in range(0, len(polys)):
         this_face = polys[f_ind]
-        if len(this_face.vertices) > 6:  # the cutting plane causes some quads to now have 5 edges, +1 for good measure
+        if len(this_face.vertices) > nverts_not_enough:  # the cutting plane causes some quads to now have 5 edges, +1 for good measure
             big_poly_inds.append(f_ind)
+
+
+    # polys = cross_section.data.polygons
+    # npolys = len(polys)
+    # bpinds = [ii for ii in range(0,npolys) if len(polys[ii].vertices) > nverts_not_enough]
+    # print("number of big polys agrees?")
+    # print(big_poly_inds == bpinds)
+
 
     if len(big_poly_inds) == 1:
         # cap_ind = big_poly_inds[0]
         cap_inds = big_poly_inds
-
 
     elif len(big_poly_inds) > 1:
         print("Warning:  " + str(len(big_poly_inds)) + " polys with > 6 verts, making selection")
@@ -929,13 +1431,16 @@ def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
         
 
     else:
-        print("ERROR:  found no polys with > 6 verts, something went wrong <-- investigate")
+        print("ERROR:  found no appropriate polys with > 6 verts, something went wrong <-- investigate")
         print(len(big_poly_inds), "/", len(cross_section.data.polygons))
-        x = intentional_crash  # force crash
+        x = intentional_crash_no_cross_section_found  # force crash
 
     # Create new object as child object of centerline
     new_face_ob = new_obj_from_polys(cross_section, cap_inds)
     new_face_ob.parent = centerline
+    this_name = new_face_ob.name + "_" + str(ind).zfill(4)  # prepend all indices with 0s, assume nothing larger than 9999
+    new_face_ob.name = this_name
+    # The order of the cross-section processing is determined by these names
 
     # Calculate area
     this_area = sum(polys[ii].area for ii in cap_inds)
@@ -946,7 +1451,88 @@ def get_cross_sectional_area(centerline, ind, meshobj, kd_mesh, self):
     select_obj(cross_section)
     bpy.ops.object.delete()
 
-    return(this_area)
+    return(this_area, new_face_ob)
+
+
+def update_thresh(thresh):
+# For boolean instersect, test all thresholds 1e-2 to 1e-10
+    if thresh < 1e-10:
+        thresh = 1e-4
+    elif thresh >= 1e-4:
+        thresh *= 10
+    else:
+        thresh /= 10
+    return(thresh)
+
+def create_backup_obj(cross_section):
+    bpy.ops.object.duplicate()
+    cross_section_backup = bpy.context.object
+    select_obj(cross_section)
+    return(cross_section_backup)
+
+def delete_bad_intersect(cross_section, cross_section_backup):
+    select_obj(cross_section)
+    bpy.ops.object.delete() 
+    cross_section = cross_section_backup
+    select_obj(cross_section)
+    return(cross_section)
+
+def delete_backup(cross_section, cross_section_backup):
+    select_obj(cross_section_backup)
+    bpy.ops.object.delete() 
+    select_obj(cross_section)
+
+
+def cross_section_check_passed(cross_section, cross_section_backup, nverts_not_enough = 8):
+# Return true if cross_section meets criteria to be an actual cross section
+# Does not currently check for a max number of points
+
+    # Delete vertices and edges not part of any face
+    select_obj(cross_section)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    for poly in cross_section.data.polygons:
+        poly.select = True
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='INVERT')
+    bpy.ops.mesh.delete(type='VERT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # Check if no cross-sectional area created
+    c1 = len(cross_section.data.polygons) > 0 
+    if c1:
+
+        # Check that a cross section poly exists
+        poly_sizes = [len(poly.vertices) for poly in cross_section.data.polygons]
+        max_ngon = max(poly_sizes)
+        c2 = max_ngon > nverts_not_enough
+        print("  inside check, nverts max_ngon =", max_ngon)
+
+        condition_met = c1 and c2
+
+        # # Check if all vertices are co-planar
+        # coords = np.array([v.co for v in cross_section.data.vertices])
+        # coords_centered = coords - np.mean(coords, axis = 0)
+        # cov = np.cov(coords_centered, rowvar = False)
+        # evals, evecs = np.linalg.eig(cov)
+        # min_eval = min(evals)
+        # min_eval_coplanar = 1e-5  # with no numerical error, min eigenvalue should be 0 if all vertices are coplanar
+        # c3 = min_eval < min_eval_coplanar
+
+        # # Check that cross section is not just a big piece of the mesh, should use co-planar check instead
+        # c3 = len(cross_section.data.polygons) < 10  # might limit number of possible holes to 9? 
+
+        # Check if not enough vertices to be meaningful
+        # c2 = len(cross_section.data.vertices) > nverts_not_enough
+
+        # Must meet all conditions
+        # condition_met = c1 and c2 and c3
+
+    else:
+        condition_met = False
+    return (condition_met)
+
 
 
 
@@ -965,15 +1551,16 @@ def new_obj_from_polys(cross_section, cap_inds):
     bpy.ops.object.mode_set(mode='OBJECT')
     ob_list_after = [ob_i for ob_i in bpy.data.objects if ob_i.type == 'MESH']
     new_face_ob = [ob for ob in ob_list_after if ob not in ob_list_before][0]
-    new_face_ob.name = "cross-sectional area"
+    new_face_ob.name = "cross-section"
     mat = bpy.data.materials["cross_section_material"]
     new_face_ob.data.materials.append(mat)  # added for 2.79
     new_face_ob.material_slots[0].material = mat
     return(new_face_ob)
 
 
-def apply_intersect(obj, plane, thresh = .0001):
+def apply_intersect(obj, plane, thresh = .0001, ):
 # Cut mesh at plane, create new cross sectional face (can take a couple seconds)
+# The "carve" option will be removed in future versions of Blender, don't user it
     bool_mod = obj.modifiers.new('modifier1', 'BOOLEAN')
     bool_mod.operation = 'INTERSECT'
     bool_mod.object = plane
@@ -984,6 +1571,7 @@ def apply_intersect(obj, plane, thresh = .0001):
 
 def make_plane(centerline, ind):
     # Create plane perpendicular to centerline at vertex ind
+    # Normal is weighted average of two prior and two next normals
     # Side length half length of centerline, arbitrary
     # rad = max(2*max_rad, get_dist(centerline.data.vertices[0].co, centerline.data.vertices[-1].co) / 8)
     rad = bpy.context.scene.search_radius
