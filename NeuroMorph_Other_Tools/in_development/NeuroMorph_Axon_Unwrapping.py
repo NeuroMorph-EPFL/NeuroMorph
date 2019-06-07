@@ -1423,6 +1423,9 @@ def proj_vesicles_unwrap(ctrline, vesicle_list):
 
 
 def select_obj_unwrap(ob):
+    # First activate any object, for cases when arriving here after deleting the active object
+    bpy.context.scene.objects.active = bpy.context.scene.objects[0]
+    bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
     bpy.context.scene.objects.active = ob
     ob.select = True  # necessary
