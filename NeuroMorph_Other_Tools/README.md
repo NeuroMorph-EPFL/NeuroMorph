@@ -33,7 +33,5 @@ Previously part of the deprecated NeuroMorph Measurement Tools, allows objects t
 [Download](https://raw.githubusercontent.com/NeuroMorph-EPFL/NeuroMorph/master/NeuroMorph_Other_Tools/correct_Y_mirroring.py)  
 
 Tool to correct IMOD-exported meshes by rotating in the Y dimension, so that they can be processed correctly in Blender.  
-<br>
-
 
 [![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph_Other_Tools?pixel)](https://github.com/NeuroMorph-EPFL/NeuroMorph/tree/master/NeuroMorph_Other_Tools)
