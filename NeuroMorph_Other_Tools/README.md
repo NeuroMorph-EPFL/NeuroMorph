@@ -35,15 +35,5 @@ Previously part of the deprecated NeuroMorph Measurement Tools, allows objects t
 Tool to correct IMOD-exported meshes by rotating in the Y dimension, so that they can be processed correctly in Blender.  
 <br>
 
-#### NeuroMorph Mitochondria Properties 
-This tool is in development, and is poorly documented.  
-It finds bounding boxes of mitochondria.  
-<br>
-
-#### NeuroMorph Axon Unwrapping
-This tool is in development, and is poorly documented.  
-It unwraps axon surfaces to be plottable in 2D, with vesicles near the surface projected onto their nearest points on the axon surface.  It makes extensive use of the NeuroMorph Centerline Processing pipeline, with all relevant tools copied into this stand-alone addon.
-
-
 
 [![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph_Other_Tools?pixel)](https://github.com/NeuroMorph-EPFL/NeuroMorph/tree/master/NeuroMorph_Other_Tools)
