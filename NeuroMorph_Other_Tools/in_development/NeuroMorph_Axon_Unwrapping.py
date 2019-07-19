@@ -142,6 +142,7 @@ class PathOnMesh_unwrap(bpy.types.Operator):
 
 def select_shortest_path_unwrap(obj, vinds, self):
     # Select shortest path on obj between the (2) vertices with indices in vinds
+    bpy.ops.object.mode_set(mode='OBJECT')
     select_obj_unwrap(obj)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='DESELECT')
@@ -1083,7 +1084,7 @@ def unwrap_crosssection_boundaries_unwrap(centerline, self):
         # Get this cross section
         this_xsec_name = centerline["cross_section_names"][yind]
         xsection = bpy.data.objects[this_xsec_name]  # context.object?
-        face = xsection.data.polygons[0]
+        # face = xsection.data.polygons[0]
         this_yaxis_pt = Vector(centerline["yaxis_pts"][yind])  # xyz vector
         this_yaxis_ind = centerline["yaxis_inds"][yind]
 
@@ -1091,13 +1092,71 @@ def unwrap_crosssection_boundaries_unwrap(centerline, self):
         select_shortest_path_unwrap(yaxis_ob, [this_yaxis_ind, yaxis0_ind], self)
         this_y = get_total_length_of_edges_unwrap(yaxis_ob)
 
+        # If cross-section has holes, want to only consider the boundary vertices here.
+        # Duplicate the cross section, select all edges that are part of multiple polygons
+        # (these are the edges that connect the holes to the outer boundary),
+        # delete these edges, resulting in the polygons also being removed.
+        # Select all vertices, make faces, will make small polygons for each hole 
+        # in addition to the full face.  Keep only the polygon with the largest area.
+        # Delete new xsection object at end.
+        xsec_has_holes = False
+        if len(xsection.data.polygons) > 1:
+            # Cross-section consists of multiple faces, ie there is a hole
+            xsec_has_holes = True
+            print("Removing holes from cross section")
+
+            # First duplicate the cross-section for procesing
+            select_obj_unwrap(xsection)
+            bpy.ops.object.duplicate_move()
+            xsec_temp = bpy.context.object
+
+            # Delete the edges connecting the hole to the boundary
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.select_mode(type="EDGE")
+            bpy.ops.mesh.region_to_loop()
+            bpy.ops.mesh.select_all(action='INVERT')  # now only the bad edges are selected
+            bpy.ops.mesh.delete(type='EDGE')
+
+            # Fill in faces
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.edge_face_add()
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+            # Now there are multiple faces, determine the largest one and delete the rest
+            areas = [p.area for p in xsec_temp.data.polygons]  # This needs to be on object mode
+            max_area_ind = areas.index(max(areas))
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_mode(type="FACE")
+            bpy.ops.mesh.select_all(action='DESELECT')
+            bpy.ops.object.mode_set(mode='OBJECT')
+            xsec_temp.data.polygons[max_area_ind].select = True
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='INVERT')
+            bpy.ops.mesh.delete(type='FACE')
+            bpy.ops.mesh.select_mode(type="VERT")
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+            # Delete original xsection, keep new object without hole
+            xsection_name = xsection.name
+            select_obj_unwrap(xsection)
+            bpy.ops.object.delete()
+            xsection = xsec_temp
+            xsection.name = xsection_name
+
+            # Return as before
+            select_obj_unwrap(yaxis_ob)
+
+        boundary_verts = list(xsection.data.polygons[0].vertices)
+
+
         # Find closest 2 verts to yaxis_pt
         # Use distance from yaxis_pt to these pts, ignore polygon edge between them
         vind1 = -1
         vind2 = -1
         dist1 = 1000000
         dist2 = 1000000
-        for vind in face.vertices:
+        for vind in boundary_verts:
             pt = xsection.data.vertices[vind].co
             this_dist = get_dist_unwrap(this_yaxis_pt, pt)
             if this_dist < dist2:
@@ -1114,7 +1173,7 @@ def unwrap_crosssection_boundaries_unwrap(centerline, self):
         # Assign vertices to closest starting point, thereby defining cutting point on opposite side of polygon
         vlist1 = []  # Vertices closest to pt1
         vlist2 = []  # Vertices closest to pt2
-        for vind in face.vertices:
+        for vind in boundary_verts:
             if vind == vind1:
                 this_dist1 = 0
             else:
@@ -1125,6 +1184,7 @@ def unwrap_crosssection_boundaries_unwrap(centerline, self):
             else:
                 select_shortest_path_unwrap(xsection, [vind2, vind], self)
                 this_dist2 = get_total_length_of_edges_unwrap(xsection)
+
             if this_dist1 < this_dist2:
                 vlist1.append([vind, this_dist1])
             else:
@@ -1187,15 +1247,12 @@ class SurfProjectionSetup_unwrap(bpy.types.Operator):
 def setup_kdt_unwrap(nverts, centerline):
     # Loop through all vertices of all cross-sections, add to kdtree
 
-    nverts = nverts + 500  # why is this necessary?
-
     kdt = mathutils.kdtree.KDTree(nverts)
     index_offset = 0
     for cline_ind in range(0, len(centerline.data.vertices)):
         this_xsec_name = centerline["cross_section_names"][cline_ind]
         xsection = bpy.data.objects[this_xsec_name]
         for ii, vv in enumerate(xsection.data.vertices):
-            print(cline_ind, len(centerline.data.vertices), nverts, ii+index_offset)
             kdt.insert(vv.co, ii+index_offset)
         index_offset += len(xsection.data.vertices)
     kdt.balance()
@@ -1255,21 +1312,20 @@ def proj_vesicles_to_surf_unwrap(centerline, vesicle_list):
         # Calculate closest xsection point to center point
         xsection_co, ii, dist = kdt.find(vsc_ctr)
 
-        print(ind, len(vesicle_list), ii)
-
-        ### Hack, related to nverts = nverts + 500  # why is this necessary?
-        if ii >= len(xy_coords_flat):
-            print("bad! but ignoring... <------------------------------------------------------------------")
+        if ii >= nverts_all:
+            # This should not happen, but if cross-sections are allowed to have holes, 
+            # and therefoure "internal" boundary points, then the boundary indexing is 
+            # incorrect, and this can result.  
+            # Holes are removed in unwrap_crosssection_boundaries_unwrap().
             skipped_count += 1
         else:
-        ###
-
             # Save xy-coords of this point and distance
             xy_here = xy_coords_flat[ii]
             vscl_to_xsec_coords.append([xy_here, dist])
 
     pickle.dump(vscl_to_xsec_coords, open("/home/anne/Desktop/NeuroMorph/vscl_coords_for_plotting.p", "wb"))
-    print("WARNING:", str(skipped_count), "vesicles were ignored due to bad indexing")
+    if skipped_count > 0:
+        print("WARNING:", str(skipped_count), "vesicles were ignored due to bad indexing")
     return()
 
 
@@ -1424,7 +1480,8 @@ def proj_vesicles_unwrap(ctrline, vesicle_list):
 
 def select_obj_unwrap(ob):
     # First activate any object, for cases when arriving here after deleting the active object
-    bpy.context.scene.objects.active = bpy.context.scene.objects[0]
+    tmp = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide == False][0]
+    bpy.context.scene.objects.active = tmp
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
     bpy.context.scene.objects.active = ob
