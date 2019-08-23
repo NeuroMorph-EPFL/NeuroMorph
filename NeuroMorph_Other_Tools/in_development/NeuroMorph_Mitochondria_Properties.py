@@ -135,6 +135,7 @@ class GetGeometry(bpy.types.Operator):
         geom_props = []
         for ob in ob_list:
             # ob = bpy.data.objects[ob_name]
+            print(ob.name)
             this_data = get_geom_properties(ob, bbox_parent)
             geom_props.append(this_data)  # [max_length, length_ratio, volume]
 
@@ -170,6 +171,7 @@ class GetGeometry(bpy.types.Operator):
 
 
 
+
 def get_geom_properties(ob, bbox_parent):
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
@@ -185,8 +187,11 @@ def get_geom_properties(ob, bbox_parent):
     ob.select = True
 
     # Find primary axis via SVD decomposition
-    # First center coords to origin
+    # First center coords to origin, and subsample if too many vertices
     vert_coords_orig = [v.co for v in ob.data.vertices]
+    max_verts = 20000  # To prevent memory errors in the svd call
+    if len(vert_coords_orig) > max_verts:
+        vert_coords_orig = subsample_points(vert_coords_orig, max_verts)
     centroid = Vector(np.mean(vert_coords_orig, axis = 0))
     vert_coords_centered = [v-centroid for v in vert_coords_orig]
     U, s, V = np.linalg.svd(vert_coords_centered)  # V[i] = eigenvector(i), normalized
@@ -231,6 +236,13 @@ def get_geom_properties(ob, bbox_parent):
     return([max_length, length_ratio, volume])
 
 
+
+def subsample_points(coords, max_verts):
+    # For now, just sample regularly, in future should be smarter
+    npts = len(coords)
+    skip = math.ceil(npts / max_verts)
+    coords = coords[0:-1:skip]
+    return(coords)
 
 
 def get_bounding_box(vert_coords, rot_mat):
