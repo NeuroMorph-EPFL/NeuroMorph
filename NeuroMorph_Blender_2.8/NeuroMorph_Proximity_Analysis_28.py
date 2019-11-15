@@ -16,7 +16,7 @@
 bl_info = {  
     "name": "NeuroMorph Proximity Analysis",
     "author": "Anne Jorstad",
-    "version": (1, 0, 1),
+    "version": (1, 1, 0),
     "blender": (2, 80, 0),
     "location": "View3D > NeuroMorph > Proximity Analysis",
     "description": "Calculate regions of surface within a given distance of each other",
@@ -35,10 +35,6 @@ from os import listdir
 import copy
 import numpy as np  # must have Blender > 2.7
 from bpy_extras.io_utils import ExportHelper
-
-# breakpoint = bpy.types.bp.bp
-# # breakpoint(locals(), True, False)
-
 import datetime
 
 
@@ -52,13 +48,6 @@ class NEUROMORPH_PT_ProximityAnalysisPanel(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-
-        # row = layout.row()
-        # row.operator("neuromorph.set_ob1", text='Set Object 1')
-        # layout.label(text = "Obj. 1:  " + bpy.context.scene.name1)
-        # row = layout.row()
-        # row.operator("neuromorph.set_ob2", text='Set Object 2')
-        # layout.label(text = "Obj. 2:  " + bpy.context.scene.name2)
 
         row = layout.row()
         row.prop(context.scene , "dist_thresh")
@@ -142,27 +131,6 @@ class NEUROMORPH_OT_set_filename1(bpy.types.Operator, ExportHelper):
         return {'FINISHED'}
 
 
-# # Set the active object to be one of the chosen objects for computation
-# class NEUROMORPH_OT_set_ob1(bpy.types.Operator):
-#     """Set Object 1 to active object"""
-#     bl_idname = "neuromorph.set_ob1"
-#     bl_label = "Set Object 1 to active object"
-
-#     def execute(self, context):
-#         bpy.context.scene.name1 = bpy.context.object.name
-#         return {'FINISHED'}
-
-# class NEUROMORPH_OT_set_ob2(bpy.types.Operator):
-#     """Set Object 2 to active object"""
-#     bl_idname = "neuromorph.set_ob2"
-#     bl_label = "Set Object 2 to active object"
-
-#     def execute(self, context):
-#         bpy.context.scene.name2 = bpy.context.object.name
-#         return {'FINISHED'}
-
-
-
 # Outer function organizing everything
 class NEUROMORPH_OT_get_distances1(bpy.types.Operator):
     """Find all regions less than the max threshold distance between the two selected objects"""
@@ -174,13 +142,7 @@ class NEUROMORPH_OT_get_distances1(bpy.types.Operator):
 
         t1 = datetime.datetime.now()
         bad_count = 0
-
         objs_start = [ob for ob in bpy.context.scene.objects if ob.type == 'MESH']
-
-        # ob1 = bpy.data.objects[bpy.context.scene.name1]
-        # ob2 = bpy.data.objects[bpy.context.scene.name2]
-        # thresh = bpy.context.scene.dist_thresh
-
 
         objs_selected = [ob for ob in bpy.context.scene.objects if ob.select_get() == True]
         if len(objs_selected) != 2:
@@ -622,9 +584,6 @@ def write_data(SAs, name1, name2, self):
 
     [total_SA1, total_SA2] = get_total_SA(SAs)
 
-    # name1 = bpy.context.scene.name1
-    # name2 = bpy.context.scene.name2
-
     f = open(full_filename, 'w')
     f.write(name1 + " name;Surface Area " + name1 + ";" + name2 + " name;Surface Area " + name2 + ";Centroid of Interaction\n\n")
 
@@ -891,19 +850,6 @@ def register():
         default = "/"
     )
 
-    # bpy.types.Scene.name1 = bpy.props.StringProperty \
-    # (
-    #     name = "Object 1", 
-    #     description = "Name (prefix) of first type of object", 
-    #     default = ""
-    # )
-    # bpy.types.Scene.name2 = bpy.props.StringProperty \
-    # (
-    #     name = "Object 2", 
-    #     description = "Name (prefix) of second type of object", 
-    #     default = ""
-    # )
-
     bpy.types.Scene.dist_thresh = bpy.props.FloatProperty \
     (
         name = "Max Distance",
@@ -915,8 +861,6 @@ def unregister():
     unregister_classes()
 
     del bpy.types.Scene.dist_thresh
-    # del bpy.types.Scene.name2
-    # del bpy.types.Scene.name1 
     del bpy.types.Scene.filename2
     del bpy.types.Scene.filename1
 
@@ -924,8 +868,6 @@ def unregister():
 
 classes = (
     NEUROMORPH_PT_ProximityAnalysisPanel,
-    # NEUROMORPH_OT_set_ob1,
-    # NEUROMORPH_OT_set_ob2,
     NEUROMORPH_OT_set_filename1,
     NEUROMORPH_OT_get_distances1,
     NEUROMORPH_OT_spheres_to_points,
