@@ -102,6 +102,9 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         layout.label(text = "Press P to mark endpoints from scroll mode.")
 
         row = layout.row()
+        row.label(text = "Last Length Measured: " + str(round(bpy.context.scene.last_length_measured, 6)))
+
+        row = layout.row()
         row.operator("neuromorph.export_lengths", text='Export Segment Lengths', icon='ALIGN_LEFT')
 
 
@@ -123,12 +126,6 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         if hasattr(context.object, 'data') and context.object.data.name[0:6] == 'Sphere':
             row = layout.row()
             row.operator("neuromorph.update_marker_radius", text = "Update Marker Radius")
-
-        if bpy.context.scene.marker_dist >= 0:
-            split = layout.row().split(factor=0.2, align=True)
-            colL = split.column()
-            colR = split.column()
-            colR.label(text = "Distance Measured: " + str(round(bpy.context.scene.marker_dist, 6)))
 
         
         # # ----------------------------
@@ -452,14 +449,9 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
 
 
     def __init__(self):
-        # #print("Start")
-        # tmpvar=0  # needs something here to compile
-        self.new_marker = []
-        self.prev_marker = []
         self.prev_pt = []
 
     def __del__(self):
-        #print("End")
         tmpvar=0  # needs something here to compile
 
     def modal(self, context, event):
@@ -552,7 +544,8 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
             if self.prev_pt == []:
                 self.prev_pt = coord_3D
             else:
-                make_segment(self.prev_pt, coord_3D)
+                this_dist = make_segment(self.prev_pt, coord_3D)
+                bpy.context.scene.last_length_measured = this_dist
                 self.prev_pt = []
 
             # Go back to the main object to continue modal mode
@@ -575,22 +568,9 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
             coord_3D = get_3D_coords_from_mouse_loc(context, im_plane, coord_im, orientation)
             add_sphere_at_loc(coord_3D)
 
-            self.prev_marker = self.new_marker
-            self.new_marker = bpy.context.object
-
             # Go back to the main object to continue modal mode
             im_plane.select_set(True)
             bpy.context.view_layer.objects.active = im_plane
-
-        elif event.type == 'L' and event.value == 'PRESS':
-            if self.new_marker != [] and self.prev_marker != []:
-                loc1 = self.prev_marker.location
-                loc2 = self.new_marker.location
-                this_dist = get_dist(loc1, loc2)
-                print("this dist = ", str(this_dist))
-                bpy.context.scene.marker_dist = this_dist
-            else:
-                print("two markers not yet defined")
 
         # Draw with the grease pencil
         elif (event.type == 'D' and event.ctrl and event.value == 'PRESS' and not event.shift) or \
@@ -1283,6 +1263,7 @@ def make_segment(p1, p2):
     # Get length of segment
     this_dist = get_dist(p1, p2)
     seg_ob.segment_length = this_dist
+    return(this_dist)
 
 
 def update_collection_of_new_obj(obj, scene_obj):
@@ -3132,11 +3113,11 @@ def register():
         # update=update_render_images
     )
 
-    bpy.types.Scene.marker_dist = bpy.props.FloatProperty \
+    bpy.types.Scene.last_length_measured = bpy.props.FloatProperty \
     (
-        name = "Distance measured",
-        description = "Distance between last two markers placed",
-        default = -1
+        name = "Length measured",
+        description = "Length of last segment measured",
+        default = 0
     )
 
     bpy.types.Object.segment_length = bpy.props.FloatProperty \
@@ -3150,7 +3131,7 @@ def register():
 def unregister():
     unregister_classes()
     
-    del bpy.types.Scene.marker_dist
+    del bpy.types.Scene.last_length_measured
     del bpy.types.Scene.render_images
     del bpy.types.Scene.surface_prefix
     del bpy.types.Scene.marker_prefix
