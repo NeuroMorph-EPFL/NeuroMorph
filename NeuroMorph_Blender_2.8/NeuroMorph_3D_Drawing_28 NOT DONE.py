@@ -465,6 +465,13 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
 
       # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False  # <--------------------------- todo bring back ???
      
+
+      # Reload keymap, if necessary (eg if restarted Blender with addon saved as loaded)
+      km = bpy.context.window_manager.keyconfigs.active.keymaps['3D View']
+      if "neuromorph.modal_operator" not in km.keymap_items.keys():
+        register_keymaps()
+
+
       if bpy.context.mode == 'OBJECT' and bpy.context.active_object.name[0:5] == "Image":
 
         im_plane = bpy.context.active_object
@@ -486,6 +493,7 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
         # Convert grease pencil curve on any action, if convert curve on release is checked
         if bpy.context.scene.convert_curve_on_release and \
             bpy.context.scene.grease_pencil is not None and \
+            bpy.context.scene.grease_pencil.layers.active is not None and \
             bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
             hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
             len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
@@ -2955,14 +2963,17 @@ class NEUROMORPH_OT_export_lengths(bpy.types.Operator, ExportHelper):
         return {'FINISHED'}
 
 
-def register():
-    register_classes()
+def register_keymaps():
     km = bpy.context.window_manager.keyconfigs.active.keymaps['3D View']
     kmi = km.keymap_items.new(NEUROMORPH_OT_modal_operator.bl_idname, 'X', 'PRESS', ctrl=True)
     kmi = km.keymap_items.new(NEUROMORPH_OT_add_sphere.bl_idname, 'M', 'PRESS', alt=True)
     kmi = km.keymap_items.new(NEUROMORPH_OT_draw_curve.bl_idname, 'D', 'PRESS', ctrl=True)
-    kmi = km.keymap_items.new(EraseCurve.bl_idname, 'E', 'PRESS', ctrl=True)
-    kmi = km.keymap_items.new(ConvertCurve.bl_idname, 'D', 'PRESS', ctrl=True, shift=True)
+    # kmi = km.keymap_items.new(EraseCurve.bl_idname, 'E', 'PRESS', ctrl=True)
+    # kmi = km.keymap_items.new(ConvertCurve.bl_idname, 'D', 'PRESS', ctrl=True, shift=True)
+
+def register():
+    register_classes()
+    register_keymaps()
 
     # # change color of wire mesh line for better visibility on image  <------------------------------- todo
     # bpy.context.user_preferences.themes[0].view_3d.wire = (0.0, 1.0, 1.0)
