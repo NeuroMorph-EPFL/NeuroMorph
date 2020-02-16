@@ -105,7 +105,7 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         row.label(text = "Last Length Measured: " + str(round(bpy.context.scene.last_length_measured, 6)))
 
         row = layout.row()
-        row.operator("neuromorph.export_lengths", text='Export Segment Lengths', icon='ALIGN_LEFT')
+        row.operator("neuromorph.export_seg_lengths", text='Export Segment Lengths', icon='ALIGN_LEFT')
 
 
 
@@ -128,23 +128,23 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
             row.operator("neuromorph.update_marker_radius", text = "Update Marker Radius")
 
         
-        # # ----------------------------
-        # layout.label(text = "---------- Mark Region on Image (Draw) ----------")
+        # ----------------------------
+        layout.label(text = "---------- Mark Region on Image (Draw) ----------")
 
-        # row = layout.row()
-        # row.prop(context.scene, 'surface_prefix')
+        row = layout.row()
+        row.prop(context.scene, 'surface_prefix')
 
-        # split = layout.row().split(percentage=0.6)
-        # colL = split.column()
-        # colR = split.column()
-        # colL.operator("neuromorph.draw_curve", text='Draw Object Outline', icon='GREASEPENCIL')
-        # colR.operator("object.erase_curve", text='Erase', icon="PANEL_CLOSE")
+        split = layout.row().split(factor=0.6, align=True)
+        colL = split.column()
+        colR = split.column()
+        colL.operator("neuromorph.draw_curve", text='Draw Object Outline', icon='GREASEPENCIL')
+        colR.operator("neuromorph.erase_curve", text='Erase', icon="GPBRUSH_ERASE_HARD")
         
-        # split = layout.row().split(percentage=0.6)
-        # colL = split.column()
-        # colR = split.column()
-        # colL.prop(context.scene , "convert_curve_on_release")
-        # colR.operator("object.convert_curve", text='Use This Curve', icon="OUTLINER_OB_CURVE")
+        split = layout.row().split(factor=0.6, align=True)
+        colL = split.column()
+        colR = split.column()
+        colL.prop(context.scene , "convert_curve_on_release")
+        colR.operator("neuromorph.convert_curve", text='Use This Curve', icon="OUTLINER_OB_CURVE")
 
         # split = layout.row().split(percentage=0.6)
         # colL = split.column()
@@ -182,126 +182,6 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         #         row.prop(mat, "diffuse_color", text="")
 
 
-
-
-# ###################### See if can use invoke() somehow to wait until GP operation finishes before calling convert curve...
-# # unsolved problem:  convert grease pencil curve on mouse click release while in modal,
-# #                    currently must move mouse to activate convert curve on release functionality
-# # want to run in modal until GP finishes, then interpret the "FINISHED", and call the next operation:  possible?
-# # class TestGreasePencilReleaseDetection(bpy.types.Operator):
-# #     """Testing"""
-# #     bl_idname = "scene.detect_grease_pencil"
-# #     bl_label = "Detect Grease Pencil Release"
-
-# #     def execute(self, context):
-# #         bpy.ops.ed.undo_push(message="convert curve")
-# #         convert_curve_fcn(self, False)
-# #         return {'FINISHED'}
-
-# #     def invoke(self, context, event):
-# #         bpy.ops.ed.undo_push(message="draw curve")
-# #         draw_curve_fcn(self)
-# #         return {'RUNNING_MODAL'}
-# ######################
-# class OperatorAfterGreasePencilMacro(bpy.types.Macro):  #bpy.types.Macro
-#     """Macro for detecting grease pencil release and immediately converting curve"""
-#     bl_idname = "scene.detect_grease_pencil"  # if in panel then is always called
-#     bl_label = "Grease Pencil, Detect Release and Convert Curve"
-#     bl_options = {'REGISTER', 'UNDO'}
-
-#     @classmethod
-#     def poll(cls, context):
-#         print("in poll from OperatorAfterGreasePencilMacro")
-#         # if bpy.context.scene.grease_pencil is not None and \
-#         #     bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
-#         #     hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
-#         #     len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
-#         #         # bpy.ops.ed.undo_push(message="convert curve")
-#         #         # convert_curve_fcn(self, False)
-#         #         print("should convert now")
-#         #         return True
-#         return True
-
-#     def execute(self, context):  # doesn't get called
-#         print("inside OperatorAfterGreasePencilMacro execute")
-#         return {'FINISHED'}
-
-
-
-
-# def update_render_images(self, context):
-#     im_ob_list = [item for item in bpy.data.objects if (item.name =='Image Z' or item.name =='Image X' or item.name =='Image Y')]
-#     for im_ob in im_ob_list:
-#        if(bpy.context.scene.render_images):
-#             create_plane(im_ob)
-#        else :
-#             delete_plane(im_ob)  
-
-
-
-# #A handler that call the function after each time the scene is updated.
-# # (add as handler in the register function)
-# @persistent
-# def print_updated_objects(scene):
-#     """Called when that the scene is updated. It look for the updated images and
-#     load the image corresponding to it's actual location."""
-#     for im_ob in scene.objects:
-#         # Search for the updated objects
-#         if im_ob.is_updated:
-#             # Only look at the images, we don't want to do anything on the objects
-#             if (im_ob.name in ["Image Z","Image X","Image Y"]):
-#                 (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
-#                 load_im(ind, image_files, im_ob, orientation)
-#                 if (im_ob.name == "Image Z"): 
-#                     im_ob.location.z = locs[ind]
-#                 elif (im_ob.name == "Image X"):
-#                     im_ob.location.x = locs[ind]
-#                 elif (im_ob.name == "Image Y"):
-#                     im_ob.location.y = locs[ind]
-#
-#
-# # (add as handler in the register function)
-# @persistent
-# def set_image_for_frame(scene):
-#     """Do the same thing as print_updated_objects, when rendering plane is
-# checked. Set also the texture of the planes.
-#     """
-#     if(bpy.context.scene.render_images):
-#         for im_ob in scene.objects:
-#             if (im_ob.name in ["Image Z","Image X","Image Y"]):
-#                 (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
-#                 load_im(ind, image_files, im_ob, orientation)
-#                 if (im_ob.name == "Image Z"): 
-#                     im_ob.location.z = locs[ind]
-#                 elif (im_ob.name == "Image X"):
-#                     im_ob.location.x = locs[ind]
-#                 elif (im_ob.name == "Image Y"):
-#                     im_ob.location.y = locs[ind]
-#                 set_texture(im_ob)
-#                
-# #A handler to change light property when the script is loaded
-# def setLight(scene):
-#     bpy.context.scene.world.light_settings.use_environment_light = True
-#     #And we remove the handler just after we set the light on
-#     bpy.app.handlers.scene_update_post.remove(setLight)
-# 
-# # Same Handler that is called when a new blend file is loaded
-# @persistent
-# def setLightLoad(scene):
-#     bpy.context.scene.world.light_settings.use_environment_light = True
-
-# def set_texture(im_ob):
-#     for child in im_ob.children:
-#         if child.name == 'Plane Z':
-#             # child.data.uv_textures[0].data[0].image = im_ob.data
-#             child.data.uv_layers[0].data[0].image = im_ob.data  ########## ?????????????????????????????
-#             child.data.materials['Mat Z'].texture_slots['Text Z'].texture.image = im_ob.data
-#         elif child.name == 'Plane X':
-#             child.data.uv_textures[0].data[0].image = im_ob.data
-#             child.data.materials['Mat X'].texture_slots['Text X'].texture.image = im_ob.data
-#         elif child.name == 'Plane Y':
-#             child.data.uv_textures[0].data[0].image = im_ob.data
-#             child.data.materials['Mat Y'].texture_slots['Text Y'].texture.image = im_ob.data
 
 
 
@@ -425,80 +305,78 @@ def clear_ims(orientation):
 #         return {'FINISHED'}
 
 
+
+
+
 class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
     """Scroll through image stack from selected image with mouse scroll wheel"""
     bl_idname = "neuromorph.modal_operator"
     bl_label = "Modal Operator"
     bl_options = {"REGISTER", "UNDO"}
-    # bl_options = {"GRAB_POINTER"}
 
-    # Objects for storing the two most recently defined markers
-    # for distance calculation
+    # @classmethod
+    # def poll(self, context):
+    #     # # print("in poll from ImageScrollOperator")
+    #     # if bpy.context.scene.grease_pencil is not None and \
+    #     #     bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
+    #     #     hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
+    #     #     len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
+    #     #         print("should convert curve now, but can't modify data from poll() function...")
+    #     #         # bpy.ops.ed.undo_push(message="convert curve")
+    #     #         # convert_curve_fcn(self)  # "can't modify blend data in this state (drawing/rendering)""
+    #     return True  # always
 
-    @classmethod
-    def poll(self, context):
-        # # print("in poll from ImageScrollOperator")
-        # if bpy.context.scene.grease_pencil is not None and \
-        #     bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
-        #     hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
-        #     len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
-        #         print("should convert curve now, but can't modify data from poll() function...")
-        #         # bpy.ops.ed.undo_push(message="convert curve")
-        #         # convert_curve_fcn(self)  # "can't modify blend data in this state (drawing/rendering)""
-        return True  # always
+    # def __init__(self):
+    #     self.prev_pt = []
 
+    # def __del__(self):
+    #     tmpvar=0  # needs something here to compile
 
-    def __init__(self):
-        self.prev_pt = []
+    im_obj = None
+    prev_pt = None
 
-    def __del__(self):
-        tmpvar=0  # needs something here to compile
+    def invoke(self, context, event):
+        # Reload keymap, if necessary (eg if restarted Blender with addon saved as loaded)
+        km = bpy.context.window_manager.keyconfigs.active.keymaps['3D View']
+        if "neuromorph.modal_operator" not in km.keymap_items.keys():
+            register_keymaps()
+
+        if bpy.ops.object.mode_set.poll():
+            if bpy.context.mode == 'OBJECT' and bpy.context.active_object.name[0:5] == "Image":
+                self.im_obj = bpy.context.object
+                context.window_manager.modal_handler_add(self)
+                return {'RUNNING_MODAL'}
+            else:
+                self.report({'INFO'}, "Select an image before scrolling")
+                return {'FINISHED'}
+
 
     def modal(self, context, event):
-
-      # print("event type: " + event.type)
-      # print("event value: " + event.value)
-      # if bpy.context.scene.grease_pencil.layers.active.active_frame:
-      #   print("active frame exists")
-      # if hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes'):
-      #   print("strokes exists")
-
-      # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False  # <--------------------------- todo bring back ???
-     
-
-      # Reload keymap, if necessary (eg if restarted Blender with addon saved as loaded)
-      km = bpy.context.window_manager.keyconfigs.active.keymaps['3D View']
-      if "neuromorph.modal_operator" not in km.keymap_items.keys():
-        register_keymaps()
+        print("event type: " + event.type)
+        print("event value: " + event.value)
+        # bpy.ops.wm.tool_set_by_id(name="builtin.select_box")  # here?
 
 
-      if bpy.context.mode == 'OBJECT' and bpy.context.active_object.name[0:5] == "Image":
-
-        im_plane = bpy.context.active_object
+        # Get image parameters
+        im_plane = self.im_obj
         (ind, N, delta, orientation, image_files, locs) = getIndex(im_plane)
 
-        add_empty = False
-        if add_empty:
-            empty_name = "Empty " + orientation
-            empty_ob = bpy.data.objects[empty_name]
 
-        # If shift is pressed, the scroll step-size is increased
-        movement = 1
-        if event.shift:
-            movement = bpy.context.scene.shift_step
-            if (movement <= 0):
-                movement = 1
+        ### Grease pencil mode functionality
+        in_gp_mode = 'GPencil' in [obj.name for obj in bpy.data.objects] and \
+            bpy.data.objects['GPencil'].data.layers is not None and \
+            len(bpy.data.objects['GPencil'].data.layers[0].frames[0].strokes) > 0
 
-        
-        # Convert grease pencil curve on any action, if convert curve on release is checked
-        if bpy.context.scene.convert_curve_on_release and \
-            bpy.context.scene.grease_pencil is not None and \
-            bpy.context.scene.grease_pencil.layers.active is not None and \
-            bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
-            hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
-            len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
+        if in_gp_mode:
+            # Convert grease pencil curve on any action, if convert curve on release is checked
+            if bpy.context.scene.convert_curve_on_release:
                 bpy.ops.ed.undo_push(message="convert curve")
-                convert_curve_fcn(self, orientation)
+                convert_curve_fcn(self, orientation)  # could also pass im_plane
+
+            
+        ### Exit modal mode
+        if event.type in ('RIGHTMOUSE', 'ESC'):  # Cancel
+            return {'CANCELLED'}
 
 
         ### Standard functionality
@@ -523,38 +401,46 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
 
         ### Specialty functionality
 
-        # Scroll up and down through the image stack  (now handles 3D)
-        elif event.type == 'WHEELDOWNMOUSE' or event.type == 'NUMPAD_MINUS':
-            if ind >= movement:
-                ind = ind - movement
-                this_im, im_filename = load_im(ind, image_files, orientation)  # executed by handler in print_updated_objects() 
-                insert_im_as_material(im_plane, this_im, im_filename, orientation)
-                moveImage(im_plane, -delta*movement, orientation)
-                if add_empty:
-                    empty_ob.data = this_im
-                    moveImage(empty_ob, -delta*movement, orientation)
+        # Scroll up and down through the image stack (for stack in X/Y/Z dimension)
+        # Don't allow scrolling while in grease pencil mode
+        elif not in_gp_mode and \
+            (event.type == 'WHEELDOWNMOUSE' or event.type == 'NUMPAD_MINUS' or \
+            event.type == 'WHEELUPMOUSE' or event.type == 'NUMPAD_PLUS'):
 
-        elif event.type == 'WHEELUPMOUSE' or event.type == 'NUMPAD_PLUS':
-            if ind < N-movement:
-                ind = ind + movement
-                this_im, im_filename = load_im(ind, image_files, orientation)  # executed by handler in print_updated_objects() 
-                insert_im_as_material(im_plane, this_im, im_filename, orientation)
-                moveImage(im_plane, delta*movement, orientation)
-                if add_empty:
-                    empty_ob.data = this_im
-                    moveImage(empty_ob, delta*movement, orientation)
+            # If shift is pressed, the scroll step-size is increased
+            movement = 1
+            if event.shift:
+                movement = bpy.context.scene.shift_step
+                if (movement <= 0):
+                    movement = 1
+
+            # Scroll down
+            if event.type == 'WHEELDOWNMOUSE' or event.type == 'NUMPAD_MINUS':
+                if ind >= movement:
+                    ind = ind - movement
+                    this_im, im_filename = load_im(ind, image_files, orientation)  # executed by handler in print_updated_objects() 
+                    insert_im_as_material(im_plane, this_im, im_filename, orientation)
+                    moveImage(im_plane, -delta*movement, orientation)
+
+            # Scroll up
+            elif event.type == 'WHEELUPMOUSE' or event.type == 'NUMPAD_PLUS':
+                if ind < N-movement:
+                    ind = ind + movement
+                    this_im, im_filename = load_im(ind, image_files, orientation)  # executed by handler in print_updated_objects() 
+                    insert_im_as_material(im_plane, this_im, im_filename, orientation)
+                    moveImage(im_plane, delta*movement, orientation)
 
         # Mark the start or end of a segment
-        elif event.type == 'P' and event.value == 'PRESS':
+        elif not in_gp_mode and event.type == 'P' and event.value == 'PRESS':
             # Intersect ray with image plane
             coord_im = event.mouse_region_x, event.mouse_region_y  # 2D coordinates of mouse on screen
             coord_3D = get_3D_coords_from_mouse_loc(context, im_plane, coord_im, orientation)
-            if self.prev_pt == []:
+            if self.prev_pt is None:
                 self.prev_pt = coord_3D
             else:
                 this_dist = make_segment(self.prev_pt, coord_3D)
                 bpy.context.scene.last_length_measured = this_dist
-                self.prev_pt = []
+                self.prev_pt = None
 
             # Go back to the main object to continue modal mode
             im_plane.select_set(True)
@@ -562,8 +448,7 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
 
 
         # Mark a sphere on the image at the mouse location 
-        elif event.type == 'M' and event.value == 'PRESS':  # and event.alt 
-
+        elif not in_gp_mode and event.type == 'M' and event.value == 'PRESS':  # and event.alt 
             # Push undo event
             # For currently unknown reasons, two objects are removed on the first undo execution,
             # which is why there are two undo events here.  todo: figure this out (is known problem in Blender)
@@ -580,71 +465,29 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
             im_plane.select_set(True)
             bpy.context.view_layer.objects.active = im_plane
 
-        # Draw with the grease pencil
+        # Draw curve with the grease pencil
         elif (event.type == 'D' and event.ctrl and event.value == 'PRESS' and not event.shift) or \
-            (event.type == 'D' and event.value == 'PRESS' and not event.shift):
-            bpy.ops.ed.undo_push(message="draw curve")
+             (event.type == 'D' and event.value == 'PRESS' and not event.shift):
             draw_curve_fcn(self)
 
         # Erase grease pencil
-        elif event.type == 'E' and event.ctrl and event.value == 'PRESS' or \
-            (event.type == 'E' and event.value == 'PRESS' and not event.shift):
-            bpy.ops.ed.undo_push(message="erase curve")
+        # use current Blender 2.8 command instead? (event.ctrl and event.value == 'PRESS')
+        elif in_gp_mode and ((event.type == 'E' and event.ctrl and event.value == 'PRESS') or \
+            (event.type == 'E' and event.value == 'PRESS' and not event.shift)):
+            # bpy.ops.ed.undo_push(message="erase curve")
             erase_curve_fcn(self)
 
-        # Convert drawn curve into 3D mesh curve (if grease pencil strokes exist)
-        elif event.type == 'D' and event.ctrl and event.shift and event.value == 'PRESS' and \
-            bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
-            hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
-            len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
-                bpy.ops.ed.undo_push(message="convert curve")
-                convert_curve_fcn(self, orientation)
-
-        # # Convert grease pencil curve into 3D mesh immediately after drawing completes
-        # # todo:  cannot detect end of grease pencil drawing (event is eaten by grease pencil routine instead of passed on),
-        # #        so this action happens on any event after grease pencil drawing is terminated (eg mouse move)
-        # if bpy.types.Scene.convert_curve_on_release and event.type == 'LEFTMOUSE' and event.value == 'RELEASE':  
-        #     # the above is not detected at end of grease pencil session
-        #     print("DETECTED GP MOUSE RELEASE!!")
-        #     convert_curve_fcn(self)
-        # elif bpy.context.scene.convert_curve_on_release and \
-        #     bpy.context.scene.grease_pencil is not None and \
-        #     bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
-        #     hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
-        #     len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
-        #         bpy.ops.ed.undo_push(message="convert curve DETECTED 2")
-        #         convert_curve_fcn(self)
+        # Convert drawn curve(s) into 3D mesh curve
+        elif in_gp_mode and event.type == 'D' and event.ctrl and event.shift and event.value == 'PRESS':
+            bpy.ops.ed.undo_push(message="convert curve")
+            convert_curve_fcn(self, orientation)
 
 
-        # Draw with the grease pencil and create curve on release??
-        elif (event.type == 'Q' and event.value == 'PRESS'):
-            bpy.ops.ed.undo_push(message="draw and convert curve")
-            bpy.ops.scene.detect_grease_pencil()
-
-
-
-        # Exit modal mode
-        elif event.type in ('RIGHTMOUSE', 'ESC'):  # Cancel
-            return {'CANCELLED'}
-        
-        # Is probably best to do nothing on left mouse click
-
-
-        # bpy.ops.ed.undo_push(message="end modal loop undo")
         return {'RUNNING_MODAL'}  # continue to run in modal mode
 
-    def invoke(self, context, event):
-        if bpy.ops.object.mode_set.poll():
-          bpy.ops.object.mode_set(mode='OBJECT')
-          if (bpy.context.active_object.name[0:5]=="Image"):
-            context.window_manager.modal_handler_add(self)
 
-            # self._initial_mouse = event.mouse_x
-            # self._initial_frame = context.scene.frame_current
 
-            return {'RUNNING_MODAL'}  # start running in modal mode
-          else:
-            return {'FINISHED'}
+
 
 
 def moveImage(im_plane, delta, orientation):
@@ -782,7 +625,7 @@ def getIndex(im_plane):
         exte = bpy.context.scene.image_ext_Z
         image_files = bpy.context.scene.imagefilepaths_z
         N = len(image_files)
-        max=bpy.context.scene.z_side
+        this_max = bpy.context.scene.z_side
         orientation = 'Z'
         point_location = im_plane.location.z
     elif (imageName == "Image X"):
@@ -790,7 +633,7 @@ def getIndex(im_plane):
         exte = bpy.context.scene.image_ext_X
         image_files = bpy.context.scene.imagefilepaths_x
         N = len(image_files)
-        max=bpy.context.scene.x_side
+        this_max = bpy.context.scene.x_side
         orientation = 'X'
         point_location = im_plane.location.x
     elif (imageName == "Image Y"):
@@ -798,19 +641,19 @@ def getIndex(im_plane):
         exte = bpy.context.scene.image_ext_Y
         image_files = bpy.context.scene.imagefilepaths_y
         N = len(image_files)
-        max=bpy.context.scene.y_side
+        this_max = bpy.context.scene.y_side
         orientation = 'Y'
         point_location = im_plane.location.y
    
-    min=0
-    delta = (max-min)/(N - 1)
+    this_min = 0
+    delta = (this_max-this_min)/(N-1)
     locs = [delta*n for n in range(N)]        
 
     min_dist=float('inf')
     for ii in range(len(locs)):
-       if abs(locs[ii]-point_location) < min_dist:
-           min_dist = abs(locs[ii]-point_location)
-           ind = ii 
+        if abs(locs[ii]-point_location) < min_dist:
+            min_dist = abs(locs[ii]-point_location)
+            ind = ii 
 
     return (ind, N, delta, orientation, image_files, locs)
 
@@ -1135,16 +978,16 @@ def DisplayImageFunction(orientation):
         im_plane = create_plane(orientation, this_location, this_im, im_filename, im_name)
         loc_location(im_plane, orientation)
 
-        # Optionally add an empty (this held the main image in Blender 2.7x)
-        add_empty = False
-        if (add_empty):
-            bpy.ops.object.empty_add(type='IMAGE', location=vert_coordinate, rotation=(rotX,rotY,rotZ))
-            empty_ob = bpy.context.active_object
-            empty_ob.name = empty_name
-            empty_ob.scale = scale_vec
-            empty_ob.location = this_location  # this is correct
-            empty_ob.data = this_im
-            loc_location(empty_ob, orientation)
+        # # Optionally add an empty (this held the main image in Blender 2.7x)
+        # add_empty = False
+        # if (add_empty):
+        #     bpy.ops.object.empty_add(type='IMAGE', location=vert_coordinate, rotation=(rotX,rotY,rotZ))
+        #     empty_ob = bpy.context.active_object
+        #     empty_ob.name = empty_name
+        #     empty_ob.scale = scale_vec
+        #     empty_ob.location = this_location  # this is correct
+        #     empty_ob.data = this_im
+        #     loc_location(empty_ob, orientation)
 
         bpy.ops.object.select_all(action='TOGGLE')
         bpy.ops.object.select_all(action='DESELECT')
@@ -1467,6 +1310,8 @@ class NEUROMORPH_OT_update_marker_radius(bpy.types.Operator):
             obj.scale = scl
         return {'FINISHED'}
 
+
+
 class NEUROMORPH_OT_draw_curve(bpy.types.Operator):
     """Draw object outline (from scroll mode, Shortcut: D)"""
     bl_idname = "neuromorph.draw_curve"
@@ -1475,56 +1320,118 @@ class NEUROMORPH_OT_draw_curve(bpy.types.Operator):
     def execute(self, context):
         draw_curve_fcn(self)
         # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
+        # bpy.ops.wm.tool_set_by_id(name="builtin.select_box")
         return {'FINISHED'}
 
+
+def get_drawing_material():
+    # Define a new grease pencil material, if it does not already exist
+    drawing_mat_name = "drawing_material"
+    if drawing_mat_name in bpy.data.materials.keys():
+        gp_mat = bpy.data.materials[drawing_mat_name]
+    else:
+        # Define new grease pencil material and set its color
+        gp_mat = bpy.data.materials.new(drawing_mat_name)
+        bpy.data.materials.create_gpencil_data(gp_mat)  # sets gp_mat.is_grease_pencil, changes data structure
+        gp_mat.grease_pencil.color = [0,1,0,1]
+        # Draw on surface
+        bpy.context.scene.tool_settings.gpencil_stroke_placement_view3d = 'SURFACE'  # Draw on surface
+        # Define brush settings
+        bpy.data.brushes["Draw Pencil"].size = 5  # Radius
+        # bpy.data.brushes["Draw Pencil"].strength = 1  # Alpha value, maybe default 0.6 is nicer?
+    return(gp_mat)
+
+
 def draw_curve_fcn(self):
-    print("in draw_curve_fcn()")
+    # If not already in grease pencil mode, set up the grease pencil
+    if not ('GPencil' in [obj.name for obj in bpy.data.objects] and \
+            bpy.data.objects['GPencil'].data.layers is not None and \
+            len(bpy.data.objects['GPencil'].data.layers[0].frames[0].strokes) > 0):
+        # Get the colored drawing material, to better see the stroke
+        drawing_mat = get_drawing_material()
+        # Add a new grease pencil blank
+        bpy.ops.object.gpencil_add(type='EMPTY')
+        # Go into draw mode
+        bpy.ops.object.mode_set(mode='PAINT_GPENCIL')
+        # Set the material
+        gp_obj = bpy.data.objects['GPencil']
+        gp_obj.data.materials.append(drawing_mat)
+        gp_obj.active_material = drawing_mat
 
-    # On release, leave grease pencil mode (might want to change functionality in the future)
-    bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
-
-    blender_vsn = float(bpy.app.version_string[0:4])
-
-    # draw closed curve with grease pencil, can erase
-    original_type = bpy.context.area.type
-    bpy.context.area.type = "VIEW_3D"
-    bpy.ops.gpencil.draw('INVOKE_REGION_WIN',mode='DRAW')  # todo: does this work?
-    for g in bpy.data.grease_pencil:
-        # Blender 2.80
-
-        # todo: figure out how to turn off grease pencil after single stroke here
-        # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
-
-        # Project drawn curves onto image plane 
-        bpy.data.scenes["Scene"].tool_settings.annotation_stroke_placement_view3d = "SURFACE"
-
-
-        # todo: set color
-        # todo: 
+    # Start drawing
+    # Note: from modal, cannot detect left release at end of drawing when
+    #       using INVOKE_DEFAULT, must move mouse to activate next action
+    bpy.ops.gpencil.draw('INVOKE_DEFAULT')
+    
 
 
 
-    #     if blender_vsn >= 2.78:
-    #         for plt in g.palettes:  # color of stroke while drawing
-    #             plt.colors[0].color = Vector([0,1,0])
 
-    #     for lyr in g.layers:
-    #         if blender_vsn < 2.78:
-    #             lyr.color = Vector([0,1,0])
-    #             lyr.line_width = 2
-    #         else:
-    #             lyr.tint_color = Vector([0,1,0])
-    #             lyr.tint_factor = 1.0
-    #             # should also set line_width, but is no longer a property of the layer in 2.78
-    #         lyr.show_x_ray = False  # visibility from z-buffer, not always visible
-    # bpy.context.area.type = original_type  # maybe not necessary anymore, v2.78?
-    # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
-    self.report({'INFO'},"Drawing...")
+# def draw_curve_fcn_old2(self):
+#     print("start of draw_curve_fcn")
+
+#     # Set draw placement to be on surface
+#     bpy.context.scene.tool_settings.annotation_stroke_placement_view3d = "SURFACE"
+
+#     # Start the annotation
+#     bpy.ops.wm.tool_set_by_id(name="builtin.annotate")
+#     bpy.ops.gpencil.annotate()  #mode='DRAW', wait_for_input=False)
+#     # bpy.ops.gpencil.draw()
+
+#     # Set grease pencil color
+#     bpy.data.grease_pencils["Annotations"].layers["Note"].color = [0, 1, 0]
+
+#     # Enter paint mode for Grease Pencil strokes, necessary?
+#     bpy.ops.gpencil.paintmode_toggle()
+
+#     print("end of draw_curve_fcn")
 
 
-class EraseCurve(bpy.types.Operator):
+# def draw_curve_fcn_old(self):
+#     # print("in draw_curve_fcn()")
+
+#     # # On release, leave grease pencil mode (might want to change functionality in the future)
+#     # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False  # todo:  this??  as below
+
+#     # blender_vsn = float(bpy.app.version_string[0:4])
+
+#     # draw closed curve with grease pencil, can erase
+#     original_type = bpy.context.area.type
+#     bpy.context.area.type = "VIEW_3D"
+#     bpy.ops.gpencil.draw('INVOKE_REGION_WIN',mode='DRAW')  # todo: does this work?
+#     for g in bpy.data.grease_pencil:
+#         # Blender 2.80
+
+#         # todo: figure out how to turn off grease pencil after single stroke here
+#         # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
+
+#         # Project drawn curves onto image plane 
+#         bpy.data.scenes["Scene"].tool_settings.annotation_stroke_placement_view3d = "SURFACE"
+
+#         # todo: set color
+#         # todo: 
+
+#     #     if blender_vsn >= 2.78:
+#     #         for plt in g.palettes:  # color of stroke while drawing
+#     #             plt.colors[0].color = Vector([0,1,0])
+
+#     #     for lyr in g.layers:
+#     #         if blender_vsn < 2.78:
+#     #             lyr.color = Vector([0,1,0])
+#     #             lyr.line_width = 2
+#     #         else:
+#     #             lyr.tint_color = Vector([0,1,0])
+#     #             lyr.tint_factor = 1.0
+#     #             # should also set line_width, but is no longer a property of the layer in 2.78
+#     #         lyr.show_x_ray = False  # visibility from z-buffer, not always visible
+#     # bpy.context.area.type = original_type  # maybe not necessary anymore, v2.78?
+#     # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
+#     self.report({'INFO'},"Drawing...")
+
+
+class NEUROMORPH_OT_erase_curve(bpy.types.Operator):
     """Erase (a portion of) drawn curve (from scroll mode, Shortcut: E)"""
-    bl_idname = "object.erase_curve"
+    bl_idname = "neuromorph.erase_curve"
     bl_label = "erase (a portion of) drawn curve"
     bl_options = {"REGISTER", "UNDO"}
     def execute(self, context):
@@ -1532,30 +1439,63 @@ class EraseCurve(bpy.types.Operator):
         return {'FINISHED'}
 
 def erase_curve_fcn(self):
-    # exactly the grease pencil erasor, only here for convenience
-    original_type = bpy.context.area.type
-    bpy.context.area.type = "VIEW_3D"
-    bpy.ops.gpencil.draw('INVOKE_REGION_WIN',mode='ERASER')
-    bpy.context.area.type = original_type
+    bpy.ops.gpencil.draw('INVOKE_DEFAULT', mode='ERASER')
 
 
-class ConvertCurve(bpy.types.Operator):
-    """Convert drawn curve to Blender curve"""
-    bl_idname = "object.convert_curve"
-    bl_label = "convert grease pencil drawing to curve"
+
+class NEUROMORPH_OT_convert_curve(bpy.types.Operator):
+    """Convert grease pencil curve to mesh curve"""
+    bl_idname = "neuromorph.convert_curve"
+    bl_label = "convert grease pencil curve to mesh curve"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         imageName = bpy.context.object.name  # Assume plane is active object
-        if imageName[0:5] != "Image":
-            self.report({'INFO'},"Image plane of this curve must be active")
-            return {'CANCELLED'}
+        # if imageName[0:5] != "Image":
+        #     self.report({'INFO'},"Image plane of this curve must be active")
+        #     return {'CANCELLED'}
         orientation = imageName[-1]
         convert_curve_fcn(self, orientation)
         return {'FINISHED'}
 
 
-def convert_curve_fcn(self, orientation):  #, proj_z=False):
+def convert_curve_fcn(self, orientation):
+    if 'GPencil' in [obj.name for obj in bpy.data.objects] and \
+        bpy.data.objects['GPencil'].data.layers is not None and \
+        len(bpy.data.objects['GPencil'].data.layers[0].frames[0].strokes) > 0:
+
+        # Convert grease pencil to path
+        bpy.ops.gpencil.convert(type = 'PATH')
+
+        # Convert path to mesh
+        bpy.ops.object.convert(target='MESH')
+        crv_obj = bpy.data.objects['GP_Layer']
+        crv_obj.name = "Curve"
+
+        # Delete all grease pencil objects
+        bpy.ops.object.mode_set(mode='OBJECT')
+        gp_obj = bpy.data.objects['GPencil']
+        bpy.ops.object.select_all(action='DESELECT')
+        gp_obj.select_set(True)
+        bpy.ops.object.delete()
+        del gp_obj
+
+        # Set active object
+        crv_obj.select_set(True)
+        bpy.context.view_layer.objects.active = crv_obj
+
+        # Downsample a bit, for speed (do this only at the end of this function!)
+        bpy.ops.object.mode_set(mode = 'EDIT')
+        bpy.ops.mesh.select_all(action='SELECT')
+        thresh = get_mesh_density_threshold()  # for now
+        bpy.ops.mesh.remove_doubles(threshold = thresh)
+        bpy.ops.object.mode_set(mode = 'OBJECT')
+
+
+
+
+
+def convert_curve_fcn_old(self, orientation):  #, proj_z=False):
     print("in convert_curve_fcn()")
 
     # Convert grease pencil markings to mesh curve
@@ -2943,9 +2883,9 @@ def get_closest_endpts_from_pts(L1, L2, R1, R2):
 
 
 
-class NEUROMORPH_OT_export_lengths(bpy.types.Operator, ExportHelper):
+class NEUROMORPH_OT_export_seg_lengths(bpy.types.Operator, ExportHelper):
     """Export all measured segment lengths"""
-    bl_idname = "neuromorph.export_lengths"
+    bl_idname = "neuromorph.export_seg_lengths"
     bl_label = "Export segment lengths"
 
     filename_ext = ".csv"  # ExportHelper mixin class uses this
@@ -2966,10 +2906,12 @@ class NEUROMORPH_OT_export_lengths(bpy.types.Operator, ExportHelper):
 def register_keymaps():
     km = bpy.context.window_manager.keyconfigs.active.keymaps['3D View']
     kmi = km.keymap_items.new(NEUROMORPH_OT_modal_operator.bl_idname, 'X', 'PRESS', ctrl=True)
+    # kmi = km.keymap_items.new(NEUROMORPH_OT_modal_operator_gp.bl_idname, 'X', 'PRESS', ctrl=True, shift=True)  ###### todo remove!
     kmi = km.keymap_items.new(NEUROMORPH_OT_add_sphere.bl_idname, 'M', 'PRESS', alt=True)
     kmi = km.keymap_items.new(NEUROMORPH_OT_draw_curve.bl_idname, 'D', 'PRESS', ctrl=True)
-    # kmi = km.keymap_items.new(EraseCurve.bl_idname, 'E', 'PRESS', ctrl=True)
-    # kmi = km.keymap_items.new(ConvertCurve.bl_idname, 'D', 'PRESS', ctrl=True, shift=True)
+    kmi = km.keymap_items.new(NEUROMORPH_OT_erase_curve.bl_idname, 'E', 'PRESS', ctrl=True)
+    kmi = km.keymap_items.new(NEUROMORPH_OT_convert_curve.bl_idname, 'D', 'PRESS', ctrl=True, shift=True)
+
 
 def register():
     register_classes()
@@ -3183,11 +3125,287 @@ classes = (
     NEUROMORPH_OT_display_image,
     NEUROMORPH_OT_modal_operator,
     NEUROMORPH_OT_add_sphere,
-    NEUROMORPH_OT_export_lengths,
+    NEUROMORPH_OT_export_seg_lengths,
     NEUROMORPH_OT_update_marker_radius,
-    NEUROMORPH_OT_draw_curve
+    NEUROMORPH_OT_draw_curve,
+    NEUROMORPH_OT_convert_curve,
+    NEUROMORPH_OT_erase_curve,
+    # NEUROMORPH_OT_modal_operator_gp
 )
 register_classes, unregister_classes = bpy.utils.register_classes_factory(classes)
 
 if __name__ == "__main__":
     register()
+
+
+
+
+
+
+##########################################################################################
+### OLD CODE, CAN DELETE
+
+# def set_gp_material(gp_obj):  # Not used, can probably delete
+#     # Assumes a grease pencil object has just been created
+#
+#     # gp_obj = bpy.data.objects['GPencil']
+#     bpy.context.view_layer.objects.active = gp_obj
+#
+#     drawing_mat_list = [mat for mat in bpy.data.materials if mat.name == "drawing_material"]
+#     # bpy.data.materials.remove(bpy.data.materials["drawing_material"])
+#     if len(drawing_mat_list) == 0:
+#         # Don't use nodes for grease pencil stroke!
+#         # Instead, must create material with grease pencil object active
+#         # in order to have a grease pencil material
+#
+#         drawing_mat = bpy.data.materials.new("drawing_material")  # how to make this a gp material??
+#         # bpy.ops.material.new()  # this is what Blender's scripting output says the command is 
+#         # drawing_mat = gp_obj.data.materials.new("drawing_material")  # doesn't work
+#
+#         # Once material is a grease pencil material, can set the following
+#         # but it doesn't exist unless mat.is_grease_pencil == True, and this is not settable
+#         drawing_mat.grease_pencil.color = [0,1,0,1]
+#
+#     else:
+#         drawing_mat = drawing_mat_list[0]
+#         # drawing_mat = bpy.data.materials.get('drawing_material')
+#
+#     # Set material to gp object  (not sure what subset of these is necessary)
+#     gp_obj.data.materials.append(drawing_mat)
+#     gp_obj.material_slots[0].material = drawing_mat
+#     gp_obj.active_material = drawing_mat
+
+
+
+# ###### Example modal operator that works with grease pencil ######
+# class NEUROMORPH_OT_modal_operator_annotate(bpy.types.Operator):
+#     bl_idname = "neuromorph.modal_operator_annotate"
+#     bl_label = "Modal Operator"
+#     bl_options = {"REGISTER", "UNDO"}
+
+#     def invoke(self, context, event):
+#         bpy.ops.object.mode_set(mode='OBJECT')
+        
+#         context.window_manager.modal_handler_add(self)
+#         context.area.header_text_set("My modal")
+#         context.workspace.status_text_set(text="D: Draw | ESC: Cancel") 
+#         return {'RUNNING_MODAL'}
+
+#     def modal(self, context, event):
+#         if event.type == 'D' and event.value == 'PRESS':
+#             context.scene.tool_settings.annotation_stroke_placement_view3d = "SURFACE"
+#             bpy.ops.wm.tool_set_by_id(name="builtin.annotate")
+#             bpy.ops.gpencil.annotate('INVOKE_DEFAULT')
+#         elif event.type == 'ESC':
+#             context.area.header_text_set(text=None)
+#             context.workspace.status_text_set(text=None)
+#             return {'CANCELLED'}
+#         return {'RUNNING_MODAL'}
+# # #################################
+
+
+# ###################### See if can use invoke() somehow to wait until GP operation finishes before calling convert curve...
+# # unsolved problem:  convert grease pencil curve on mouse click release while in modal,
+# #                    currently must move mouse to activate convert curve on release functionality
+# # want to run in modal until GP finishes, then interpret the "FINISHED", and call the next operation:  possible?
+# # class TestGreasePencilReleaseDetection(bpy.types.Operator):
+# #     """Testing"""
+# #     bl_idname = "scene.detect_grease_pencil"
+# #     bl_label = "Detect Grease Pencil Release"
+
+# #     def execute(self, context):
+# #         bpy.ops.ed.undo_push(message="convert curve")
+# #         convert_curve_fcn(self, False)
+# #         return {'FINISHED'}
+
+# #     def invoke(self, context, event):
+# #         bpy.ops.ed.undo_push(message="draw curve")
+# #         draw_curve_fcn(self)
+# #         return {'RUNNING_MODAL'}
+# ######################
+# class OperatorAfterGreasePencilMacro(bpy.types.Macro):  #bpy.types.Macro
+#     """Macro for detecting grease pencil release and immediately converting curve"""
+#     bl_idname = "scene.detect_grease_pencil"  # if in panel then is always called
+#     bl_label = "Grease Pencil, Detect Release and Convert Curve"
+#     bl_options = {'REGISTER', 'UNDO'}
+
+#     @classmethod
+#     def poll(cls, context):
+#         print("in poll from OperatorAfterGreasePencilMacro")
+#         # if bpy.context.scene.grease_pencil is not None and \
+#         #     bpy.context.scene.grease_pencil.layers.active.active_frame is not None and \
+#         #     hasattr(bpy.context.scene.grease_pencil.layers.active.active_frame, 'strokes') and \
+#         #     len(bpy.context.scene.grease_pencil.layers.active.active_frame.strokes) > 0:
+#         #         # bpy.ops.ed.undo_push(message="convert curve")
+#         #         # convert_curve_fcn(self, False)
+#         #         print("should convert now")
+#         #         return True
+#         return True
+
+#     def execute(self, context):  # doesn't get called
+#         print("inside OperatorAfterGreasePencilMacro execute")
+#         return {'FINISHED'}
+
+
+
+
+# def update_render_images(self, context):
+#     im_ob_list = [item for item in bpy.data.objects if (item.name =='Image Z' or item.name =='Image X' or item.name =='Image Y')]
+#     for im_ob in im_ob_list:
+#        if(bpy.context.scene.render_images):
+#             create_plane(im_ob)
+#        else :
+#             delete_plane(im_ob)  
+
+
+
+# #A handler that call the function after each time the scene is updated.
+# # (add as handler in the register function)
+# @persistent
+# def print_updated_objects(scene):
+#     """Called when that the scene is updated. It look for the updated images and
+#     load the image corresponding to it's actual location."""
+#     for im_ob in scene.objects:
+#         # Search for the updated objects
+#         if im_ob.is_updated:
+#             # Only look at the images, we don't want to do anything on the objects
+#             if (im_ob.name in ["Image Z","Image X","Image Y"]):
+#                 (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
+#                 load_im(ind, image_files, im_ob, orientation)
+#                 if (im_ob.name == "Image Z"): 
+#                     im_ob.location.z = locs[ind]
+#                 elif (im_ob.name == "Image X"):
+#                     im_ob.location.x = locs[ind]
+#                 elif (im_ob.name == "Image Y"):
+#                     im_ob.location.y = locs[ind]
+#
+#
+# # (add as handler in the register function)
+# @persistent
+# def set_image_for_frame(scene):
+#     """Do the same thing as print_updated_objects, when rendering plane is
+# checked. Set also the texture of the planes.
+#     """
+#     if(bpy.context.scene.render_images):
+#         for im_ob in scene.objects:
+#             if (im_ob.name in ["Image Z","Image X","Image Y"]):
+#                 (ind, N, delta, orientation, image_files, locs) = getIndex(im_ob)
+#                 load_im(ind, image_files, im_ob, orientation)
+#                 if (im_ob.name == "Image Z"): 
+#                     im_ob.location.z = locs[ind]
+#                 elif (im_ob.name == "Image X"):
+#                     im_ob.location.x = locs[ind]
+#                 elif (im_ob.name == "Image Y"):
+#                     im_ob.location.y = locs[ind]
+#                 set_texture(im_ob)
+#                
+# #A handler to change light property when the script is loaded
+# def setLight(scene):
+#     bpy.context.scene.world.light_settings.use_environment_light = True
+#     #And we remove the handler just after we set the light on
+#     bpy.app.handlers.scene_update_post.remove(setLight)
+# 
+# # Same Handler that is called when a new blend file is loaded
+# @persistent
+# def setLightLoad(scene):
+#     bpy.context.scene.world.light_settings.use_environment_light = True
+
+# def set_texture(im_ob):
+#     for child in im_ob.children:
+#         if child.name == 'Plane Z':
+#             # child.data.uv_textures[0].data[0].image = im_ob.data
+#             child.data.uv_layers[0].data[0].image = im_ob.data  ########## ?????????????????????????????
+#             child.data.materials['Mat Z'].texture_slots['Text Z'].texture.image = im_ob.data
+#         elif child.name == 'Plane X':
+#             child.data.uv_textures[0].data[0].image = im_ob.data
+#             child.data.materials['Mat X'].texture_slots['Text X'].texture.image = im_ob.data
+#         elif child.name == 'Plane Y':
+#             child.data.uv_textures[0].data[0].image = im_ob.data
+#             child.data.materials['Mat Y'].texture_slots['Text Y'].texture.image = im_ob.data
+
+
+# # Text modal operator for grease pencil only
+# class NEUROMORPH_OT_modal_operator_gp(bpy.types.Operator):
+#     bl_idname = "neuromorph.modal_operator_gp"
+#     bl_label = "Modal Operator gp"
+#     bl_options = {"REGISTER", "UNDO"}
+
+#     # def invoke(self, context, event):
+#     #     bpy.ops.object.mode_set(mode='OBJECT')
+#     #     context.window_manager.modal_handler_add(self)
+#     #     # context.area.header_text_set("My modal")
+#     #     # context.workspace.status_text_set(text="D: Draw | ESC: Cancel")
+#     #     return {'RUNNING_MODAL'}
+
+#     def invoke(self, context, event):
+#         if bpy.ops.object.mode_set.poll():
+#             if bpy.context.mode == 'OBJECT' and bpy.context.active_object.name[0:5] == "Image":
+#                 context.window_manager.modal_handler_add(self)
+#                 return {'RUNNING_MODAL'}
+#             else:
+#                 self.report({'INFO'}, "Select an image before scrolling")
+#                 return {'FINISHED'}
+
+#     def modal(self, context, event):
+
+#         in_gp = False
+
+#         # if in_gp or (bpy.context.mode == 'OBJECT' and bpy.context.active_object.name[0:5] == "Image"):
+#         if event.type == 'D' and event.value == 'PRESS':
+#             in_gp = True
+#             # Get the colored drawing material, to better see the stroke
+#             drawing_mat = get_drawing_material()
+#             # Add a new grease pencil blank, makes GPencil active object
+#             bpy.ops.object.gpencil_add(type='EMPTY')
+#             # Go into draw mode
+#             bpy.ops.object.mode_set(mode='PAINT_GPENCIL')
+#             # Set the material
+#             gp_obj = bpy.data.objects['GPencil']
+#             gp_obj.data.materials.append(drawing_mat)
+#             gp_obj.active_material = drawing_mat
+#             # Start drawing
+#             bpy.ops.gpencil.draw('INVOKE_DEFAULT')
+#             # Note: cannot detect left release at end of drawing using INVOKE_DEFAULT,
+#             #       must move mouse to activate next action
+
+#         if 'GPencil' in [obj.name for obj in bpy.data.objects] and \
+#             bpy.data.objects['GPencil'].data.layers is not None and \
+#             len(bpy.data.objects['GPencil'].data.layers[0].frames[0].strokes) > 0:
+
+#             print("convert!")
+
+#             # Convert grease pencil to path
+#             bpy.ops.gpencil.convert(type = 'PATH')
+
+#             # Convert path to mesh
+#             bpy.ops.object.convert(target='MESH')
+#             crv_obj = bpy.data.objects['GP_Layer']
+#             crv_obj.name = "Curve"
+
+#             # Delete all grease pencil objects
+#             bpy.ops.object.mode_set(mode='OBJECT')
+#             gp_obj = bpy.data.objects['GPencil']
+#             bpy.ops.object.select_all(action='DESELECT')
+#             gp_obj.select_set(True)
+#             bpy.ops.object.delete()
+#             del gp_obj
+
+#             # Set active object
+#             crv_obj.select_set(True)
+#             bpy.context.view_layer.objects.active = crv_obj
+
+#             # Downsample a bit, for speed (do this only at the end of this function!)
+#             bpy.ops.object.mode_set(mode = 'EDIT')
+#             bpy.ops.mesh.select_all(action='SELECT')
+#             thresh = get_mesh_density_threshold()  # for now
+#             bpy.ops.mesh.remove_doubles(threshold = thresh)
+#             bpy.ops.object.mode_set(mode = 'OBJECT')
+#             in_gp = False
+
+#         elif event.type == 'ESC':  # Exit modal mode
+#             # context.area.header_text_set(text=None)
+#             # context.workspace.status_text_set(text=None)
+#             return {'CANCELLED'}
+#         return {'RUNNING_MODAL'} 
+
+#         
