@@ -63,16 +63,16 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         row.prop(context.scene , "z_side")
 
         row = layout.row(align=True)
+        row.prop(context.scene, "image_path_Z")
+        row.operator("neuromorph.select_stack_folder_z", text='', icon='FILEBROWSER')
+
+        row = layout.row(align=True)
         row.prop(context.scene, "image_path_X")
         row.operator("neuromorph.select_stack_folder_x", text='', icon='FILEBROWSER')
 
         row = layout.row(align=True)
         row.prop(context.scene, "image_path_Y")
         row.operator("neuromorph.select_stack_folder_y", text='', icon='FILEBROWSER')
-
-        row = layout.row(align=True)
-        row.prop(context.scene, "image_path_Z")
-        row.operator("neuromorph.select_stack_folder_z", text='', icon='FILEBROWSER')
 
         # split = self.layout.row().split(percentage=0.6)  # percentage=0.53
         # colL = split.column()
@@ -146,19 +146,19 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         colL.prop(context.scene , "convert_curve_on_release")
         colR.operator("neuromorph.convert_curve", text='Use This Curve', icon="OUTLINER_OB_CURVE")
 
-        # split = layout.row().split(percentage=0.6)
-        # colL = split.column()
-        # colR = split.column()
-        # colL.prop(context.scene, "scene_precision")
-        # colR.prop(context.scene , "closed_curve")
+        split = layout.row().split(factor=0.6, align=True)
+        colL = split.column()
+        colR = split.column()
+        colL.prop(context.scene, "scene_precision")
+        colR.prop(context.scene , "closed_curve")
 
-        # row = layout.row()
-        # row.operator("mesh.curves2object", text='Construct Mesh Surface from Curves', icon="OUTLINER_OB_SURFACE")
+        row = layout.row()
+        row.operator("neuromorph.curves_to_mesh", text='Construct Mesh Surface from Curves', icon="OUTLINER_OB_SURFACE")
 
-        # split = layout.row().split(percentage=0.6)
-        # colL = split.column()
-        # colR = split.column()
-        # colR.operator("object.close_tube", text='Close Open Tube', icon="MESH_CYLINDER")
+        split = layout.row().split(factor=0.6, align=True)
+        colL = split.column()
+        colR = split.column()
+        colR.operator("neuromorph.close_tube", text='Close Open Tube', icon="MESH_CYLINDER")
 
         # # layout.label("--For Debugging--")
         # # row = layout.row()
@@ -169,19 +169,21 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         # # # row.operator("scene.detect_grease_pencil", text='Detect GP mouse release?')
 
 
-        # # ----------------------------
-        # layout.label("---------- Mesh Transparency ---------- ")
+        # ----------------------------
+        layout.label(text = "---------- Mesh Transparency ---------- ")
+        row = layout.row()
+        row.operator("neuromorph.add_transparency", text='Add Transparency')
+        row.operator("neuromorph.remove_transparency", text='Remove Transpanrency')
         # row = layout.row()
-        # row.operator("object.add_transparency", text='Add Transparency')
-        # row.operator("object.rem_transparency", text='Remove Transpanrency')
-        # row = layout.row()
-        # if bpy.context.object is not None:
-        #     mat=bpy.context.object.active_material
-        #     if mat is not None:
-        #         row.prop(mat, "alpha", slider=True)
-        #         row.prop(mat, "diffuse_color", text="")
-
-
+        split = layout.row().split(factor=0.5, align=True)
+        colL = split.column()
+        colR = split.column()
+        if bpy.context.object is not None:
+            mat = bpy.context.object.active_material
+            if mat is not None and mat.use_nodes:
+                BSDF_node = mat.node_tree.nodes["Principled BSDF"]
+                colL.prop(BSDF_node.inputs["Alpha"], "default_value", slider=True, text = "alpha")
+                colR.prop(BSDF_node.inputs["Base Color"], "default_value", text="")
 
 
 
@@ -352,8 +354,8 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
 
 
     def modal(self, context, event):
-        print("event type: " + event.type)
-        print("event value: " + event.value)
+        # print("event type: " + event.type)
+        # print("event value: " + event.value)
         # bpy.ops.wm.tool_set_by_id(name="builtin.select_box")  # here?
 
 
@@ -662,7 +664,7 @@ def getIndex(im_plane):
 class NEUROMORPH_OT_select_stack_folder_z(bpy.types.Operator, ImportHelper):  # adjusted
     """Select location of the Z stack images (original image stack)"""
     bl_idname = "neuromorph.select_stack_folder_z"
-    bl_label = "Select folder of the Z stack images"
+    bl_label = "Select Z stack image folder"
 
     # Define this to tell 'fileselect_add' that we want a directory
     directory: bpy.props.StringProperty(
@@ -697,7 +699,7 @@ class NEUROMORPH_OT_select_stack_folder_z(bpy.types.Operator, ImportHelper):  # 
 class NEUROMORPH_OT_select_stack_folder_x(bpy.types.Operator, ImportHelper):  # adjusted
     """Select location of the X stack images (OPTIONAL)"""
     bl_idname = "neuromorph.select_stack_folder_x"
-    bl_label = "Select folder of the X stack images"
+    bl_label = "Select X stack image folder"
 
     # Define this to tell 'fileselect_add' that we want a directory
     directory: bpy.props.StringProperty(
@@ -718,7 +720,7 @@ class NEUROMORPH_OT_select_stack_folder_x(bpy.types.Operator, ImportHelper):  # 
 class NEUROMORPH_OT_select_stack_folder_y(bpy.types.Operator, ImportHelper):  # adjusted
     """Select location of the Y stack images (OPTIONAL)"""
     bl_idname = "neuromorph.select_stack_folder_y"
-    bl_label = "Select folder of the Y stack images"
+    bl_label = "Select Y stack image folder"
 
     # Define this to tell 'fileselect_add' that we want a directory
     directory: bpy.props.StringProperty(
@@ -1127,68 +1129,51 @@ def update_collection_of_new_obj(obj, scene_obj):
         con.objects.link(obj)
 
 
-class AddTranspButton(bpy.types.Operator):
+class NEUROMORPH_OT_add_transparency(bpy.types.Operator):
     """Define transparency of selected mesh object"""
-    bl_idname = "object.add_transparency"
+    bl_idname = "neuromorph.add_transparency"
     bl_label = "Add Transparency"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-      if bpy.context.mode == 'OBJECT':
-       if (bpy.context.active_object is not None and  bpy.context.active_object.type=='MESH'):
-           myob = bpy.context.active_object
-           myob.show_transparent=True
-           bpy.data.materials[:]
-           if bpy.context.object.active_material:
-             matact=bpy.context.object.active_material
-             matact.use_transparency=True
-             matact.transparency_method = 'Z_TRANSPARENCY'
-             # matact.alpha = 0.5
-             #matact.diffuse_color = (0.8,0.8,0.8)
-             matact.alpha.diffuse_color[3] = 0.5
-           else:
-             matname=""
-             for mater in bpy.data.materials[:]:
-                if mater.name=="_mat_"+myob.name:
-                   matname=mater.name
-                   break
-             if matname=="":
-                mat = bpy.data.materials.new("_mat_"+myob.name)
-             else:
-                mat=bpy.data.materials[matname]
-             mat.use_transparency=True
-             mat.transparency_method = 'Z_TRANSPARENCY'
-             # mat.alpha = 0.5
-             mat.diffuse_color = (0.8, 0.8, 0.8, 0.5)
-             context.object.active_material = mat
+        if bpy.context.mode == 'OBJECT':
+            if bpy.context.active_object is not None and bpy.context.active_object.type=='MESH':
+                obj = bpy.context.active_object
+                this_mat = obj.active_material
+                if this_mat is None:
+                    this_mat = bpy.data.materials.new(obj.name + "_material")
+                    obj.active_material = this_mat
+                    this_color = (0.5, 0.8, 0.8, 1)
+                else:
+                    this_color = this_mat.node_tree.nodes["Principled BSDF"].inputs[0].default_value
+                
+                this_mat.use_nodes = True
+                this_mat.blend_method = 'BLEND'
+                BSDF_node = this_mat.node_tree.nodes["Principled BSDF"]
+                BSDF_node.inputs["Base Color"].default_value = this_color
+                BSDF_node.inputs["Alpha"].default_value = 0.5  # this alpha doesn't make object opaque when =1
 
-      return {'FINISHED'}
+        return {'FINISHED'}
 
 
-class RemTranspButton(bpy.types.Operator):
+
+
+class NEUROMORPH_OT_remove_transparency(bpy.types.Operator):
     """Remove transparency of selected mesh object"""
-    bl_idname = "object.rem_transparency"
+    bl_idname = "neuromorph.remove_transparency"
     bl_label = "Remove Transparency"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-      if bpy.context.mode == 'OBJECT':
-       if (bpy.context.active_object is not None and bpy.context.active_object.type=='MESH'):
-           myob = bpy.context.active_object
-           if bpy.context.object.active_material:
-               matact=bpy.context.object.active_material
-               if matact.name[0:5]=="_mat_":
-
-                  matact.use_transparency=False
-                  bpy.ops.object.material_slot_remove()
-                  bpy.data.materials[:].remove(matact)
-                  myob.show_transparent=False
-               else:
-                  matact.alpha = 1
-                  matact.use_transparency=False
-                  myob.show_transparent=False
-
-      return {'FINISHED'}
+        if bpy.context.mode == 'OBJECT':
+            if (bpy.context.active_object is not None and bpy.context.active_object.type=='MESH'):
+                obj = bpy.context.active_object
+                this_mat = obj.active_material
+                if this_mat is not None:
+                    # this_mat.use_nodes = False
+                    this_mat.blend_method = 'OPAQUE'
+        return {'FINISHED'}
+      
 
 
 def insert_image_stack_ladder():
@@ -1367,66 +1352,6 @@ def draw_curve_fcn(self):
 
 
 
-# def draw_curve_fcn_old2(self):
-#     print("start of draw_curve_fcn")
-
-#     # Set draw placement to be on surface
-#     bpy.context.scene.tool_settings.annotation_stroke_placement_view3d = "SURFACE"
-
-#     # Start the annotation
-#     bpy.ops.wm.tool_set_by_id(name="builtin.annotate")
-#     bpy.ops.gpencil.annotate()  #mode='DRAW', wait_for_input=False)
-#     # bpy.ops.gpencil.draw()
-
-#     # Set grease pencil color
-#     bpy.data.grease_pencils["Annotations"].layers["Note"].color = [0, 1, 0]
-
-#     # Enter paint mode for Grease Pencil strokes, necessary?
-#     bpy.ops.gpencil.paintmode_toggle()
-
-#     print("end of draw_curve_fcn")
-
-
-# def draw_curve_fcn_old(self):
-#     # print("in draw_curve_fcn()")
-
-#     # # On release, leave grease pencil mode (might want to change functionality in the future)
-#     # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False  # todo:  this??  as below
-
-#     # blender_vsn = float(bpy.app.version_string[0:4])
-
-#     # draw closed curve with grease pencil, can erase
-#     original_type = bpy.context.area.type
-#     bpy.context.area.type = "VIEW_3D"
-#     bpy.ops.gpencil.draw('INVOKE_REGION_WIN',mode='DRAW')  # todo: does this work?
-#     for g in bpy.data.grease_pencil:
-#         # Blender 2.80
-
-#         # todo: figure out how to turn off grease pencil after single stroke here
-#         # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
-
-#         # Project drawn curves onto image plane 
-#         bpy.data.scenes["Scene"].tool_settings.annotation_stroke_placement_view3d = "SURFACE"
-
-#         # todo: set color
-#         # todo: 
-
-#     #     if blender_vsn >= 2.78:
-#     #         for plt in g.palettes:  # color of stroke while drawing
-#     #             plt.colors[0].color = Vector([0,1,0])
-
-#     #     for lyr in g.layers:
-#     #         if blender_vsn < 2.78:
-#     #             lyr.color = Vector([0,1,0])
-#     #             lyr.line_width = 2
-#     #         else:
-#     #             lyr.tint_color = Vector([0,1,0])
-#     #             lyr.tint_factor = 1.0
-#     #             # should also set line_width, but is no longer a property of the layer in 2.78
-#     #         lyr.show_x_ray = False  # visibility from z-buffer, not always visible
-#     # bpy.context.area.type = original_type  # maybe not necessary anymore, v2.78?
-#     # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
-#     self.report({'INFO'},"Drawing...")
 
 
 class NEUROMORPH_OT_erase_curve(bpy.types.Operator):
@@ -1464,12 +1389,20 @@ def convert_curve_fcn(self, orientation):
         bpy.data.objects['GPencil'].data.layers is not None and \
         len(bpy.data.objects['GPencil'].data.layers[0].frames[0].strokes) > 0:
 
-        # Convert grease pencil to path
-        bpy.ops.gpencil.convert(type = 'PATH')
-
-        # Convert path to mesh
-        bpy.ops.object.convert(target='MESH')
+        # Convert grease pencil to curve
+        bpy.ops.gpencil.convert(type = 'CURVE')
         crv_obj = bpy.data.objects['GP_Layer']
+        bpy.context.view_layer.objects.active = crv_obj
+
+        # Toggle Cyclic to make a closed curve
+        if bpy.context.scene.closed_curve:
+            bpy.ops.object.mode_set(mode = 'EDIT')
+            bpy.ops.curve.cyclic_toggle()
+            bpy.ops.object.mode_set(mode = 'OBJECT')
+
+        # Convert curve to mesh
+        bpy.ops.object.convert(target='MESH')
+        # crv_obj = bpy.data.objects['GP_Layer']
         crv_obj.name = "Curve"
 
         # Delete all grease pencil objects
@@ -1832,10 +1765,10 @@ def loft_curves_to_surface(crvs):
 
 
 
-class MeshFromCurves(bpy.types.Operator):
+class NEUROMORPH_OT_curves_to_mesh(bpy.types.Operator):
     """Combine curves into mesh object"""
-    bl_idname = "mesh.curves2object"
-    bl_label = "update marker radius"
+    bl_idname = "neuromorph.curves_to_mesh"
+    bl_label = "Combine curves into mesh object"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
@@ -1911,8 +1844,9 @@ class MeshFromCurves(bpy.types.Operator):
         bpy.ops.object.mode_set(mode = 'OBJECT')
 
         # Smooth the final surface with the Laplacian smoothing modifier?
-        # todo: this might be doing too much (shrinking the object)
-        if 0:
+        # But this is probably doing too much (shrinking the object)
+        do_smoothing = False
+        if do_smoothing:
             obj = bpy.context.object
 
             bpy.ops.object.modifier_add(type='LAPLACIANSMOOTH')
@@ -1926,21 +1860,34 @@ class MeshFromCurves(bpy.types.Operator):
             obj.modifiers["Laplacian Smooth"].use_normalized = True
 
 
-        # Return transparent mesh
-        bpy.ops.object.mode_set(mode = 'OBJECT')
-        obj = bpy.context.object
-
-        surf_mat_list = [mat for mat in bpy.data.materials if mat.name == "surf_material"]
-        if len(surf_mat_list) == 0:
-            surf_mat = bpy.data.materials.new("surf_material")
-            surf_mat.diffuse_color = (0.67, 0.0, 1.0, 0.75)
-            # surf_mat.alpha = .75
+        # Define or get material for transparent colored mesh
+        if "surface_material" in [mat.name for mat in bpy.data.materials]:
+            surf_mat = bpy.data.materials["surface_material"]
         else:
-            surf_mat = surf_mat_list[0]
+            surf_mat = bpy.data.materials.new("surface_material")
+            # surf_mat.diffuse_color = (0.67, 0.0, 1.0, 0.75)
+            surf_mat.use_nodes = True
+            surf_mat.blend_method = 'BLEND'
+            BSDF_node = surf_mat.node_tree.nodes["Principled BSDF"]
+            BSDF_node.inputs["Base Color"].default_value = (0.67, 0.0, 1.0, 1)
+            BSDF_node.inputs["Alpha"].default_value = 0.75
 
+        # Select the new mesh object
+        bpy.ops.object.mode_set(mode='OBJECT')
+        obj = bpy.context.object
+        bpy.context.view_layer.objects.active = obj
+        obj.select_set(True)
+
+        # Delete all previous material info
+        for slot_id in range(0, len(obj.material_slots)):
+            obj.active_material_index = slot_id
+            bpy.ops.object.material_slot_remove()
+
+        # Set material
         obj.active_material = surf_mat
-        bpy.ops.object.add_transparency()
-        obj.name = obj.name = bpy.context.scene.surface_prefix  # "new_surf"
+
+        # Set name
+        obj.name = bpy.context.scene.surface_prefix  # "new_surf"
 
         return {'FINISHED'}
 
@@ -1953,7 +1900,7 @@ def sort_curves(self):
     objs = bpy.context.scene.objects
     crvs = []
     for o in objs:
-        if o.select:
+        if o.select_get():
             if hasattr(o, 'data') and hasattr(o.data, 'vertices'):
                 crvs.append(o)
             else:
@@ -2316,7 +2263,7 @@ def construct_sub_crv(crv_to_split, vert_ind, end_to_keep, make_copy=True):
 
     # Delete vertices
     for v in vert_range_to_del:
-        crv_to_split_new.data.vertices[v].select_set(True)
+        crv_to_split_new.data.vertices[v].select =True
     bpy.ops.object.mode_set(mode = 'EDIT')
     bpy.ops.mesh.delete(type='VERT')
     bpy.ops.object.mode_set(mode = 'OBJECT')
@@ -2528,9 +2475,9 @@ def order_curves(crv_list, orientation):
 
 
 
-class CloseOpenTube(bpy.types.Operator):
+class NEUROMORPH_OT_close_tube(bpy.types.Operator):
     """Close ends of selected open tubular surface"""
-    bl_idname = "object.close_tube"
+    bl_idname = "neuromorph.close_tube"
     bl_label = "Close ends of selected open tubular surface"
 
     def execute(self, context):
@@ -2559,7 +2506,7 @@ class LineOfBestFit_button(bpy.types.Operator):
         delta_z = bpy.context.scene.z_side / N / 2
         for obj in objs:
         #for ind, obj in enumerate(objs):
-            if obj.select and hasattr(obj, 'data'):
+            if obj.select_get() and hasattr(obj, 'data'):
                 if abs(obj.data.vertices[0].co[2] - last_z) > delta_z:
                     if ind != -1:
                         crvs.append([])
@@ -2977,13 +2924,13 @@ def register():
     )
     bpy.types.Scene.image_path_X = bpy.props.StringProperty \
     (
-        name = "(Source-X)",
+        name = "optional Source-X",
         description = "Select location of the X stack images (OPTIONAL)",
         default = "/"
     )
     bpy.types.Scene.image_path_Y = bpy.props.StringProperty \
     (
-        name="(Source-Y)",
+        name="optional Source-Y",
         description="Select location of the Y stack images (OPTIONAL)",
         default="/"
     )
@@ -3130,6 +3077,10 @@ classes = (
     NEUROMORPH_OT_draw_curve,
     NEUROMORPH_OT_convert_curve,
     NEUROMORPH_OT_erase_curve,
+    NEUROMORPH_OT_curves_to_mesh,
+    NEUROMORPH_OT_close_tube,
+    NEUROMORPH_OT_add_transparency,
+    NEUROMORPH_OT_remove_transparency
     # NEUROMORPH_OT_modal_operator_gp
 )
 register_classes, unregister_classes = bpy.utils.register_classes_factory(classes)
@@ -3409,3 +3360,46 @@ if __name__ == "__main__":
 #         return {'RUNNING_MODAL'} 
 
 #         
+
+# def draw_curve_fcn_old(self):
+#     # print("in draw_curve_fcn()")
+
+#     # # On release, leave grease pencil mode (might want to change functionality in the future)
+#     # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False  # todo:  this??  as below
+
+#     # blender_vsn = float(bpy.app.version_string[0:4])
+
+#     # draw closed curve with grease pencil, can erase
+#     original_type = bpy.context.area.type
+#     bpy.context.area.type = "VIEW_3D"
+#     bpy.ops.gpencil.draw('INVOKE_REGION_WIN',mode='DRAW')  # todo: does this work?
+#     for g in bpy.data.grease_pencil:
+#         # Blender 2.80
+
+#         # todo: figure out how to turn off grease pencil after single stroke here
+#         # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
+
+#         # Project drawn curves onto image plane 
+#         bpy.data.scenes["Scene"].tool_settings.annotation_stroke_placement_view3d = "SURFACE"
+
+#         # todo: set color
+#         # todo: 
+
+#     #     if blender_vsn >= 2.78:
+#     #         for plt in g.palettes:  # color of stroke while drawing
+#     #             plt.colors[0].color = Vector([0,1,0])
+
+#     #     for lyr in g.layers:
+#     #         if blender_vsn < 2.78:
+#     #             lyr.color = Vector([0,1,0])
+#     #             lyr.line_width = 2
+#     #         else:
+#     #             lyr.tint_color = Vector([0,1,0])
+#     #             lyr.tint_factor = 1.0
+#     #             # should also set line_width, but is no longer a property of the layer in 2.78
+#     #         lyr.show_x_ray = False  # visibility from z-buffer, not always visible
+#     # bpy.context.area.type = original_type  # maybe not necessary anymore, v2.78?
+#     # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
+#     self.report({'INFO'},"Drawing...")
+
+
