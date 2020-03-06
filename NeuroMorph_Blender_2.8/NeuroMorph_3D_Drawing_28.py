@@ -74,12 +74,12 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         row.prop(context.scene, "image_path_Y")
         row.operator("neuromorph.select_stack_folder_y", text='', icon='FILEBROWSER')
 
-        # split = self.layout.row().split(percentage=0.6)  # percentage=0.53
-        # colL = split.column()
-        # colR = split.column()
-        # colR.operator("object.clear_images", text='Clear Images')
+        split = self.layout.row().split(factor=0.6, align=True)
+        colL = split.column()
+        colR = split.column()
+        colR.operator("neuromorph.clear_images", text='Clear Images')
 
-        split = layout.row().split(factor=0.6, align=True)  # percentage=0.53
+        split = layout.row().split(factor=0.6, align=True)
         colL = split.column()
         colR = split.column()
         colL.operator("neuromorph.display_image", text='Show Image(s) at Vertex', icon="TEXTURE")  # TEXTURE or IMAGE_DATA
@@ -188,126 +188,6 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
 
 
 
-# Sometimes this is necessary before changing modes
-def activate_an_object():
-    if bpy.context.active_object is not None:
-        if bpy.context.object.mode == 'EDIT':
-            bpy.ops.object.mode_set(mode='OBJECT')
-
-    # ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide_get() == False][0]
-    ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.hide_get() == False][0]
-    bpy.context.view_layer.objects.active = ob_0
-    ob_0.select_set(True)
-
-def delete_an_object(ob):
-    activate_an_object()
-    bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.select_all(action='DESELECT')
-    bpy.context.view_layer.objects.active = ob
-    ob.select_set(True)
-    bpy.ops.object.delete()
-    activate_an_object()
-
-
-# Call this before loading any new image stack folders 
-def clear_ims(orientation):
-    # orientation in {"X","Y","Z"}
-
-    activate_an_object()
-    bpy.ops.object.mode_set(mode='OBJECT')
-    bpy.ops.object.select_all(action='DESELECT')
-
-    if orientation == "X":
-        im_name = "Image X"
-        bpy.context.scene.image_path_X = "/"
-        image_files_full = bpy.context.scene.imagefilepaths_x
-
-    elif orientation == "Y":
-        im_name = "Image Y"
-        bpy.context.scene.image_path_Y = "/"
-        image_files_full = bpy.context.scene.imagefilepaths_y
-
-    elif orientation == "Z":
-        im_name = "Image Z"
-        bpy.context.scene.image_path_Z = "/"
-        image_files_full = bpy.context.scene.imagefilepaths_z
-
-        # Also remove ImageStackLadder if Z
-        isl = [ob for ob in bpy.data.objects if ob.name == "ImageStackLadder"]
-        if isl != []:
-            isl = isl[0]
-            delete_an_object(isl)
-
-    # Delete image objects
-    im_ob_list = [ob for ob in bpy.context.scene.objects if ob.name == im_name]
-    if len(im_ob_list) > 0:
-        for im_ob in im_ob_list:
-            delete_an_object(im_ob)
-
-    # Delete loaded images
-    image_files_names = [os.path.split(imf.name)[1] for imf in image_files_full]  # File names only
-    for f in bpy.data.images:
-        this_name = f.name
-        if this_name in image_files_names:
-            f.user_clear()
-            bpy.data.images.remove(f)
-    image_files_full.clear()
-
-
-
-
-# class ClearImages(bpy.types.Operator):
-#     """Clear all images and image directories in memory"""
-#     # clearing names is necessary if new image folder contains same names as previous folder
-#     bl_idname = "object.clear_images"
-#     bl_label = "Clear all images in memory (necessary if new image folder contains same names as previous folder)"
-#     bl_options = {"REGISTER", "UNDO"}
-
-#     def execute(self, context):
-#         # any_ob = bpy.context.scene.objects[0]
-#         # any_ob.select_set(True)
-#         # bpy.context.view_layer.objects.active = any_ob
-#         # bpy.ops.object.mode_set(mode='OBJECT')
-#         # bpy.ops.object.select_all(action='DESELECT')
-#         # im_ob_list = [ob for ob in bpy.context.scene.objects if ob.name == "Image"]
-#         # if len(im_ob_list) > 0:  # delete it
-#         #     for im_ob in im_ob_list:
-#         #         bpy.context.view_layer.objects.active = im_ob
-#         #         im_ob.select_set(True)
-#         #         bpy.ops.object.delete()
-
-#         #     # Activate an object so other functions have appropriate modes
-#         #     ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide_get() == False][0]
-#         #     bpy.context.view_layer.objects.active = ob_0
-#         #     ob_0.select_set(True)
-
-#         # for f in bpy.data.images:
-#         #     f.user_clear()
-#         #     bpy.data.images.remove(f)
-
-#         # # Also clear image directories
-#         # bpy.context.scene.image_path_X = "/"
-#         # bpy.context.scene.image_path_Y = "/"
-#         # bpy.context.scene.image_path_Z = "/"
-#         # bpy.context.scene.imagefilepaths_x.clear()
-#         # bpy.context.scene.imagefilepaths_y.clear()
-#         # bpy.context.scene.imagefilepaths_z.clear()
-
-#         # # Remove ImageStackLadder
-#         # isl = [ob for ob in bpy.data.objects if ob.name == "ImageStackLadder"]
-#         # if isl != []:
-#         #     isl = isl[0]
-#         #     isl.select_set(True)
-#         #     bpy.ops.object.delete() 
-
-#         clear_ims("X")
-#         clear_ims("Y")
-#         clear_ims("Z")
-
-#         return {'FINISHED'}
-
-
-
 
 
 class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
@@ -358,7 +238,6 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
         # print("event value: " + event.value)
         # bpy.ops.wm.tool_set_by_id(name="builtin.select_box")  # here?
 
-
         # Get image parameters
         im_plane = self.im_obj
         (ind, N, delta, orientation, image_files, locs) = getIndex(im_plane)
@@ -371,7 +250,7 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
 
         if in_gp_mode:
             # Convert grease pencil curve on any action, if convert curve on release is checked
-            if bpy.context.scene.convert_curve_on_release:
+            if bpy.context.scene.convert_curve_on_release: 
                 bpy.ops.ed.undo_push(message="convert curve")
                 convert_curve_fcn(self, orientation)  # could also pass im_plane
 
@@ -440,7 +319,7 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
             if self.prev_pt is None:
                 self.prev_pt = coord_3D
             else:
-                this_dist = make_segment(self.prev_pt, coord_3D)
+                this_dist = make_segment_object(self.prev_pt, coord_3D)
                 bpy.context.scene.last_length_measured = this_dist
                 self.prev_pt = None
 
@@ -491,6 +370,74 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
 
 
 
+def delete_object(ob):
+    selected_objects = [ob for ob in bpy.data.objects if ob.select_get() == True]
+    if len(selected_objects) > 0:
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+
+    bpy.context.view_layer.objects.active = ob
+    ob.select_set(True)
+    bpy.ops.object.delete()
+
+
+# Call this before loading any new image stack folders 
+# orientation in {"X","Y","Z"}
+def clear_ims(orientation):
+    
+    if orientation == "X":
+        im_name = "Image X"
+        bpy.context.scene.image_path_X = "/"
+        image_files_full = bpy.context.scene.imagefilepaths_x
+
+    elif orientation == "Y":
+        im_name = "Image Y"
+        bpy.context.scene.image_path_Y = "/"
+        image_files_full = bpy.context.scene.imagefilepaths_y
+
+    elif orientation == "Z":
+        im_name = "Image Z"
+        bpy.context.scene.image_path_Z = "/"
+        image_files_full = bpy.context.scene.imagefilepaths_z
+
+        # Also remove ImageStackLadder if Z
+        isl = [ob for ob in bpy.data.objects if ob.name == "ImageStackLadder"]
+        if isl != []:
+            isl = isl[0]
+            delete_object(isl)
+
+    # Delete image objects
+    im_ob_list = [ob for ob in bpy.context.scene.objects if ob.name == im_name]
+    if len(im_ob_list) > 0:
+        for im_ob in im_ob_list:
+            delete_object(im_ob)
+
+    # Delete loaded images
+    image_files_names = [os.path.split(imf.name)[1] for imf in image_files_full]  # File names only
+    for im in bpy.data.images:
+        im_name = im.name
+        if im_name in image_files_names:
+            bpy.data.images.remove(im, do_unlink=True)
+            mat_name = "Mat " + orientation + "- " + im_name
+            bpy.data.materials.remove(bpy.data.materials[mat_name], do_unlink=True)     
+    image_files_full.clear()
+
+
+
+
+class NEUROMORPH_OT_clear_images(bpy.types.Operator):
+    """Clear all images and image directories in memory"""
+    # clearing names is necessary if new image folder contains same names as previous folder
+    bl_idname = "neuromorph.clear_images"
+    bl_label = "Clear all images in memory (necessary if new image folder contains same names as previous folder)"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        clear_ims("X")
+        clear_ims("Y")
+        clear_ims("Z")
+        return {'FINISHED'}
+
 
 def moveImage(im_plane, delta, orientation):
     """The image is moved switch it's orientation"""
@@ -510,11 +457,11 @@ def load_im(ind, image_files, orientation):
     elif (orientation == 'Y'):
         newid = ind+bpy.context.scene.file_min_Y
     full_path = image_files[newid].name
-    im_filename = os.path.split(full_path)[1]
-    if im_filename not in bpy.data.images:
+    im_name = os.path.split(full_path)[1]
+    if im_name not in bpy.data.images:
         bpy.data.images.load(full_path)  # often produces TIFFReadDirectory: Warning, can ignore
-    im = bpy.data.images[im_filename]
-    return(im, im_filename)
+    im = bpy.data.images[im_name]
+    return(im, im_name)
 
 def insert_im_as_material(im_plane, this_im, im_filename, orientation):
     mat_name = "Mat " + orientation + "- " + im_filename
@@ -1088,7 +1035,36 @@ def add_sphere_at_loc(loc):
     # turn off origin marker
     # bpy.context.space_data.show_manipulator = False
 
-def make_segment(p1, p2):
+def make_segment_object(p0, p1):
+    use_cyl_for_visibility = True
+    if use_cyl_for_visibility:
+        seg_ob = make_cyl(p0, p1)
+        seg_ob.select_set(False)  # want to see color of new object
+    else:
+        seg_ob = make_seg(p0, p1)
+        seg_ob.select_set(True)  # better visibility for single edge
+    seg_ob.name = "segment"
+
+    # Check if segment collector parent object exists in scene
+    segment_parent_name = "SegmentParent"
+    if segment_parent_name not in [ob.name for ob in bpy.data.objects]:
+        segment_parent = bpy.data.objects.new(segment_parent_name, None)
+        bpy.context.scene.collection.objects.link(segment_parent)
+        update_collection_of_new_obj(segment_parent, seg_ob)
+    seg_ob.parent = bpy.data.objects[segment_parent_name]
+
+    # Turn off dotted line between parent and child
+    bpy.context.space_data.overlay.show_relationship_lines = False
+
+    # Get length of segment
+    this_dist = get_dist(p0, p1)
+    seg_ob.segment_length = this_dist
+
+    return(this_dist)
+
+
+# Make plane, remove two of the vertices --> single segment
+def make_seg(p0, p1):
     bpy.ops.mesh.primitive_plane_add()
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     seg_ob = bpy.context.object
@@ -1103,20 +1079,34 @@ def make_segment(p1, p2):
     bpy.ops.object.mode_set(mode = 'OBJECT')
     seg_ob.data.vertices[0].co = p1
     seg_ob.data.vertices[1].co = p2
-    seg_ob.name = "segment"
+    return(seg_ob)
 
-    # Check if segment collector parent object exists in scene
-    segment_parent_name = "SegmentParent"
-    if segment_parent_name not in [ob.name for ob in bpy.data.objects]:
-        segment_parent = bpy.data.objects.new(segment_parent_name, None)
-        bpy.context.scene.collection.objects.link(segment_parent)
-        update_collection_of_new_obj(segment_parent, seg_ob)
-    seg_ob.parent = bpy.data.objects[segment_parent_name]
+# Use narrow cylindar with color for better visibility
+def make_cyl(p0, p1):
+    mid = (p0 + p1)/2
+    dir_vec = p0 - p1
+    seg_len = dir_vec.length
+    dir_vec = dir_vec / seg_len
+    up = Vector([0,0,1])
+    rot = up.rotation_difference(dir_vec).to_euler()
+    narrow_rad = 0.001  # In theory this should be adjustable by the user
+    nverts = 6
+    bpy.ops.mesh.primitive_cylinder_add(vertices=nverts, radius=narrow_rad, depth=seg_len, \
+        end_fill_type='NGON', location=mid, rotation=rot)
+    cyl_ob = bpy.context.object
+    
+    # Define color
+    seg_mat_list = [mat for mat in bpy.data.materials if mat.name == "segment_material"]
+    if len(seg_mat_list) == 0:
+        seg_mat = bpy.data.materials.new("segment_material")
+        seg_mat.use_nodes = True
+        BSDF_node = seg_mat.node_tree.nodes["Principled BSDF"]
+        BSDF_node.inputs["Base Color"].default_value = (0, 1, 0, 1)
+    else:
+        seg_mat = seg_mat_list[0]
+    cyl_ob.active_material = seg_mat
 
-    # Get length of segment
-    this_dist = get_dist(p1, p2)
-    seg_ob.segment_length = this_dist
-    return(this_dist)
+    return(cyl_ob)
 
 
 def update_collection_of_new_obj(obj, scene_obj):
@@ -1179,16 +1169,12 @@ class NEUROMORPH_OT_remove_transparency(bpy.types.Operator):
 def insert_image_stack_ladder():
     # insert bar of image stack height with vertex at each z value in stack
 
-    bpy.ops.object.mode_set(mode='OBJECT')
+    if bpy.ops.object.mode_set.poll():
+        bpy.ops.object.mode_set(mode='OBJECT')
 
     # If ImageStackLadder already exists, remove it and replace with new one
     if bpy.data.objects.get("ImageStackLadder") is not None:
-        if bpy.ops.object.mode_set.poll():
-            bpy.ops.object.mode_set(mode = 'OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.data.objects["ImageStackLadder"].select_set(True)
-        bpy.ops.object.delete()
-
+        delete_object(bpy.data.objects["ImageStackLadder"])
 
     h = bpy.context.scene.z_side
     n = len(bpy.context.scene.imagefilepaths_z)
@@ -2864,12 +2850,9 @@ def register():
     register_classes()
     register_keymaps()
 
-    # # change color of wire mesh line for better visibility on image  <------------------------------- todo
-    # bpy.context.user_preferences.themes[0].view_3d.wire = (0.0, 1.0, 1.0)
-
-    # # test using macros for grease pencil release
-    # OperatorAfterGreasePencilMacro.define("OBJECT_OT_draw_curve")
-    # OperatorAfterGreasePencilMacro.define("OBJECT_OT_convert_curve")
+    # Change color of wire mesh line for better visibility on image
+    # More relevant for the retreive object from image tool
+    # bpy.context.preferences.themes[0].view_3d.wire_edit = (0.0, 1.0, 1.0)
 
     # # # <-------------------------------------------------------- todo: turn these back on in Blender 2.80?
     # bpy.app.handlers.scene_update_post.append(setLight)  
@@ -3070,6 +3053,7 @@ classes = (
     NEUROMORPH_OT_select_stack_folder_y,
     NEUROMORPH_OT_select_stack_folder_x,
     NEUROMORPH_OT_display_image,
+    NEUROMORPH_OT_clear_images,
     NEUROMORPH_OT_modal_operator,
     NEUROMORPH_OT_add_sphere,
     NEUROMORPH_OT_export_seg_lengths,
