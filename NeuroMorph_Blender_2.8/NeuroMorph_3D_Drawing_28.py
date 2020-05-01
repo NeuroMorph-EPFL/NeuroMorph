@@ -301,7 +301,7 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
                     ind = ind - movement
                     this_im, im_filename = load_im(ind, image_files, orientation)  # executed by handler in print_updated_objects() 
                     insert_im_as_material(im_plane, this_im, im_filename, orientation)
-                    moveImage(im_plane, -delta*movement, orientation)
+                    move_image(im_plane, -delta*movement, orientation)
 
             # Scroll up
             elif event.type == 'WHEELUPMOUSE' or event.type == 'NUMPAD_PLUS':
@@ -309,7 +309,7 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
                     ind = ind + movement
                     this_im, im_filename = load_im(ind, image_files, orientation)  # executed by handler in print_updated_objects() 
                     insert_im_as_material(im_plane, this_im, im_filename, orientation)
-                    moveImage(im_plane, delta*movement, orientation)
+                    move_image(im_plane, delta*movement, orientation)
 
         # Mark the start or end of a segment
         elif not in_gp_mode and event.type == 'P' and event.value == 'PRESS':
@@ -439,7 +439,7 @@ class NEUROMORPH_OT_clear_images(bpy.types.Operator):
         return {'FINISHED'}
 
 
-def moveImage(im_plane, delta, orientation):
+def move_image(im_plane, delta, orientation):
     """The image is moved switch it's orientation"""
     if (orientation == 'Z'):
         im_plane.location.z = im_plane.location.z + delta
@@ -449,7 +449,7 @@ def moveImage(im_plane, delta, orientation):
         im_plane.location.y = im_plane.location.y + delta
 
 def load_im(ind, image_files, orientation):
-# check if image already loaded, only load new image if not
+# Check if image already loaded, only load new image if not
     if (orientation == 'Z'):
         newid = ind+bpy.context.scene.file_min_Z
     elif (orientation == 'X'):
@@ -482,6 +482,9 @@ def insert_im_as_material(im_plane, this_im, im_filename, orientation):
     bpy.context.object.active_material = bpy.data.materials[mat_name]
     bpy.ops.object.mode_set(mode = 'OBJECT')
 
+    # Turn off shadow of image plane
+    bpy.context.object.active_material.shadow_method = 'NONE'
+
 
 
 def create_plane(orientation, this_loc, this_im, im_filename, im_name):
@@ -508,12 +511,8 @@ def create_plane(orientation, this_loc, this_im, im_filename, im_name):
     im_plane.dimensions = pl_dimensions
     im_plane.name = im_name
 
-    # Create associated image material, 2.8x
-    insert_im_as_material(im_plane, this_im, im_filename, orientation)
-
-    # Turn of shadow of image plane
-    bpy.context.object.active_material.shadow_method = 'NONE'
-
+    # # Create associated image material, 2.8x (do separately after function call)
+    # insert_im_as_material(im_plane, this_im, im_filename, orientation)
 
     # # Create associated texture and material, 2.79
     # pl_ob.data.uv_textures.new()
@@ -611,7 +610,7 @@ def getIndex(im_plane):
 class NEUROMORPH_OT_select_stack_folder_z(bpy.types.Operator, ImportHelper):  # adjusted
     """Select location of the Z stack images (original image stack)"""
     bl_idname = "neuromorph.select_stack_folder_z"
-    bl_label = "Select Z stack image folder"
+    bl_label = "Select Image Folder (Z Stack)"
 
     # Define this to tell 'fileselect_add' that we want a directory
     directory: bpy.props.StringProperty(
@@ -646,7 +645,7 @@ class NEUROMORPH_OT_select_stack_folder_z(bpy.types.Operator, ImportHelper):  # 
 class NEUROMORPH_OT_select_stack_folder_x(bpy.types.Operator, ImportHelper):  # adjusted
     """Select location of the X stack images (OPTIONAL)"""
     bl_idname = "neuromorph.select_stack_folder_x"
-    bl_label = "Select X stack image folder"
+    bl_label = "Select Image Folder (X Stack)"
 
     # Define this to tell 'fileselect_add' that we want a directory
     directory: bpy.props.StringProperty(
@@ -667,7 +666,7 @@ class NEUROMORPH_OT_select_stack_folder_x(bpy.types.Operator, ImportHelper):  # 
 class NEUROMORPH_OT_select_stack_folder_y(bpy.types.Operator, ImportHelper):  # adjusted
     """Select location of the Y stack images (OPTIONAL)"""
     bl_idname = "neuromorph.select_stack_folder_y"
-    bl_label = "Select Y stack image folder"
+    bl_label = "Select Image Folder (Y Stack)"
 
     # Define this to tell 'fileselect_add' that we want a directory
     directory: bpy.props.StringProperty(
@@ -773,7 +772,7 @@ class NEUROMORPH_OT_display_image(bpy.types.Operator):  # adjusted
             Nx = len(bpy.context.scene.imagefilepaths_x)
             if Nx > 0:
                 if (bpy.context.active_object.type == 'MESH'):
-                    DisplayImageFunction('X')
+                    display_image_function('X')
                 else:
                     self.report({'INFO'}, "Select a vertex on a mesh object")
             else:
@@ -781,7 +780,7 @@ class NEUROMORPH_OT_display_image(bpy.types.Operator):  # adjusted
             Ny = len(bpy.context.scene.imagefilepaths_y)
             if Ny > 0:
                 if (bpy.context.active_object.type == 'MESH'):
-                    DisplayImageFunction('Y')
+                    display_image_function('Y')
                 else:
                     self.report({'INFO'}, "Select a vertex on a mesh object")
             else:
@@ -789,7 +788,7 @@ class NEUROMORPH_OT_display_image(bpy.types.Operator):  # adjusted
             Nz = len(bpy.context.scene.imagefilepaths_z)
             if Nz > 0:
                 if (bpy.context.active_object.type=='MESH'):
-                    DisplayImageFunction('Z')  # must call Z last as this might return image as active object
+                    display_image_function('Z')  # must call Z last as this might return image as active object
                 else:
                     self.report({'INFO'},"Select a vertex on a mesh object")
             else:
@@ -799,7 +798,7 @@ class NEUROMORPH_OT_display_image(bpy.types.Operator):  # adjusted
             
         return {'FINISHED'}
 
-def DisplayImageFunction(orientation):
+def display_image_function(orientation):
     """For the given orientation, it search for the closest image to the selected
     vertex. Then it display the image in the good orientation."""
     x_max = bpy.context.scene.x_side
@@ -816,10 +815,9 @@ def DisplayImageFunction(orientation):
         exte = bpy.context.scene.image_ext_Z
         N = len(image_files)
         delta = (z_max-z_min)/(N-1)
-        locs = [delta*n for n in range(N)]  # the z locations of each image in space
+        locs = [delta*n for n in range(N)]  # z locations of each image in space
         im_name = "Image Z"
-        empty_name = "Empty Z"
-        #The rotation that we need to apply on the image.
+        # Image rotation
         rotX = 3.141592653
         rotY = 0
         rotZ = 0
@@ -830,10 +828,9 @@ def DisplayImageFunction(orientation):
         exte = bpy.context.scene.image_ext_X
         N = len(image_files)
         delta = (x_max-x_min)/(N-1)
-        locs = [delta*n for n in range(N)]  # the x locations of each image in space
+        locs = [delta*n for n in range(N)]  # x locations of each image in space
         im_name = "Image X"
-        empty_name = "Empty X"
-        #The rotation that we need to apply on the image.
+        # Image rotation
         rotX = 0
         rotY = -3.141592653/2
         rotZ = 3.141592653
@@ -844,10 +841,9 @@ def DisplayImageFunction(orientation):
         exte = bpy.context.scene.image_ext_Y
         N = len(image_files)
         delta = (y_max-y_min)/(N-1)
-        locs = [delta*n for n in range(N)]  # the y locations of each image in space
+        locs = [delta*n for n in range(N)]  # y locations of each image in space
         im_name = "Image Y"
-        empty_name = "Empty Y"
-        #The rotation that we need to apply on the image.
+        # Image rotation
         rotX = -3.141592653/2
         rotY = 0
         rotZ = 0
@@ -860,12 +856,12 @@ def DisplayImageFunction(orientation):
         bpy.data.objects[object_name].select_set(False)
 
     # Remove previous image objects
-    prev_im_obs = [item.name for item in bpy.data.objects if item.name == im_name or item.name == empty_name]
+    prev_im_obs = [item.name for item in bpy.data.objects if item.name == im_name]
     for ob_name in prev_im_obs:
         bpy.data.objects[ob_name].select_set(True)
     bpy.ops.object.delete()
 
-    # collect selected verts
+    # Collect selected verts
     selected_id = [i.index for i in myob.data.vertices if i.select]
     original_object = myob.name
 
@@ -892,22 +888,7 @@ def DisplayImageFunction(orientation):
                 ind = ii
         this_im, im_filename = load_im(ind, image_files, orientation)
 
-        # For Blender 2.7x
-        # coord = locs[ind]
-        # if(orientation == 'Z'):
-        #      locX = 0
-        #      locY = y_max
-        #      locZ = coord
-        # elif(orientation == 'X'):
-        #      locX = coord
-        #      locY = y_max
-        #      locZ = 0
-        # elif(orientation == 'Y'):
-        #      locX = 0
-        #      locY = coord
-        #      locZ = z_max
-
-        # For Blender 2.80
+        # Define location (different between Blender 2.7/2.8)
         coord = locs[ind]
         if(orientation == 'Z'):
             locX = x_max/2
@@ -925,18 +906,10 @@ def DisplayImageFunction(orientation):
         
         # Create a plane holding the image as a texture
         im_plane = create_plane(orientation, this_location, this_im, im_filename, im_name)
-        loc_location(im_plane, orientation)
+        lock_location(im_plane, orientation)
 
-        # # Optionally add an empty (this held the main image in Blender 2.7x)
-        # add_empty = False
-        # if (add_empty):
-        #     bpy.ops.object.empty_add(type='IMAGE', location=vert_coordinate, rotation=(rotX,rotY,rotZ))
-        #     empty_ob = bpy.context.active_object
-        #     empty_ob.name = empty_name
-        #     empty_ob.scale = scale_vec
-        #     empty_ob.location = this_location  # this is correct
-        #     empty_ob.data = this_im
-        #     loc_location(empty_ob, orientation)
+        # Create associated image material
+        insert_im_as_material(im_plane, this_im, im_filename, orientation)
 
         bpy.ops.object.select_all(action='TOGGLE')
         bpy.ops.object.select_all(action='DESELECT')
@@ -958,7 +931,7 @@ def DisplayImageFunction(orientation):
   
 
 
-def loc_location(ob, orientation):
+def lock_location(ob, orientation):
 # Lock translations in directions other than the orientation of the image
     if(orientation == 'Z'):
         ob.lock_location[0] = True # x
@@ -1388,7 +1361,6 @@ def convert_curve_fcn(self, orientation):
 
         # Convert curve to mesh
         bpy.ops.object.convert(target='MESH')
-        # crv_obj = bpy.data.objects['GP_Layer']
         crv_obj.name = "Curve"
 
         # Delete all grease pencil objects
@@ -1403,6 +1375,9 @@ def convert_curve_fcn(self, orientation):
         crv_obj.select_set(True)
         bpy.context.view_layer.objects.active = crv_obj
 
+        # # Remove any errors that happened when converting curve
+        # clean_converted_curve(orientation)
+
         # Downsample a bit, for speed (do this only at the end of this function!)
         bpy.ops.object.mode_set(mode = 'EDIT')
         bpy.ops.mesh.select_all(action='SELECT')
@@ -1413,55 +1388,14 @@ def convert_curve_fcn(self, orientation):
 
 
 
+def clean_converted_curve(orientation): 
+# This doesn't seem to catch the bad cases right now.
+# But the curve conversion seems much more stable than in 2.79, 
+# so maybe it's not necessary.
 
-def convert_curve_fcn_old(self, orientation):  #, proj_z=False):
-    print("in convert_curve_fcn()")
-
-    # Convert grease pencil markings to mesh curve
-    # grease pencil drawings are part of current image until converted
-    if bpy.context.object.name[0:5] != "Image":
-        self.report({'INFO'},"Image plane of this curve must be active")
-        return {'CANCELLED'}
-
-    # for g in bpy.data.grease_pencil:
-    #     if g.draw_mode != 'SURFACE':
-    #         g.draw_mode = 'SURFACE'
-    #         self.report({'INFO'},"Warning: Grease Pencil Drawing Settings changed to Surface mode for currect curve projection")
-    bpy.context.tool_settings.gpencil_stroke_placement_view3d = 'SURFACE'  # new versions of blender
-
-    the_image = bpy.context.object
-    
-    # convert curve to polyline, image is still active object
-    bpy.ops.gpencil.convert()
-
-    # Erase all grease pencil markings
-    original_type = bpy.context.area.type
-    bpy.context.area.type = "VIEW_3D"
-    bpy.ops.gpencil.active_frame_delete()
-    bpy.context.area.type = original_type
-
-    # Make the curve the active object
-    for obj in bpy.data.objects:
-        if "GP_Layer" in obj.name:
-            new_curve = obj
-    bpy.context.view_layer.objects.active = new_curve
-    new_curve.name = "curve"
-
-    # Toggle Cyclic to make a closed curve
-    if bpy.context.scene.closed_curve:
-        bpy.ops.object.mode_set(mode = 'EDIT')
-        bpy.ops.curve.cyclic_toggle()
-        bpy.ops.object.mode_set(mode = 'OBJECT')
-
-    # Convert to mesh
-    print("before curve convert()")
-    bpy.ops.object.convert(target='MESH')
-
-
-    print("nverts before incorrect z-value vertex removal: ", len(bpy.context.active_object.data.vertices))
-
-    # Remove points with incorrect z-value, 
-    # eg if drew over another curve, will project single point to height of that curve
+    # Remove points with incorrect z-value (where z is the orientation, for any orientation).
+    # This was a bigger problem in Blender 2.7, when drawing over another curve would
+    # project a single point to height of that curve
     if orientation == "Z":
         N = len(bpy.context.scene.imagefilepaths_z)
         delta_z = bpy.context.scene.z_side / N / 2
@@ -1477,7 +1411,7 @@ def convert_curve_fcn_old(self, orientation):  #, proj_z=False):
     z_err = delta_z / 2  # arbitrary
 
     # Use median z-value as representative of curve
-    all_zs = [v.co[z_ind] for v in new_curve.data.vertices]
+    all_zs = [v.co[z_ind] for v in bpy.context.active_object.data.vertices]
     z_med = median(all_zs)
 
     # Remove all points not sufficiently close to z_med
@@ -1485,7 +1419,7 @@ def convert_curve_fcn_old(self, orientation):  #, proj_z=False):
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.object.mode_set(mode='OBJECT')
     in_consec_section_to_remove = False
-    for ind, v in enumerate(new_curve.data.vertices):
+    for ind, v in enumerate(bpy.context.active_object.data.vertices):
         this_z = v.co[z_ind]
         if (abs(this_z - z_med) > z_err):
             v.select_set(True)
@@ -1494,6 +1428,7 @@ def convert_curve_fcn_old(self, orientation):  #, proj_z=False):
     bpy.ops.object.mode_set(mode='OBJECT')
 
 
+    # print("nverts before fork and loop vertex removal: ", len(bpy.context.active_object.data.vertices))
     print("nverts before fork and loop vertex removal: ", len(bpy.context.active_object.data.vertices))
 
     # Remove extraneous vertices that sometimes appear in the curve conversion (forks and loops)
@@ -1502,11 +1437,11 @@ def convert_curve_fcn_old(self, orientation):  #, proj_z=False):
         # divide curve into three sections, remove bad verts from each section separately
         # thereby forcing the shortest path selection to run through the entire closed curve
         nsub = math.floor(nverts/3)
-        remove_extraneous_verts(new_curve, 0, nsub)
-        remove_extraneous_verts(new_curve, nsub, 2*nsub)
-        remove_extraneous_verts(new_curve, 2*nsub, nverts-1)
+        remove_extraneous_verts(bpy.context.active_object, 0, nsub)
+        remove_extraneous_verts(bpy.context.active_object, nsub, 2*nsub)
+        remove_extraneous_verts(bpy.context.active_object, 2*nsub, nverts-1)
     else:
-        remove_extraneous_verts(new_curve, 0, nverts-1)  # entire curve
+        remove_extraneous_verts(bpy.context.active_object, 0, nverts-1)  # entire curve
 
 
     print("nverts before subdividing necessary edges: ", len(bpy.context.active_object.data.vertices))
@@ -1522,7 +1457,7 @@ def convert_curve_fcn_old(self, orientation):  #, proj_z=False):
         v1 = bpy.context.active_object.data.vertices[edg.vertices[1]].co
         this_len = get_dist(v0,v1)
         if this_len > thresh:
-            print("do some somedividing!")
+            print("do some dividing!")
             ndivs = math.ceil(math.log(this_len / thresh) / math.log(2))
             bpy.ops.object.mode_set(mode = 'EDIT')
             bpy.ops.mesh.select_all(action='DESELECT')
@@ -1534,79 +1469,7 @@ def convert_curve_fcn_old(self, orientation):  #, proj_z=False):
                 bpy.ops.mesh.subdivide()
             bpy.ops.object.mode_set(mode = 'OBJECT')
 
-
-        # this_len = max(bpy.context.scene.x_side, bpy.context.scene.y_side)
-        # thresh = this_len / 500.0  # from create_curve for remove_doubles, arbitrary
-        # thresh = thresh * 5
-        # count = 0
-        # for ind in range(len(obj.data.edges)):
-        #     bpy.ops.object.mode_set(mode = 'OBJECT')
-        #     edg = bpy.context.active_object.data.edges[ind]
-        #     v0 = obj.data.vertices[edg.vertices[0]].co
-        #     v1 = obj.data.vertices[edg.vertices[1]].co
-        #     this_len = get_dist(v0,v1)
-        #     if this_len > thresh:  # this is slow
-        #         bpy.ops.object.mode_set(mode = 'EDIT')
-        #         bpy.ops.mesh.select_all(action='DESELECT')
-        #         bpy.ops.object.mode_set(mode = 'OBJECT')
-        #         bpy.context.active_object.data.edges[ind].select_set(True)
-        #         bpy.ops.object.mode_set(mode = 'EDIT')
-        #         bpy.ops.mesh.subdivide()
-        #         bpy.ops.mesh.subdivide()
-        #         bpy.ops.mesh.subdivide()
-        #         bpy.ops.object.mode_set(mode = 'OBJECT')
-        # bpy.ops.object.mode_set(mode = 'EDIT')
-        # bpy.ops.mesh.select_all(action='SELECT')
-        # bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')  # todo:  check options
-        # bpy.ops.mesh.tris_convert_to_quads()
-
-
-
     print("nverts before curve downsampling: ", len(bpy.context.active_object.data.vertices))
-
-    # Downsample a bit, for speed (do this only at the end of this function!)
-    bpy.ops.object.mode_set(mode = 'EDIT')
-    bpy.ops.mesh.select_all(action='SELECT')
-    # thresh = get_mesh_density_threshold()
-    bpy.ops.mesh.remove_doubles(threshold = thresh)
-    bpy.ops.object.mode_set(mode = 'OBJECT')
-
-
-    print("nverts before convert to quads: ", len(bpy.context.active_object.data.vertices))
-
-    # Convert to quads, for speed
-    bpy.ops.object.mode_set(mode = 'EDIT')
-    bpy.ops.mesh.tris_convert_to_quads()
-    bpy.ops.object.mode_set(mode = 'OBJECT')
-
-    # Return image as only active object, ready to draw again
-    bpy.ops.object.select_all(action='DESELECT')
-    the_image.select_set(True)
-    bpy.context.view_layer.objects.active = the_image
-
-    print("end of convert_curve_fcn()")
-
-
-
-# def duplicateObject_tmp(scene, name, copyobj):
- 
-#     # Create new mesh
-#     mesh = bpy.data.meshes.new(name)
- 
-#     # Create new object associated with the mesh
-#     ob_new = bpy.data.objects.new(name, mesh)
- 
-#     # Copy data block from the old object into the new object
-#     ob_new.data = copyobj.data.copy()
-#     ob_new.scale = copyobj.scale
-#     ob_new.location = copyobj.location
- 
-#     # Link new object to the given scene and select it
-#     scene.collection.objects.link(ob_new)
-#     ob_new.select_set(True)
- 
-#     return ob_new
-
 
 
 def remove_extraneous_verts(crv, v0_ind, v1_ind):
@@ -1620,8 +1483,8 @@ def remove_extraneous_verts(crv, v0_ind, v1_ind):
     bpy.ops.object.mode_set(mode = 'EDIT')
     bpy.ops.mesh.select_all(action='DESELECT')
     bpy.ops.object.mode_set(mode='OBJECT')
-    crv.data.vertices[v0_ind].select_set(True)
-    crv.data.vertices[v1_ind].select_set(True)
+    crv.data.vertices[v0_ind].select = True
+    crv.data.vertices[v1_ind].select = True
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.shortest_path_select()
     bpy.ops.object.mode_set(mode='OBJECT')
@@ -1667,7 +1530,7 @@ def remove_extraneous_verts(crv, v0_ind, v1_ind):
         bpy.ops.mesh.select_all(action='DESELECT')
         bpy.ops.object.mode_set(mode = 'OBJECT')
         for ind in bad_inds:
-            crv.data.vertices[ind].select_set(True)
+            crv.data.vertices[ind].select = True
         bpy.ops.object.mode_set(mode = 'EDIT')
         bpy.ops.mesh.delete(type='VERT')
         bpy.ops.object.mode_set(mode = 'OBJECT')
@@ -1675,6 +1538,27 @@ def remove_extraneous_verts(crv, v0_ind, v1_ind):
     bpy.ops.object.mode_set(mode = 'EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.object.mode_set(mode = 'OBJECT')
+
+
+# def duplicateObject_tmp(scene, name, copyobj):
+ 
+#     # Create new mesh
+#     mesh = bpy.data.meshes.new(name)
+ 
+#     # Create new object associated with the mesh
+#     ob_new = bpy.data.objects.new(name, mesh)
+ 
+#     # Copy data block from the old object into the new object
+#     ob_new.data = copyobj.data.copy()
+#     ob_new.scale = copyobj.scale
+#     ob_new.location = copyobj.location
+ 
+#     # Link new object to the given scene and select it
+#     scene.collection.objects.link(ob_new)
+#     ob_new.select_set(True)
+ 
+#     return ob_new
+
 
 
 
@@ -3385,5 +3269,178 @@ if __name__ == "__main__":
 #     # bpy.context.area.type = original_type  # maybe not necessary anymore, v2.78?
 #     # bpy.data.scenes["Scene"].tool_settings.use_gpencil_continuous_drawing = False
 #     self.report({'INFO'},"Drawing...")
+
+
+# def convert_curve_fcn_old(self, orientation):  #, proj_z=False):
+#     print("in convert_curve_fcn()")
+
+#     # Convert grease pencil markings to mesh curve
+#     # grease pencil drawings are part of current image until converted
+#     if bpy.context.object.name[0:5] != "Image":
+#         self.report({'INFO'},"Image plane of this curve must be active")
+#         return {'CANCELLED'}
+
+#     # for g in bpy.data.grease_pencil:
+#     #     if g.draw_mode != 'SURFACE':
+#     #         g.draw_mode = 'SURFACE'
+#     #         self.report({'INFO'},"Warning: Grease Pencil Drawing Settings changed to Surface mode for currect curve projection")
+#     bpy.context.tool_settings.gpencil_stroke_placement_view3d = 'SURFACE'  # new versions of blender
+
+#     the_image = bpy.context.object
+    
+#     # convert curve to polyline, image is still active object
+#     bpy.ops.gpencil.convert()
+
+#     # Erase all grease pencil markings
+#     original_type = bpy.context.area.type
+#     bpy.context.area.type = "VIEW_3D"
+#     bpy.ops.gpencil.active_frame_delete()
+#     bpy.context.area.type = original_type
+
+#     # Make the curve the active object
+#     for obj in bpy.data.objects:
+#         if "GP_Layer" in obj.name:
+#             new_curve = obj
+#     bpy.context.view_layer.objects.active = new_curve
+#     new_curve.name = "curve"
+
+#     # Toggle Cyclic to make a closed curve
+#     if bpy.context.scene.closed_curve:
+#         bpy.ops.object.mode_set(mode = 'EDIT')
+#         bpy.ops.curve.cyclic_toggle()
+#         bpy.ops.object.mode_set(mode = 'OBJECT')
+
+#     # Convert to mesh
+#     print("before curve convert()")
+#     bpy.ops.object.convert(target='MESH')
+
+
+#     print("nverts before incorrect z-value vertex removal: ", len(bpy.context.active_object.data.vertices))
+
+#     # Remove points with incorrect z-value, 
+#     # eg if drew over another curve, will project single point to height of that curve
+#     if orientation == "Z":
+#         N = len(bpy.context.scene.imagefilepaths_z)
+#         delta_z = bpy.context.scene.z_side / N / 2
+#         z_ind = 2
+#     elif orientation == "X":
+#         N = len(bpy.context.scene.imagefilepaths_x)
+#         delta_z = bpy.context.scene.x_side / N / 2
+#         z_ind = 0
+#     elif orientation == "Y":
+#         N = len(bpy.context.scene.imagefilepaths_y)
+#         delta_z = bpy.context.scene.y_side / N / 2
+#         z_ind = 1
+#     z_err = delta_z / 2  # arbitrary
+
+#     # Use median z-value as representative of curve
+#     all_zs = [v.co[z_ind] for v in new_curve.data.vertices]
+#     z_med = median(all_zs)
+
+#     # Remove all points not sufficiently close to z_med
+#     bpy.ops.object.mode_set(mode = 'EDIT')
+#     bpy.ops.mesh.select_all(action='DESELECT')
+#     bpy.ops.object.mode_set(mode='OBJECT')
+#     in_consec_section_to_remove = False
+#     for ind, v in enumerate(new_curve.data.vertices):
+#         this_z = v.co[z_ind]
+#         if (abs(this_z - z_med) > z_err):
+#             v.select_set(True)
+#     bpy.ops.object.mode_set(mode = 'EDIT')
+#     bpy.ops.mesh.dissolve_verts()  # deletes verts, connects verts not deleted across hole of deleted verts
+#     bpy.ops.object.mode_set(mode='OBJECT')
+
+
+#     print("nverts before fork and loop vertex removal: ", len(bpy.context.active_object.data.vertices))
+
+#     # Remove extraneous vertices that sometimes appear in the curve conversion (forks and loops)
+#     nverts = len(bpy.context.active_object.data.vertices)
+#     if bpy.context.scene.closed_curve:
+#         # divide curve into three sections, remove bad verts from each section separately
+#         # thereby forcing the shortest path selection to run through the entire closed curve
+#         nsub = math.floor(nverts/3)
+#         remove_extraneous_verts(new_curve, 0, nsub)
+#         remove_extraneous_verts(new_curve, nsub, 2*nsub)
+#         remove_extraneous_verts(new_curve, 2*nsub, nverts-1)
+#     else:
+#         remove_extraneous_verts(new_curve, 0, nverts-1)  # entire curve
+
+
+#     print("nverts before subdividing necessary edges: ", len(bpy.context.active_object.data.vertices))
+
+#     # Subdivide edges where vertices were removed
+#     nverts = len(bpy.context.active_object.data.vertices)
+#     # print("nverts before: ", nverts)
+#     thresh = get_mesh_density_threshold()
+#     for ind in range(len(bpy.context.active_object.data.edges)):
+#         bpy.ops.object.mode_set(mode = 'OBJECT')
+#         edg = bpy.context.active_object.data.edges[ind]
+#         v0 = bpy.context.active_object.data.vertices[edg.vertices[0]].co
+#         v1 = bpy.context.active_object.data.vertices[edg.vertices[1]].co
+#         this_len = get_dist(v0,v1)
+#         if this_len > thresh:
+#             print("do some somedividing!")
+#             ndivs = math.ceil(math.log(this_len / thresh) / math.log(2))
+#             bpy.ops.object.mode_set(mode = 'EDIT')
+#             bpy.ops.mesh.select_all(action='DESELECT')
+#             bpy.ops.object.mode_set(mode = 'OBJECT')
+#             bpy.context.active_object.data.edges[ind].select_set(True)
+#             bpy.ops.object.mode_set(mode = 'EDIT')
+#             for sub_ind in range(ndivs):
+#                 print("subdivide", ind, sub_ind)
+#                 bpy.ops.mesh.subdivide()
+#             bpy.ops.object.mode_set(mode = 'OBJECT')
+
+
+#         # this_len = max(bpy.context.scene.x_side, bpy.context.scene.y_side)
+#         # thresh = this_len / 500.0  # from create_curve for remove_doubles, arbitrary
+#         # thresh = thresh * 5
+#         # count = 0
+#         # for ind in range(len(obj.data.edges)):
+#         #     bpy.ops.object.mode_set(mode = 'OBJECT')
+#         #     edg = bpy.context.active_object.data.edges[ind]
+#         #     v0 = obj.data.vertices[edg.vertices[0]].co
+#         #     v1 = obj.data.vertices[edg.vertices[1]].co
+#         #     this_len = get_dist(v0,v1)
+#         #     if this_len > thresh:  # this is slow
+#         #         bpy.ops.object.mode_set(mode = 'EDIT')
+#         #         bpy.ops.mesh.select_all(action='DESELECT')
+#         #         bpy.ops.object.mode_set(mode = 'OBJECT')
+#         #         bpy.context.active_object.data.edges[ind].select_set(True)
+#         #         bpy.ops.object.mode_set(mode = 'EDIT')
+#         #         bpy.ops.mesh.subdivide()
+#         #         bpy.ops.mesh.subdivide()
+#         #         bpy.ops.mesh.subdivide()
+#         #         bpy.ops.object.mode_set(mode = 'OBJECT')
+#         # bpy.ops.object.mode_set(mode = 'EDIT')
+#         # bpy.ops.mesh.select_all(action='SELECT')
+#         # bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')  # todo:  check options
+#         # bpy.ops.mesh.tris_convert_to_quads()
+
+
+
+#     print("nverts before curve downsampling: ", len(bpy.context.active_object.data.vertices))
+
+#     # Downsample a bit, for speed (do this only at the end of this function!)
+#     bpy.ops.object.mode_set(mode = 'EDIT')
+#     bpy.ops.mesh.select_all(action='SELECT')
+#     # thresh = get_mesh_density_threshold()
+#     bpy.ops.mesh.remove_doubles(threshold = thresh)
+#     bpy.ops.object.mode_set(mode = 'OBJECT')
+
+
+#     print("nverts before convert to quads: ", len(bpy.context.active_object.data.vertices))
+
+#     # Convert to quads, for speed
+#     bpy.ops.object.mode_set(mode = 'EDIT')
+#     bpy.ops.mesh.tris_convert_to_quads()
+#     bpy.ops.object.mode_set(mode = 'OBJECT')
+
+#     # Return image as only active object, ready to draw again
+#     bpy.ops.object.select_all(action='DESELECT')
+#     the_image.select_set(True)
+#     bpy.context.view_layer.objects.active = the_image
+
+#     print("end of convert_curve_fcn()")
 
 
