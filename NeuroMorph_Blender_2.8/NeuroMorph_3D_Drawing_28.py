@@ -102,7 +102,7 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         layout.label(text = "Press P to mark endpoints from scroll mode.")
 
         row = layout.row()
-        row.label(text = "Last Length Measured: " + str(round(bpy.context.scene.last_length_measured, 6)))
+        row.label(text = "Segment Length: " + get_segment_length())
 
         row = layout.row()
         row.operator("neuromorph.export_seg_lengths", text='Export Segment Lengths', icon='ALIGN_LEFT')
@@ -123,7 +123,7 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
 
         row = layout.row()
         row.prop(context.scene, "pt_radius")
-        if hasattr(context.object, 'data') and context.object.data.name[0:6] == 'Sphere':
+        if hasattr(context.object, 'data') and context.object.data is not None and context.object.data.name[0:6] == 'Sphere':
             row = layout.row()
             row.operator("neuromorph.update_marker_radius", text = "Update Marker Radius")
 
@@ -238,6 +238,9 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
         # print("event value: " + event.value)
         # bpy.ops.wm.tool_set_by_id(name="builtin.select_box")  # here?
 
+        # Send detectable signal that program currently running in modal mode
+        bpy.context.scene.in_modal = True
+
         # Get image parameters
         im_plane = self.im_obj
         (ind, N, delta, orientation, image_files, locs) = getIndex(im_plane)
@@ -257,6 +260,8 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
             
         ### Exit modal mode
         if event.type in ('RIGHTMOUSE', 'ESC'):  # Cancel
+            bpy.context.scene.in_modal = False
+            bpy.context.scene.already_measured_this_modal = False
             return {'CANCELLED'}
 
 
@@ -322,6 +327,7 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
                 this_dist = make_segment_object(self.prev_pt, coord_3D)
                 bpy.context.scene.last_length_measured = this_dist
                 self.prev_pt = None
+                bpy.context.scene.already_measured_this_modal = True
 
             # Go back to the main object to continue modal mode
             im_plane.select_set(True)
@@ -607,7 +613,7 @@ def getIndex(im_plane):
 
 
 
-class NEUROMORPH_OT_select_stack_folder_z(bpy.types.Operator, ImportHelper):  # adjusted
+class NEUROMORPH_OT_select_stack_folder_z(bpy.types.Operator):  # adjusted
     """Select location of the Z stack images (original image stack)"""
     bl_idname = "neuromorph.select_stack_folder_z"
     bl_label = "Select Image Folder (Z Stack)"
@@ -642,7 +648,7 @@ class NEUROMORPH_OT_select_stack_folder_z(bpy.types.Operator, ImportHelper):  # 
         select_folder_invoke(self, context, "exte_Z", "image_ext_Z")
         return {"RUNNING_MODAL"}
 
-class NEUROMORPH_OT_select_stack_folder_x(bpy.types.Operator, ImportHelper):  # adjusted
+class NEUROMORPH_OT_select_stack_folder_x(bpy.types.Operator):  # adjusted
     """Select location of the X stack images (OPTIONAL)"""
     bl_idname = "neuromorph.select_stack_folder_x"
     bl_label = "Select Image Folder (X Stack)"
@@ -663,7 +669,7 @@ class NEUROMORPH_OT_select_stack_folder_x(bpy.types.Operator, ImportHelper):  # 
         select_folder_invoke(self, context, "exte_X", "image_ext_X")
         return {"RUNNING_MODAL"}
 
-class NEUROMORPH_OT_select_stack_folder_y(bpy.types.Operator, ImportHelper):  # adjusted
+class NEUROMORPH_OT_select_stack_folder_y(bpy.types.Operator):  # adjusted
     """Select location of the Y stack images (OPTIONAL)"""
     bl_idname = "neuromorph.select_stack_folder_y"
     bl_label = "Select Image Folder (Y Stack)"
@@ -1008,6 +1014,24 @@ def add_sphere_at_loc(loc):
     # turn off origin marker
     # bpy.context.space_data.show_manipulator = False
 
+
+# Display the length of the currently selected segment
+# or the last measured segment in modal
+def get_segment_length():
+    this_len = ""
+    active_obj = bpy.context.active_object
+    if active_obj is not None and active_obj.name[0:7] == "segment":
+        this_len = active_obj.segment_length
+        this_len = str(round(this_len, 6))
+    elif bpy.context.scene.in_modal and bpy.context.scene.already_measured_this_modal:
+        this_len = bpy.context.scene.last_length_measured
+        this_len = str(round(this_len, 6))
+    return(this_len)
+
+
+# Add a segment object to the scene connectiong p0 and p1
+# Can be either a single edge (smaller blender file, but hard to see)
+# or a thin cylendar (easier to see)
 def make_segment_object(p0, p1):
     use_cyl_for_visibility = True
     if use_cyl_for_visibility:
@@ -2893,11 +2917,26 @@ def register():
         description = "Length of line segment",
         default = -1.0
     )
+    bpy.types.Scene.in_modal = bpy.props.BoolProperty \
+    (
+        name = "Modal operator detector",
+        description = "Returns true if currently running modal, else returns false",
+        default = False
+    )
+    bpy.types.Scene.already_measured_this_modal = bpy.props.BoolProperty \
+    (
+        name = "Already made a measurement this modal",
+        description = "Returns true if already made a segment measurement in this modal call, else false",
+        default = False
+    )
 
 
 def unregister():
     unregister_classes()
     
+    del bpy.types.Scene.already_measured_this_modal
+    del bpy.types.Scene.in_modal
+    del bpy.types.Scene.segment_length
     del bpy.types.Scene.last_length_measured
     del bpy.types.Scene.render_images
     del bpy.types.Scene.surface_prefix
