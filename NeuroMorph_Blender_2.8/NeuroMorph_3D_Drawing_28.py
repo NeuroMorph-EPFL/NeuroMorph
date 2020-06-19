@@ -1132,6 +1132,8 @@ class NEUROMORPH_OT_add_transparency(bpy.types.Operator):
                     obj.active_material = this_mat
                     this_color = (0.5, 0.8, 0.8, 1)
                 else:
+                    if this_mat.use_nodes == False:
+                        this_mat.use_nodes = True
                     this_color = this_mat.node_tree.nodes["Principled BSDF"].inputs[0].default_value
                 
                 this_mat.use_nodes = True
