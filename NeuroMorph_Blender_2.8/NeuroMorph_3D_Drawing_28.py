@@ -181,9 +181,16 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         if bpy.context.object is not None:
             mat = bpy.context.object.active_material
             if mat is not None and mat.use_nodes:
-                BSDF_node = mat.node_tree.nodes["Principled BSDF"]
-                colL.prop(BSDF_node.inputs["Alpha"], "default_value", slider=True, text = "alpha")
-                colR.prop(BSDF_node.inputs["Base Color"], "default_value", text="")
+                if "Principled BSDF" in mat.node_tree.nodes:
+                    BSDF_node = mat.node_tree.nodes["Principled BSDF"]
+                    colL.prop(BSDF_node.inputs["Alpha"], "default_value", slider=True, text = "alpha")
+                    colR.prop(BSDF_node.inputs["Base Color"], "default_value", text="")
+                # if "Principled BSDF" not in mat.node_tree.nodes:
+                #     # Material problaby from old version of Blender and had no color
+                #     # Make a new material
+                #     mat_new = materials.new(name=mat.name)
+                #     mat_new.use_nodes = True
+                #     bsdf = mat_new.node_tree.nodes["Principled BSDF"]
 
 
 
@@ -479,7 +486,7 @@ def insert_im_as_material(im_plane, this_im, im_filename, orientation):
         texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
         texImage.image = this_im
         mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
-        mat.node_tree.nodes["Principled BSDF"].inputs["Specular"].default_value = 0  # turn off glare
+        bsdf.inputs["Specular"].default_value = 0  # turn off glare
         im_plane.data.materials.append(mat)
 
     # Assign image to active material
@@ -1123,20 +1130,30 @@ class NEUROMORPH_OT_add_transparency(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-        if bpy.context.mode == 'OBJECT':
-            if bpy.context.active_object is not None and bpy.context.active_object.type=='MESH':
+        if bpy.context.mode == 'OBJECT' and \
+           bpy.context.active_object is not None and \
+           bpy.context.active_object.type == 'MESH':
                 obj = bpy.context.active_object
                 this_mat = obj.active_material
-                if this_mat is None:
-                    this_mat = bpy.data.materials.new(obj.name + "_material")
-                    obj.active_material = this_mat
-                    this_color = (0.5, 0.8, 0.8, 1)
-                else:
-                    if this_mat.use_nodes == False:
-                        this_mat.use_nodes = True
-                    this_color = this_mat.node_tree.nodes["Principled BSDF"].inputs[0].default_value
-                
                 this_mat.use_nodes = True
+                if this_mat is None or "Principled BSDF" not in this_mat.node_tree.nodes:
+                    # Make a new material, even if one exists that has no Principled BSDF
+                    # (probably from an old version of Blender)
+                    if "Diffuse BSDF" in this_mat.node_tree.nodes:
+                        # Keep color of old material
+                        diffuse_node = this_mat.node_tree.nodes["Diffuse BSDF"]
+                        this_color = diffuse_node.inputs["Color"].default_value
+                        this_mat_name = diffuse_node.name
+                    else:
+                        this_color = (0.5, 0.8, 0.8, 1)
+                        this_mat_name = obj.name + "_material"
+
+                    this_mat = bpy.data.materials.new(this_mat_name)
+                    this_mat.use_nodes = True
+                    obj.active_material = this_mat
+                else:
+                    this_color = this_mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value
+
                 this_mat.blend_method = 'BLEND'
                 BSDF_node = this_mat.node_tree.nodes["Principled BSDF"]
                 BSDF_node.inputs["Base Color"].default_value = this_color
