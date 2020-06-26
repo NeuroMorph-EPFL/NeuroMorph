@@ -673,6 +673,18 @@ def check_edge_internal(verts, mesh, mat_edge_intersect):
             marking_sphere.active_material = mat_edge_intersect
             marking_sphere.show_transparent = True
             marking_sphere.name = "Edge Intersects Mesh Near Here"
+            update_collection_of_new_obj(marking_sphere, mesh)
+
+            # Collect intersection markers as children of an empty object
+            intersection_parent_name = "Edge Intersections Parent"
+            if intersection_parent_name in bpy.context.scene.objects:
+                intersection_parent = bpy.context.scene.objects[intersection_parent_name]
+            else:
+                intersection_parent = bpy.data.objects.new(intersection_parent_name, None)
+                bpy.context.scene.collection.objects.link(intersection_parent)
+                update_collection_of_new_obj(intersection_parent, mesh)
+            marking_sphere.parent = intersection_parent
+            activate_an_object(marking_sphere)
 
     return(n_edge_intersections)
 
@@ -764,7 +776,7 @@ def smooth_and_subdivide_centerline(centerline_approx):
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.mesh.subdivide()
-        bpy.ops.mesh.vertices_smooth(factor = 1, repeat = 5)  # These parameters are kind of arbitrary
+        bpy.ops.mesh.vertices_smooth(factor = 1, repeat = 3)  # These parameters are kind of arbitrary
         bpy.ops.object.mode_set(mode='OBJECT')
         
     # Update number of centerline points
