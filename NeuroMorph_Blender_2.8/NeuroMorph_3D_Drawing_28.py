@@ -1218,13 +1218,15 @@ class NEUROMORPH_OT_remove_transparency(bpy.types.Operator):
                 obj = bpy.context.active_object
                 this_mat = obj.active_material
                 if this_mat is not None:
-                    # this_mat.use_nodes = False
-                    area = next(area for area in bpy.context.screen.areas if area.type == 'VIEW_3D')
-                    space = next(space for space in area.spaces if space.type == 'VIEW_3D')
-                    if space.shading.type == 'SOLID':
-                        this_mat.diffuse_color[3] = 1.0
-                    else:
-                        this_mat.blend_method = 'OPAQUE'
+                    this_mat.diffuse_color[3] = 1.0
+                    this_mat.blend_method = 'OPAQUE'
+                    # # this_mat.use_nodes = False
+                    # area = next(area for area in bpy.context.screen.areas if area.type == 'VIEW_3D')
+                    # space = next(space for space in area.spaces if space.type == 'VIEW_3D')
+                    # if space.shading.type == 'SOLID':
+                    #     this_mat.diffuse_color[3] = 1.0
+                    # else:
+                    #     this_mat.blend_method = 'OPAQUE'
         return {'FINISHED'}
       
 
