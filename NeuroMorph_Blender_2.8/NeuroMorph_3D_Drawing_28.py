@@ -1001,21 +1001,15 @@ def add_sphere_at_loc(loc):
     bpy.ops.mesh.primitive_uv_sphere_add(location=loc, radius=scl, segments=segs, ring_count=rings)
     obj = bpy.context.object
 
-    sphere_mat_list = [mat for mat in bpy.data.materials if mat.name == "sphere_material"]
-    # bpy.data.materials.remove(bpy.data.materials["sphere_material"])
-    if len(sphere_mat_list) == 0:
-        sphere_mat = bpy.data.materials.new("sphere_material")
-        obj.active_material = sphere_mat
-        bpy.context.object.active_material.use_nodes = True
-        BSDF_node = bpy.data.materials["sphere_material"].node_tree.nodes["Principled BSDF"]
-        BSDF_node.inputs["Base Color"].default_value = (1, 0.3, 0, 1)
-        BSDF_node.inputs["Alpha"].default_value = 0.5
-        bpy.context.object.active_material.blend_method = 'BLEND'
-
+    # Define color
+    if "sphere_material" in [mat.name for mat in bpy.data.materials]:
+        sphere_mat = bpy.data.materials["sphere_material"]
     else:
-        sphere_mat = sphere_mat_list[0]
-        obj.active_material = sphere_mat
+        this_color = (1, 0.3, 0, 1)
+        this_alpha = 0.5
+        sphere_mat = add_unified_material(this_color, this_alpha, this_mat_name = "sphere_material")
 
+    obj.active_material = sphere_mat
     obj.name = bpy.context.scene.marker_prefix  # "marker"
 
     # turn off origin marker
@@ -1100,14 +1094,12 @@ def make_cyl(p0, p1):
     cyl_ob = bpy.context.object
     
     # Define color
-    seg_mat_list = [mat for mat in bpy.data.materials if mat.name == "segment_material"]
-    if len(seg_mat_list) == 0:
-        seg_mat = bpy.data.materials.new("segment_material")
-        seg_mat.use_nodes = True
-        BSDF_node = seg_mat.node_tree.nodes["Principled BSDF"]
-        BSDF_node.inputs["Base Color"].default_value = (0, 1, 0, 1)
+    if "segment_material" in [mat.name for mat in bpy.data.materials]:
+        seg_mat = bpy.data.materials["segment_material"]
     else:
-        seg_mat = seg_mat_list[0]
+        this_color = (0, 1, 0, 1)
+        this_alpha = 1
+        seg_mat = add_unified_material(this_color, this_alpha, this_mat_name = "segment_material")
     cyl_ob.active_material = seg_mat
 
     return(cyl_ob)
@@ -1150,33 +1142,62 @@ class NEUROMORPH_OT_add_transparency(bpy.types.Operator):
                     else:  # No material exists
                         this_color = (0.5, 0.8, 0.8, 1)
                         this_mat_name = obj.name + "_material"
-
-                    this_mat = bpy.data.materials.new(this_mat_name)
-                    this_mat.use_nodes = True
-                    obj.active_material = this_mat
                 else:
-                    this_mat.use_nodes = True  # Should already be true
                     this_color = this_mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value
+                    this_mat_name = this_mat.name
 
-                # For Solid display
-                this_color_transparent = list(this_color)
-                this_color_transparent[3] = 0.5
-                this_mat.diffuse_color = this_color_transparent
+                # # For Solid display
+                # this_color_transparent = list(this_color)
+                # this_color_transparent[3] = 0.5
+                # this_mat.diffuse_color = this_color_transparent
 
-                # For Material Preview display (preferred, as image textures are visible here)
-                this_mat.blend_method = 'BLEND'
-                BSDF_node = this_mat.node_tree.nodes["Principled BSDF"]
-                BSDF_node.inputs["Base Color"].default_value = this_color
-                BSDF_node.inputs["Alpha"].default_value = 0.5  # this alpha doesn't make object opaque when =1
+                # # For Material Preview display (preferred, as image textures are visible here)
+                # this_mat.blend_method = 'BLEND'
+                # BSDF_node = this_mat.node_tree.nodes["Principled BSDF"]
+                # BSDF_node.inputs["Base Color"].default_value = this_color
+                # BSDF_node.inputs["Alpha"].default_value = 0.5  # this alpha doesn't make object opaque when =1
 
-                # Attach the BSDF node to the diffuse color, so they change together
-                # And so alpha progresses from invisible to opaque in all modes
-                attach_color_driver(this_mat, 0)
-                attach_color_driver(this_mat, 1)
-                attach_color_driver(this_mat, 2)
-                attach_color_driver(this_mat, 3)
+                # # Attach the BSDF node to the diffuse color, so they change together
+                # # And so alpha progresses from invisible to opaque in all modes
+                # attach_color_driver(this_mat, 0)
+                # attach_color_driver(this_mat, 1)
+                # attach_color_driver(this_mat, 2)
+                # attach_color_driver(this_mat, 3)
+
+                add_unified_material(this_color, 0.5, this_mat, this_mat_name)
 
         return {'FINISHED'}
+
+
+# Create material whose diffufe color and alpha in Solid display and 
+# BSDF node color and alpha in Material Preview display are linked
+def add_unified_material(this_color, this_alpha, this_mat = None, this_mat_name = "new material"):
+    if this_mat is None:
+        this_mat = bpy.data.materials.new(this_mat_name)
+        this_mat.use_nodes = True
+        this_mat.name = this_mat_name
+
+    # For Solid display
+    this_color_transparent = list(this_color)
+    this_color_transparent[3] = this_alpha
+    this_mat.diffuse_color = this_color_transparent
+
+    # For Material Preview display (preferred, as image textures are visible here)
+    this_mat.use_nodes = True
+    this_mat.blend_method = 'BLEND'
+    BSDF_node = this_mat.node_tree.nodes["Principled BSDF"]
+    BSDF_node.inputs["Base Color"].default_value = this_color
+    BSDF_node.inputs["Alpha"].default_value = this_alpha
+
+    # Attach the BSDF node to the diffuse color, so they change together
+    # And so alpha progresses from invisible to opaque in all modes
+    attach_color_driver(this_mat, 0)
+    attach_color_driver(this_mat, 1)
+    attach_color_driver(this_mat, 2)
+    attach_color_driver(this_mat, 3)
+
+    return(this_mat)
+
 
 
 # Attach BSDF node to the viewport display (diffuse color) for smooth alpha slider 
@@ -1366,9 +1387,10 @@ def get_drawing_material():
         gp_mat.grease_pencil.color = [0,1,0,1]
         # Draw on surface
         bpy.context.scene.tool_settings.gpencil_stroke_placement_view3d = 'SURFACE'  # Draw on surface
-        # Define brush settings
-        bpy.data.brushes["Draw Pencil"].size = 5  # Radius
-        # bpy.data.brushes["Draw Pencil"].strength = 1  # Alpha value, maybe default 0.6 is nicer?
+        # Define brush settings, Blender 2.80
+        # bpy.data.brushes["Draw Pencil"].size = 5  # Radius
+        # Define brush settings, Blender 2.83
+        bpy.data.brushes["Pencil"].size = 5
     return(gp_mat)
 
 
@@ -1820,13 +1842,9 @@ class NEUROMORPH_OT_curves_to_mesh(bpy.types.Operator):
         if "surface_material" in [mat.name for mat in bpy.data.materials]:
             surf_mat = bpy.data.materials["surface_material"]
         else:
-            surf_mat = bpy.data.materials.new("surface_material")
-            # surf_mat.diffuse_color = (0.67, 0.0, 1.0, 0.75)
-            surf_mat.use_nodes = True
-            surf_mat.blend_method = 'BLEND'
-            BSDF_node = surf_mat.node_tree.nodes["Principled BSDF"]
-            BSDF_node.inputs["Base Color"].default_value = (0.67, 0.0, 1.0, 1)
-            BSDF_node.inputs["Alpha"].default_value = 0.75
+            this_color = (0.67, 0.0, 1.0, 1)
+            this_alpha = 0.75
+            surf_mat = add_unified_material(this_color, this_alpha, this_mat_name = "surface_material")
 
         # Select the new mesh object
         bpy.ops.object.mode_set(mode='OBJECT')
