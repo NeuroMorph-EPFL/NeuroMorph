@@ -1135,7 +1135,7 @@ class NEUROMORPH_OT_add_transparency(bpy.types.Operator):
                         diffuse_node = this_mat.node_tree.nodes["Diffuse BSDF"]
                         this_color = diffuse_node.inputs["Color"].default_value
                         this_mat_name = this_mat.name
-                    elif this_mat.diffuse_color is not None:
+                    elif this_mat is not None and this_mat.diffuse_color is not None:
                         # Diffuse color exists, but no nodes
                         this_color = this_mat.diffuse_color
                         this_mat_name = this_mat.name
@@ -1146,25 +1146,8 @@ class NEUROMORPH_OT_add_transparency(bpy.types.Operator):
                     this_color = this_mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value
                     this_mat_name = this_mat.name
 
-                # # For Solid display
-                # this_color_transparent = list(this_color)
-                # this_color_transparent[3] = 0.5
-                # this_mat.diffuse_color = this_color_transparent
-
-                # # For Material Preview display (preferred, as image textures are visible here)
-                # this_mat.blend_method = 'BLEND'
-                # BSDF_node = this_mat.node_tree.nodes["Principled BSDF"]
-                # BSDF_node.inputs["Base Color"].default_value = this_color
-                # BSDF_node.inputs["Alpha"].default_value = 0.5  # this alpha doesn't make object opaque when =1
-
-                # # Attach the BSDF node to the diffuse color, so they change together
-                # # And so alpha progresses from invisible to opaque in all modes
-                # attach_color_driver(this_mat, 0)
-                # attach_color_driver(this_mat, 1)
-                # attach_color_driver(this_mat, 2)
-                # attach_color_driver(this_mat, 3)
-
-                add_unified_material(this_color, 0.5, this_mat, this_mat_name)
+                this_mat = add_unified_material(this_color, 0.5, this_mat, this_mat_name)
+                obj.active_material = this_mat
 
         return {'FINISHED'}
 
@@ -1184,10 +1167,10 @@ def add_unified_material(this_color, this_alpha, this_mat = None, this_mat_name 
 
     # For Material Preview display (preferred, as image textures are visible here)
     this_mat.use_nodes = True
-    this_mat.blend_method = 'BLEND'
     BSDF_node = this_mat.node_tree.nodes["Principled BSDF"]
     BSDF_node.inputs["Base Color"].default_value = this_color
     BSDF_node.inputs["Alpha"].default_value = this_alpha
+    this_mat.blend_method = 'BLEND'
 
     # Attach the BSDF node to the diffuse color, so they change together
     # And so alpha progresses from invisible to opaque in all modes
