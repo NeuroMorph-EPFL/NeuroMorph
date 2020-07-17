@@ -109,7 +109,7 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
 
 
         # ----------------------------
-        layout.label(text = "---------- Mark Points on Image (Click) ----------")
+        layout.label(text = "---------- Mark Points on Image ----------")
 
         row = layout.row()
         row.prop(context.scene, 'marker_prefix')
@@ -128,7 +128,7 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
 
         
         # ----------------------------
-        layout.label(text = "---------- Mark Region on Image (Draw) ----------")
+        layout.label(text = "---------- Draw Curves on Image ----------")
 
         row = layout.row()
         row.prop(context.scene, 'surface_prefix')
@@ -137,13 +137,20 @@ class NEUROMORPH_PT_StackNotationPanel(bpy.types.Panel):
         colL = split.column()
         colR = split.column()
         colL.operator("neuromorph.draw_curve", text='Draw Object Outline', icon='GREASEPENCIL')
-        colR.operator("neuromorph.erase_curve", text='Erase', icon="GPBRUSH_ERASE_HARD")
-        
-        split = layout.row().split(factor=0.6, align=True)
-        colL = split.column()
-        colR = split.column()
-        colL.prop(context.scene , "convert_curve_on_release")
         colR.operator("neuromorph.convert_curve", text='Use This Curve', icon="OUTLINER_OB_CURVE")
+
+        # # Don't allow erasing or drawing multiple curves, the resulting Blender 2.8 grease pencil  
+        # # data structure gets complicated, and nobody uses these options anyway
+        # split = layout.row().split(factor=0.6, align=True)
+        # colL = split.column()
+        # colR = split.column()
+        # colL.operator("neuromorph.draw_curve", text='Draw Object Outline', icon='GREASEPENCIL')
+        # colR.operator("neuromorph.erase_curve", text='Erase', icon="GPBRUSH_ERASE_HARD")
+        # split = layout.row().split(factor=0.6, align=True)
+        # colL = split.column()
+        # colR = split.column()
+        # colL.prop(context.scene , "convert_curve_on_release")
+        # colR.operator("neuromorph.convert_curve", text='Use This Curve', icon="OUTLINER_OB_CURVE")
 
         split = layout.row().split(factor=0.6, align=True)
         colL = split.column()
@@ -254,15 +261,16 @@ class NEUROMORPH_OT_modal_operator(bpy.types.Operator):
 
 
         ### Grease pencil mode functionality
-        in_gp_mode = 'GPencil' in [obj.name for obj in bpy.data.objects] and \
-            bpy.data.objects['GPencil'].data.layers is not None and \
-            len(bpy.data.objects['GPencil'].data.layers[0].frames[0].strokes) > 0
+        in_gp_mode = 'GPencil_NMdraw' in [obj.name for obj in bpy.data.objects] and \
+            bpy.data.objects['GPencil_NMdraw'].data.layers is not None and \
+            len(bpy.data.objects['GPencil_NMdraw'].data.layers[0].frames[0].strokes) > 0
 
         if in_gp_mode:
             # Convert grease pencil curve on any action, if convert curve on release is checked
             if bpy.context.scene.convert_curve_on_release: 
                 bpy.ops.ed.undo_push(message="convert curve")
                 convert_curve_fcn(self, orientation)  # could also pass im_plane
+                select_obj(im_plane)
 
             
         ### Exit modal mode
@@ -1362,7 +1370,7 @@ class NEUROMORPH_OT_draw_curve(bpy.types.Operator):
 
 def get_drawing_material():
     # Define a new grease pencil material, if it does not already exist
-    drawing_mat_name = "drawing_material"
+    drawing_mat_name = "drawing_material_NM"
     if drawing_mat_name in bpy.data.materials.keys():
         gp_mat = bpy.data.materials[drawing_mat_name]
     else:
@@ -1380,10 +1388,22 @@ def get_drawing_material():
 
 
 def draw_curve_fcn(self):
+
+    # If grease pencil exists, but has no strokes (probably because code crashed),
+    # delete the GP object
+    if ('GPencil_NMdraw' in [obj.name for obj in bpy.data.objects] and \
+            bpy.data.objects['GPencil_NMdraw'].data.layers is not None and \
+            len(bpy.data.objects['GPencil_NMdraw'].data.layers[0].frames[0].strokes) == 0):
+
+        gp_obj = bpy.data.objects['GPencil_NMdraw']
+        select_obj(gp_obj)
+        bpy.ops.object.delete()
+        del gp_obj
+
     # If not already in grease pencil mode, set up the grease pencil
-    if not ('GPencil' in [obj.name for obj in bpy.data.objects] and \
-            bpy.data.objects['GPencil'].data.layers is not None and \
-            len(bpy.data.objects['GPencil'].data.layers[0].frames[0].strokes) > 0):
+    if not ('GPencil_NMdraw' in [obj.name for obj in bpy.data.objects] and \
+            bpy.data.objects['GPencil_NMdraw'].data.layers is not None and \
+            len(bpy.data.objects['GPencil_NMdraw'].data.layers[0].frames[0].strokes) > 0):
         # Get the colored drawing material, to better see the stroke
         drawing_mat = get_drawing_material()
         # Add a new grease pencil blank
@@ -1392,6 +1412,7 @@ def draw_curve_fcn(self):
         bpy.ops.object.mode_set(mode='PAINT_GPENCIL')
         # Set the material
         gp_obj = bpy.data.objects['GPencil']
+        gp_obj.name = "GPencil_NMdraw"
         gp_obj.data.materials.append(drawing_mat)
         gp_obj.active_material = drawing_mat
 
@@ -1427,19 +1448,61 @@ class NEUROMORPH_OT_convert_curve(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
-        imageName = bpy.context.object.name  # Assume plane is active object
-        # if imageName[0:5] != "Image":
-        #     self.report({'INFO'},"Image plane of this curve must be active")
-        #     return {'CANCELLED'}
-        orientation = imageName[-1]
-        convert_curve_fcn(self, orientation)
+        # imageName = bpy.context.object.name  # Assume plane is active object
+        # # if imageName[0:5] != "Image":
+        # #     self.report({'INFO'},"Image plane of this curve must be active")
+        # #     return {'CANCELLED'}
+        # orientation = imageName[-1]
+
+        if 'GPencil_NMdraw' in [obj.name for obj in bpy.data.objects] and \
+            bpy.data.objects['GPencil_NMdraw'].data.layers is not None and \
+            len(bpy.data.objects['GPencil_NMdraw'].data.layers[0].frames[0].strokes) > 0:
+
+            # Determine orientation of the plane
+            gp_obj = bpy.data.objects['GPencil_NMdraw']
+            pts_list = gp_obj.data.layers[0].frames[0].strokes[0].points
+            orientation = get_orientation_from_pts(pts_list)
+
+            # Call function
+            convert_curve_fcn(self, orientation)
+
         return {'FINISHED'}
 
 
+def get_orientation_from_pts(pts_list):
+# For list of 3D points, determine orientation of the plane they were drawn on 
+# by finding the coordinate where most of the values are the same, by first 
+# removing possible outliers (if the curve was drawn over another curve, single 
+# points may be on different planes), then taking the minimum standard deviation 
+# of the remaining points.
+    pts_co = [pt.co for pt in pts_list]
+
+    print(pts_list)
+    print(pts_co)
+
+    max_outlier_pctg = 0.1                   # Arbitrary, % of potentially outlier points
+    n_rem = math.ceil(max_outlier_pctg * len(pts_co))     # N points to remove
+    stds = []
+    for ind in range(0,3):
+        coords = [pt[ind] for pt in pts_co]  # Get all x/y/z values
+        coords.sort()
+        mid_coords = coords[n_rem:-n_rem]    # Remove outliers on either end
+        std_coord = np.std(mid_coords)
+        stds.append(std_coord)
+    ori_ind = np.argmin(stds)
+    orientation = ["X", "Y", "Z"][ori_ind]
+
+    print(stds)
+    print(orientation)
+
+    return(orientation)
+
+
+
 def convert_curve_fcn(self, orientation):
-    if 'GPencil' in [obj.name for obj in bpy.data.objects] and \
-        bpy.data.objects['GPencil'].data.layers is not None and \
-        len(bpy.data.objects['GPencil'].data.layers[0].frames[0].strokes) > 0:
+    if 'GPencil_NMdraw' in [obj.name for obj in bpy.data.objects] and \
+        bpy.data.objects['GPencil_NMdraw'].data.layers is not None and \
+        len(bpy.data.objects['GPencil_NMdraw'].data.layers[0].frames[0].strokes) > 0:
 
         # Convert grease pencil to curve
         bpy.ops.gpencil.convert(type = 'CURVE')
@@ -1458,7 +1521,7 @@ def convert_curve_fcn(self, orientation):
 
         # Delete all grease pencil objects
         bpy.ops.object.mode_set(mode='OBJECT')
-        gp_obj = bpy.data.objects['GPencil']
+        gp_obj = bpy.data.objects['GPencil_NMdraw']
         bpy.ops.object.select_all(action='DESELECT')
         gp_obj.select_set(True)
         bpy.ops.object.delete()
@@ -1468,8 +1531,11 @@ def convert_curve_fcn(self, orientation):
         crv_obj.select_set(True)
         bpy.context.view_layer.objects.active = crv_obj
 
-        # # Remove any errors that happened when converting curve
-        # clean_converted_curve(orientation)
+        # Remove any errors that happened when converting curve
+        clean_converted_curve(orientation)
+
+        # Reorder vertices on curve
+        order_verts(crv_obj)
 
         # Downsample a bit, for speed (do this only at the end of this function!)
         bpy.ops.object.mode_set(mode = 'EDIT')
@@ -1482,13 +1548,10 @@ def convert_curve_fcn(self, orientation):
 
 
 def clean_converted_curve(orientation): 
-# This doesn't seem to catch the bad cases right now.
-# But the curve conversion seems much more stable than in 2.79, 
-# so maybe it's not necessary.
-
     # Remove points with incorrect z-value (where z is the orientation, for any orientation).
-    # This was a bigger problem in Blender 2.7, when drawing over another curve would
-    # project a single point to height of that curve
+    # Eg when drawing over another curve projects a single point to height of that curve
+    if orientation not in ["X", "Y", "Z"]:
+        print("invalid orientation: " + orientation)
     if orientation == "Z":
         N = len(bpy.context.scene.imagefilepaths_z)
         delta_z = bpy.context.scene.z_side / N / 2
@@ -1515,19 +1578,17 @@ def clean_converted_curve(orientation):
     for ind, v in enumerate(bpy.context.active_object.data.vertices):
         this_z = v.co[z_ind]
         if (abs(this_z - z_med) > z_err):
-            v.select_set(True)
+            v.select = True
     bpy.ops.object.mode_set(mode = 'EDIT')
     bpy.ops.mesh.dissolve_verts()  # deletes verts, connects verts not deleted across hole of deleted verts
     bpy.ops.object.mode_set(mode='OBJECT')
 
-
-    # print("nverts before fork and loop vertex removal: ", len(bpy.context.active_object.data.vertices))
     print("nverts before fork and loop vertex removal: ", len(bpy.context.active_object.data.vertices))
 
     # Remove extraneous vertices that sometimes appear in the curve conversion (forks and loops)
     nverts = len(bpy.context.active_object.data.vertices)
     if bpy.context.scene.closed_curve:
-        # divide curve into three sections, remove bad verts from each section separately
+        # Divide curve into three sections, remove bad verts from each section separately
         # thereby forcing the shortest path selection to run through the entire closed curve
         nsub = math.floor(nverts/3)
         remove_extraneous_verts(bpy.context.active_object, 0, nsub)
@@ -1555,7 +1616,7 @@ def clean_converted_curve(orientation):
             bpy.ops.object.mode_set(mode = 'EDIT')
             bpy.ops.mesh.select_all(action='DESELECT')
             bpy.ops.object.mode_set(mode = 'OBJECT')
-            bpy.context.active_object.data.edges[ind].select_set(True)
+            bpy.context.active_object.data.edges[ind].select = True
             bpy.ops.object.mode_set(mode = 'EDIT')
             for sub_ind in range(ndivs):
                 print("subdivide", ind, sub_ind)
@@ -1743,6 +1804,9 @@ class NEUROMORPH_OT_curves_to_mesh(bpy.types.Operator):
         if crvs_layers == []:
             return {'FINISHED'}
 
+
+        print(crvs_layers)
+
         print("before group_curves()")
 
         # Group the curves into sets that can be processed together
@@ -1858,37 +1922,30 @@ def sort_curves(self):
     # Extract curves
     objs = bpy.context.scene.objects
     crvs = []
-    for o in objs:
-        if o.select_get():
-            if hasattr(o, 'data') and hasattr(o.data, 'vertices'):
-                crvs.append(o)
+    for ob in objs:
+        if ob.select_get():
+            if hasattr(ob, 'data') and hasattr(ob.data, 'vertices'):
+                # order_verts(ob)
+                crvs.append(ob)
             else:
-                print(o.name)
+                print(ob.name)
                 self.report({'INFO'},"Non-mesh objects cannot be combined into surface")
                 return [], []
 
     print("there are appropriate curves to sort")
 
-    # Determine orientation from first curve
-    # If diff_z < delta_z, take curves as coming from the same layer
-    xs = [pt.co[0] for pt in crvs[0].data.vertices]
-    ys = [pt.co[1] for pt in crvs[0].data.vertices]
-    zs = [pt.co[2] for pt in crvs[0].data.vertices]
-    sd_x = np.std(xs)
-    sd_y = np.std(ys)
-    sd_z = np.std(zs)
-    if min(sd_x, sd_y, sd_z) == sd_x:
-        orientation = "X"
+    # # Determine orientation from first curve
+    # # If diff_z < delta_z, take curves as coming from the same layer
+    orientation = get_orientation_from_pts(crvs[0].data.vertices)
+    if orientation == "X":
         z_ind = 0
         N = len(bpy.context.scene.imagefilepaths_x)
         delta_z = bpy.context.scene.x_side / N / 2
-    elif min(sd_x, sd_y, sd_z) == sd_y:
-        orientation = "Y"
+    elif orientation == "Y":
         z_ind = 1
         N = len(bpy.context.scene.imagefilepaths_y)
         delta_z = bpy.context.scene.y_side / N / 2
-    elif min(sd_x, sd_y, sd_z) == sd_z:
-        orientation = "Z"
+    elif orientation == "Z":
         z_ind = 2
         N = len(bpy.context.scene.imagefilepaths_z)
         delta_z = bpy.context.scene.z_side / N / 2
@@ -2809,6 +2866,17 @@ class NEUROMORPH_OT_export_seg_lengths(bpy.types.Operator, ExportHelper):
         return {'FINISHED'}
 
 
+def order_verts(crv_obj):
+# Reorder indices to be ordered 0..N along curve
+# Assumes crv_obj is a 1D set of connected edges
+    select_obj(crv_obj)
+    bpy.ops.object.convert(target='CURVE')
+    bpy.ops.object.convert(target='MESH')
+
+def select_obj(ob):
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.view_layer.objects.active = ob
+    ob.select_set(True)  # necessary
 
 
 
