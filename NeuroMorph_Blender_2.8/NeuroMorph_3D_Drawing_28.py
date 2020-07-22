@@ -1163,7 +1163,8 @@ class NEUROMORPH_OT_add_transparency(bpy.types.Operator):
 # Create material whose diffufe color and alpha in Solid display and 
 # BSDF node color and alpha in Material Preview display are linked
 def add_unified_material(this_color, this_alpha, this_mat = None, this_mat_name = "new material"):
-    if this_mat is None:
+    # if this_mat is None:
+    if this_mat is None or this_mat.node_tree is None or "Principled BSDF" not in this_mat.node_tree.nodes:
         this_mat = bpy.data.materials.new(this_mat_name)
         this_mat.use_nodes = True
         this_mat.name = this_mat_name
