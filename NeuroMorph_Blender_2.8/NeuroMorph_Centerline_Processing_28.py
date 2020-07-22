@@ -209,7 +209,7 @@ class NEUROMORPH_OT_approx_centerline(bpy.types.Operator):
 
         # Predefine some variables
         small_step = .000001  # something small
-        ninds_initial_bdry = round(bpy.context.scene.npts_centerline / 4)
+        ninds_initial_bdry = round(bpy.context.scene.npts_centerline / 2)  # 2 or 4
         # ninds_initial_bdry = 50  # if cross sections are too close together, might intersect, these are removed later
         # ninds_initial_bdry = 120
 
@@ -217,6 +217,8 @@ class NEUROMORPH_OT_approx_centerline(bpy.types.Operator):
         # Sample indices
         nverts = len(crv.data.vertices)
         delta = math.floor(nverts / (ninds_initial_bdry - 1))
+        if delta == 0:  # crv is very short, must use all the points
+            delta = 1
         inds = list(range(2, nverts, delta))
         # inds.append(nverts-3)  # why is this here??
 
@@ -384,10 +386,10 @@ class NEUROMORPH_OT_approx_centerline(bpy.types.Operator):
                 centers_new.append(mid_ctr_adjusted)
 
         # Append last point
-        centers_new.append(centers[-1])  # todo: this adds the boundary point not the centerpoint
+        centers_new.append(centers[-1])
         centers = centers_new
 
-        centerline_approx = add_curve_to_scene(mesh, "centerline_approx", centers, edges)
+        centerline_approx = add_curve_to_scene(mesh, "centerline approx", centers, edges)
 
         if len(centerline_approx.data.vertices) < 3:
             infostr = "Centerline too short, try increasing the number of centerline points (is divided by 4 here)"
@@ -401,18 +403,9 @@ class NEUROMORPH_OT_approx_centerline(bpy.types.Operator):
 
         # x = break_code
 
-        ### Detect if/where centerline exits the mesh
-        # All vertices should now be inside the mesh, loop through edges to check for
-        # when edge intersects mesh, and warn user; For now, add red ball near 
-        # intersection location, working on algorithm to move these points automatically
-        print("Detecting edge-mesh intersections")
-        mat_edge_intersect = bpy.data.materials.new("edge_intersect_material")
-        mat_edge_intersect.diffuse_color = (1.0,0.0,0.0,1.0)
-        verts = centerline_approx.data.vertices
-        n_edge_intersections = check_edge_internal(verts, mesh, mat_edge_intersect)
-        if n_edge_intersections > 0:
-            infostr = "There are still " + str(n_edge_intersections) + " centerline edges that intersect with the mesh!  See red balls and adjust by hand."
-            self.report({'INFO'}, infostr)
+        # All vertices should now be inside the mesh,
+        # Now loop through edges to check for edge-mesh intersections
+        n_edge_intersections = detect_edge_mesh_intersections(centerline_approx, mesh, self)
 
         # Delete crv and cross sections
         for cross_sec in crv.children:
@@ -427,15 +420,14 @@ class NEUROMORPH_OT_approx_centerline(bpy.types.Operator):
         # user should first adjust curve for intersections, then click button
         if n_edge_intersections == 0:
             # Add more centerline points and smooth
-            smooth_and_subdivide_centerline(centerline_approx)
+            smooth_and_subdivide_centerline(centerline_approx, mesh)
 
 
         # Update relevant variables in scene
         update_scene_for_approx_centerline(centerline_approx)
 
-        # Prepare for return
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='SELECT')  # For visibility
+        # Make centerline child of mesh
+        centerline_approx.parent = mesh
 
         return {'FINISHED'}
 
@@ -644,6 +636,21 @@ def get_total_length_of_edges(ob):
 
 def check_edge_internal(verts, mesh, mat_edge_intersect):
 # Check if edges intersect mesh, assumes all vertices already inside mesh,              
+    
+    # Remove markers from previous run, if any exist
+    intersection_parent_name = "Centerline Intersection Markers"
+    if intersection_parent_name in bpy.context.scene.objects:
+        intersection_parent = bpy.context.scene.objects[intersection_parent_name]
+    else:
+        intersection_parent = bpy.data.objects.new(intersection_parent_name, None)
+        bpy.context.scene.collection.objects.link(intersection_parent)
+        update_collection_of_new_obj(intersection_parent, mesh)
+    old_balls = [ob for ob in bpy.context.scene.objects if ob.parent == intersection_parent]
+    for ob in old_balls:
+        select_obj(ob)
+        bpy.ops.object.delete()
+
+    # Loop over all edges in centerline (defined by verts)
     n_edge_intersections = 0
     for ii in range(0, len(verts)-1):  # process edge [vi, vi+1]
         v0_co = verts[ii].co
@@ -652,37 +659,29 @@ def check_edge_internal(verts, mesh, mat_edge_intersect):
         direction = v1_co - v0_co
         dist = direction.length
 
-        # remove this
-        print(ii, ii+1)
-        print(v0_co, v1_co)
-        print(direction)
-        print(dist)
-
+        # # remove this
+        # print(ii, ii+1)
+        # print(v0_co, v1_co)
+        # print(direction)
+        # print(dist)
 
         direction = direction / dist
-        result, loc, face_normal, face_idx = mesh.ray_cast(v0_co, direction, distance=dist)  # loc = edge-mesh intersection
+        result, int_loc, face_normal, face_idx = mesh.ray_cast(v0_co, direction, distance=dist)  # int_loc = edge-mesh intersection
 
         if result == True:  # Edge intersects mesh
-            print("Edge intersects mesh at edge", str(ii), ", currently no further processing")
+            print("Centerline edge intersects mesh at edge", str(ii), ", currently no further processing")
             n_edge_intersections += 1
 
             # Add sphere marker at edge to help user
-            ave_loc = (v0_co + v1_co)/2
-            bpy.ops.mesh.primitive_uv_sphere_add(radius = .05, location = ave_loc)
+            # ave_loc = (v0_co + v1_co)/2  # Place ball at location of intersection instead
+            bpy.ops.mesh.primitive_uv_sphere_add(radius = .05, location = int_loc)
             marking_sphere = bpy.context.object
             marking_sphere.active_material = mat_edge_intersect
             marking_sphere.show_transparent = True
-            marking_sphere.name = "Edge Intersects Mesh Near Here"
+            marking_sphere.name = "Centerline Intersects Mesh Near Here"
             update_collection_of_new_obj(marking_sphere, mesh)
 
             # Collect intersection markers as children of an empty object
-            intersection_parent_name = "Edge Intersections Parent"
-            if intersection_parent_name in bpy.context.scene.objects:
-                intersection_parent = bpy.context.scene.objects[intersection_parent_name]
-            else:
-                intersection_parent = bpy.data.objects.new(intersection_parent_name, None)
-                bpy.context.scene.collection.objects.link(intersection_parent)
-                update_collection_of_new_obj(intersection_parent, mesh)
             marking_sphere.parent = intersection_parent
             activate_an_object(marking_sphere)
 
@@ -758,19 +757,26 @@ class NEUROMORPH_OT_update_approx_centerline(bpy.types.Operator):
     bl_label = "After you have adjusted the approximate centerline by hand, add more points and smooth"
 
     def execute(self, context):
-        bpy.ops.object.mode_set(mode='OBJECT')
-        centerline_approx = bpy.context.object
+        # bpy.ops.object.mode_set(mode='OBJECT')
+        # centerline_approx = bpy.context.object
+        err, objs = assign_selected_objects(self)
+        if err < 0:
+            return {'FINISHED'}
+        centerline, meshobj = objs
 
         # Add more centerline points and smooth
-        smooth_and_subdivide_centerline(centerline_approx)
+        smooth_and_subdivide_centerline(centerline, meshobj)
+
+        # Detect and mark if centerline intersects mesh
+        n_edge_intersections = detect_edge_mesh_intersections(centerline, meshobj, self)
 
         # Update relevant variables in scene
-        update_scene_for_approx_centerline(centerline_approx)
+        update_scene_for_approx_centerline(centerline)
 
         return {'FINISHED'}
 
 
-def smooth_and_subdivide_centerline(centerline_approx):
+def smooth_and_subdivide_centerline(centerline_approx, meshobj):
     select_obj(centerline_approx)
     while len(centerline_approx.data.vertices) < .75 * bpy.context.scene.npts_centerline:
         bpy.ops.object.mode_set(mode='EDIT')
@@ -781,11 +787,63 @@ def smooth_and_subdivide_centerline(centerline_approx):
         
     # Update number of centerline points
     bpy.context.scene.npts_centerline = len(centerline_approx.data.vertices)
+
+    # Order the vertices along the curve
+    order_verts(centerline_approx)
+
+    # Check for and remove any duplicate boundary vertices (can result from above processing)
+    verts = centerline_approx.data.vertices
+    if verts[0].co == verts[1].co:
+        delete_vertex(centerline_approx, 0)
+    if verts[-1].co == verts[-2].co:
+        delete_vertex(centerline_approx, -1)
+
+
+
+def delete_vertex(obj, ind):
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='DESELECT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    obj.data.vertices[ind].select = True
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.delete(type='VERT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def detect_edge_mesh_intersections(centerline_approx, mesh, self):
+    # Detect if/where centerline exits the mesh
+    # Loop through edges to check for when edge intersects mesh, and warn user; 
+    # For now, add red ball near intersection location, 
+    # Ideally would like to have an algorithm to move these points automatically.
+    print("Detecting edge-mesh intersections")
+    mat_edge_intersect = [mat for mat in bpy.data.materials if mat.name == "edge_intersect_material"]
+    if len(mat_edge_intersect) == 0:
+        mat_edge_intersect = bpy.data.materials.new("edge_intersect_material")
+        mat_edge_intersect.diffuse_color = (1.0,0.0,0.0,1.0)
+    else:
+        mat_edge_intersect = mat_edge_intersect[0]
+
+    # Important to order verts before check_edge_internal(), as it processes vertices in order
+    order_verts(centerline_approx)
+
+    verts = centerline_approx.data.vertices
+    n_edge_intersections = check_edge_internal(verts, mesh, mat_edge_intersect)
+    if n_edge_intersections > 0:
+        infostr = "There are still " + str(n_edge_intersections) + " centerline edges that intersect with the mesh!  See red balls and adjust by hand."
+        self.report({'INFO'}, infostr)
+    return(n_edge_intersections)
+
     
 
 def update_scene_for_approx_centerline(centerline_approx):
     # Reorder indices to be linear down curve
     order_verts(centerline_approx)
+
+    # Prepare for return
+    select_obj(centerline_approx)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')  # For visibility
+    bpy.ops.object.mode_set(mode='OBJECT')
 
     # Instantiate data containers
     centerline_approx["centerline_min_radii"] = []
@@ -1346,7 +1404,8 @@ def get_cross_section(centerline, ind, meshobj, kd_mesh, self):
             thresh = update_thresh(thresh)
 
             if cross_section_check_passed(cross_section, cross_section_backup, nverts_not_enough) or thresh > 1e-2:
-                if thresh < 1e-2:
+                print("final thresh = ", str(thresh))
+                if thresh <= 1e-2:
                     print("test passed with thresh =", str(thresh))
                     delete_backup(cross_section, cross_section_backup)
                 else:
