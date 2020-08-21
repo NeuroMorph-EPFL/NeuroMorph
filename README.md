@@ -14,7 +14,7 @@ For more information, please visit the [NeuroMorph project website](http://neuro
 Detailed instructions for each tool.
 
 [Video Tutorial](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
-Not up-to-date, but still helpful for the measurement and image stack interaction tools.  
+Quite legacy at this point, but still helpful for the measurement and image stack interaction tools.  
 <br>
 
 
