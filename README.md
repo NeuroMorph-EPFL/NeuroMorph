@@ -29,4 +29,4 @@ Example meshes, objects, and image files for use with the add-ons can be found i
 # Contact
 <anne.jorstad@epfl.ch>, <graham.knott@epfl.ch>  
 
-[![Analytics](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph-main?pixel)](https://github.com/NeuroMorph-EPFL/NeuroMorph)
+[![](https://ga-beacon.appspot.com/UA-99596205-1/NeuroMorph?pixel)](https://github.com/NeuroMorph-EPFL/NeuroMorph)
