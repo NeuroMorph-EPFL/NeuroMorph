@@ -1,6 +1,7 @@
 # The NeuroMorph Analysis and Visualization Toolkit
 
-NeuroMorph is a toolset designed to import, analyze, and visualize mesh models in [Blender](https://www.blender.org/). It has been developed specifically for the morphological analysis of 3D objects derived from serial electron microscopy images of brain tissue, but much of its functionality can be applied to any 3D mesh.  
+NeuroMorph is a toolset designed to import, analyze, and visualize mesh models in [Blender](https://www.blender.org/). It has been developed specifically for the morphological analysis of 3D objects derived from serial electron microscopy images of brain tissue, but much of its functionality can be applied to any 3D mesh.    
+
 This GitHub site provides all NeuroMorph software, datasets, and documentation.  
 
 For more information, please visit the [NeuroMorph project website](http://neuromorph.epfl.ch).
@@ -19,15 +20,9 @@ Not up-to-date, but still helpful for the measurement and image stack interactio
 
 # Download
 
-Download the full repository using the green download button above.  Or Download individual tools from the following folders:  
-* [NeuroMorph_Measurement_Tools](NeuroMorph_Measurement_Tools)
-* [NeuroMorph_3D_Drawing](NeuroMorph_3D_Drawing)
-* [NeuroMorph_CenterLines_CrossSections](NeuroMorph_CenterLines_CrossSections)
-* [NeuroMorph_Proximity_Analysis](NeuroMorph_Proximity_Analysis)
-* [NeuroMorph_Other_Tools](NeuroMorph_Other_Tools)
+Download a .zip of the full software repository via the green "Code" button above.  Or download the .py files of individual tools from their respective folders.
 
-Download example meshes, objects, and image files for use with the add-ons:
-* [NeuroMorph_Datasets](NeuroMorph_Datasets)
+Example meshes, objects, and image files for use with the add-ons can be found in the [NeuroMorph_Datasets](NeuroMorph_Datasets) folder.
 <br><br>
 
 
