@@ -1199,7 +1199,7 @@ class NEUROMORPH_OT_write_selected_data(bpy.types.Operator, ExportHelper):
     def execute(self, context):
         to_write = set()
         for obj in bpy.data.objects:
-            if obj.select:
+            if obj.select_get():
                 add_obj_and_children_to_set(obj, to_write)
 
         filepath = self.filepath
