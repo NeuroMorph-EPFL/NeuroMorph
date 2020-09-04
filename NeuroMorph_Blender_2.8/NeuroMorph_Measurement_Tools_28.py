@@ -723,7 +723,7 @@ def remove_false_bdry_edges(bdry_edges):
 
 
 # called by Create_Submesh and Create_Closed_Submesh
-def create_submesh_code():
+def create_submesh():
     bpy.ops.object.mode_set(mode='OBJECT')
     obj_ptr = bpy.context.active_object
     if obj_ptr.type=="MESH":
@@ -806,47 +806,47 @@ class NEUROMORPH_OT_create_submesh(bpy.types.Operator):
     
     def execute(self, context):
         # construct open submesh
-        #if create_submesh_code()!=0:
+        #if create_submesh()!=0:
 
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
         bpy.ops.object.mode_set(mode='EDIT')
             
-        (new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces) = create_submesh_code()
+        (new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces) = create_submesh()
         if new_obj is not None:
         # make the new object a child of the original mesh
         # this changes the location of the object, so use the ChildOf relation (for bones, not parent)
         # to undo transform from .parent operation (http://www.foro3d.com/archive/index.php/t-102869.html)
-          new_obj.parent = obj_ptr
-          bpy.context.view_layer.objects.active = new_obj
-          #bpy.ops.object.constraint_add(type='CHILD_OF')  # set new object to move with parent object, Blender vsn <= 2.66
-          #new_obj.constraints['Child Of'].target = obj_ptr
-          ##bpy.ops.constraint.childof_set_inverse(constraint=new_obj.constraints['Child Of'].name, owner='OBJECT')
-          #bpy.ops.object.mode_set(mode='EDIT')
-          #bpy.ops.object.mode_set(mode='OBJECT')
+            new_obj.parent = obj_ptr
+            bpy.context.view_layer.objects.active = new_obj
+            #bpy.ops.object.constraint_add(type='CHILD_OF')  # set new object to move with parent object, Blender vsn <= 2.66
+            #new_obj.constraints['Child Of'].target = obj_ptr
+            ##bpy.ops.constraint.childof_set_inverse(constraint=new_obj.constraints['Child Of'].name, owner='OBJECT')
+            #bpy.ops.object.mode_set(mode='EDIT')
+            #bpy.ops.object.mode_set(mode='OBJECT')
 
-          # determine if object is open or closed
-          bpy.ops.object.mode_set(mode='EDIT')
-          bpy.ops.mesh.region_to_loop()
-          bpy.ops.object.mode_set(mode='OBJECT')
-          bdry_edges = [edge for edge in bpy.context.active_object.data.edges if edge.select]
-          n_bdry_edges = len(bdry_edges)
-          if n_bdry_edges > 0:
-              new_obj.is_open = 1
-          else:
-              new_obj.is_open = 0
-              new_obj.has_vol = 1
+            # determine if object is open or closed
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.region_to_loop()
+            bpy.ops.object.mode_set(mode='OBJECT')
+            bdry_edges = [edge for edge in bpy.context.active_object.data.edges if edge.select]
+            n_bdry_edges = len(bdry_edges)
+            if n_bdry_edges > 0:
+                new_obj.is_open = True
+            else:
+                new_obj.is_open = False
+                new_obj.has_vol = True
 
-        # return with all vertices highlighted in edit mode
-        # return input object as active
-          sel_inds2 = [ind for ind in range(len(new_obj.data.vertices[:]))]
-          make_original_active(new_obj, sel_inds2)
-        
-          make_original_active(obj_ptr, sel_inds)
-        
-          # uncomment the following
-          new_obj.hide_set(True)
-          # doing anything here gives a context error
+            # return with all vertices highlighted in edit mode
+            # return input object as active
+            sel_inds2 = [ind for ind in range(len(new_obj.data.vertices[:]))]
+            make_original_active(new_obj, sel_inds2)
+
+            make_original_active(obj_ptr, sel_inds)
+
+            # uncomment the following
+            new_obj.hide_set(True)
+            # doing anything here gives a context error
         
         return{'FINISHED'}
 
@@ -869,28 +869,29 @@ class NEUROMORPH_OT_create_closed_submesh(bpy.types.Operator):
         bpy.ops.object.mode_set(mode='EDIT')
 
         # construct open submesh for use in calculations
-        (new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces) = create_submesh_code()
+        (new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces) = create_submesh()
         if new_obj is not None:
             # create a new closed mesh object and link it to the scene
-            close_and_add_mesh(new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces)
+            new_obj2 = close_and_add_mesh(new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces)
+            bpy.ops.object.mode_set(mode='OBJECT')
 
         return{'FINISHED'}
 
 
 # this is a separate function so that it can also be called by Create_Whole_Surfaces()
 def close_and_add_mesh(new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces):
-      selected_verts2 = list(selected_verts)
-      selected_faces2 = list(selected_faces)
+    selected_verts2 = list(selected_verts)
+    selected_faces2 = list(selected_faces)
 
     # volume calculation needs a closed mesh; edit object to close open end if it exists
     # by adding a point in the middle of an opening and adding faces connecting to that point
-      bpy.ops.object.mode_set(mode='EDIT')
-      bpy.ops.mesh.region_to_loop()
-      bpy.ops.object.mode_set(mode='OBJECT')
-      bdry_edges = [edge for edge in bpy.context.active_object.data.edges if edge.select]
-      bdry_edges = remove_false_bdry_edges(bdry_edges)
-      n_bdry_edges = len(bdry_edges)
-      if n_bdry_edges > 0:
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.region_to_loop()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bdry_edges = [edge for edge in bpy.context.active_object.data.edges if edge.select]
+    bdry_edges = remove_false_bdry_edges(bdry_edges)
+    n_bdry_edges = len(bdry_edges)
+    if n_bdry_edges > 0:
         bdry_edge_comps = get_connected_components(bdry_edges)
         ncomps = len(bdry_edge_comps)
         for c in range(0,ncomps):    # fill in each connected bdry separately
@@ -913,22 +914,22 @@ def close_and_add_mesh(new_obj, new_name, obj_ptr, sel_inds, selected_verts, sel
                 selected_faces2.append(face_new_inds)
 
     # add new mesh to scene
-      new_name_vol = new_name + "_vol"
-      new_obj2 = add_new_mesh_to_scene(obj_ptr, new_name_vol, selected_verts2, [], selected_faces2)
+    new_name_vol = new_name + "_vol"
+    new_obj2 = add_new_mesh_to_scene(obj_ptr, new_name_vol, selected_verts2, [], selected_faces2)
 
     # make new solid object the active object, and convert to triangles
-      bpy.ops.object.mode_set(mode='OBJECT')
-      bpy.context.view_layer.objects.active = new_obj2
-      bpy.ops.object.mode_set(mode='EDIT')
-      bpy.ops.mesh.quads_convert_to_tris()
-      bpy.ops.object.mode_set(mode='OBJECT')
-      bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.context.view_layer.objects.active = new_obj2
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.quads_convert_to_tris()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    bpy.ops.object.mode_set(mode='EDIT')
 
     # flip any normals that were assigned incorrectly:
     # search through all faces that contain vertex last_ind
     # if a normal is not consistent with the normal of the other face
     # containing the edge that was previously a boundary, flip it
-      if n_bdry_edges > 0:
+    if n_bdry_edges > 0:
         n_orig = len(selected_faces)
         ind = n_orig
         bpy.ops.mesh.select_all(action='DESELECT')  # unselect everything in the scene
@@ -983,31 +984,33 @@ def close_and_add_mesh(new_obj, new_name, obj_ptr, sel_inds, selected_verts, sel
 
 
     # make the new object a child of the original mesh
-      bpy.ops.object.mode_set(mode='OBJECT')
-      new_obj2.parent = obj_ptr
-      bpy.context.view_layer.objects.active = new_obj2
+    bpy.ops.object.mode_set(mode='OBJECT')
+    new_obj2.parent = obj_ptr
+    bpy.context.view_layer.objects.active = new_obj2
 
     # remove open mesh object that was generated for interal use here
-      bpy.data.objects.remove(new_obj, do_unlink=True)
+    bpy.data.objects.remove(new_obj, do_unlink=True)
 
     # set flags
-      new_obj2.is_open = 0
-      new_obj2.has_vol = 1
+    new_obj2.is_open = False
+    new_obj2.has_vol = True
 
     # enforce consistent normals
-      sel_inds2 = [ind for ind in range(len(new_obj2.data.vertices[:]))]
-      make_original_active(new_obj2, sel_inds2)
-      bpy.ops.object.mode_set(mode='EDIT')
-      bpy.ops.mesh.select_all(action='SELECT')
-      bpy.ops.mesh.normals_make_consistent(inside=False)   
-      bpy.ops.object.mode_set(mode='OBJECT')
+    sel_inds2 = [ind for ind in range(len(new_obj2.data.vertices[:]))]
+    make_original_active(new_obj2, sel_inds2)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.mesh.normals_make_consistent(inside=False)   
+    bpy.ops.object.mode_set(mode='OBJECT')
 
     # return input object as active
-      make_original_active(obj_ptr, sel_inds)
+    make_original_active(obj_ptr, sel_inds)
 
     # uncomment the following
-      new_obj2.hide_set(True)
+    new_obj2.hide_set(True)
     # doing anything here gives a context error
+
+    return(new_obj2)
 
 
 
@@ -1061,8 +1064,8 @@ class NEUROMORPH_OT_create_whole_surfaces(bpy.types.Operator):
                   bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
                   bpy.ops.object.mode_set(mode='EDIT')
 
-                  (new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces) = create_submesh_code()
-                  close_and_add_mesh(new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces)
+                  (new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces) = create_submesh()
+                  new_obj2 = close_and_add_mesh(new_obj, new_name, obj_ptr, sel_inds, selected_verts, selected_faces)
 
                   bpy.ops.object.mode_set(mode='OBJECT')
                   bpy.ops.object.select_all(action='DESELECT')
@@ -1298,7 +1301,7 @@ class NEUROMORPH_PT_MeasurementToolsPanel(bpy.types.Panel):
             col1 = split.column()
             col2 = split.column()
             col1.operator("neuromorph.create_both_meshes", text = "Both")
-            col2.operator("neuromorph.create_whole_surfaces", text='Multi-Object')
+            col2.operator("neuromorph.create_whole_surfaces", text= "Multi-Object")
 
             layout.label(text = "-----Lengths-----")
             layout.prop(context.scene , "create_length_obj")
@@ -1346,8 +1349,8 @@ def register():
     bpy.types.Object.length = FloatProperty(name = "length", default = -1.0)
     
     
-    bpy.types.Object.is_open = BoolProperty(name="is_open", default=0)
-    bpy.types.Object.has_vol = BoolProperty(name="has_vol", default=0)
+    bpy.types.Object.is_open = BoolProperty(name="is_open", default = False)
+    bpy.types.Object.has_vol = BoolProperty(name="has_vol", default = False)
     # bpy.types.Scene.remesh_octree_depth = IntProperty(name = "import octree depth", default = 7)
     # bpy.types.Object.vertex_collection = CollectionProperty(type=VertexListItem)
     # bpy.types.Object.vertex_collection_index = IntProperty(min= -1,default= -1)
