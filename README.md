@@ -11,7 +11,7 @@ For more information, please visit the [NeuroMorph project website](http://neuro
 # Documentation
 
 [NeuroMorph Wiki](https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki)  
-Detailed instructions for each tool.
+Detailed instructions for installation and use.
 
 [Video Tutorial](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
 Quite legacy at this point, but still helpful for the measurement and image stack interaction tools.  
