@@ -68,23 +68,36 @@ class NEUROMORPH_PT_BoundingBoxPanel(bpy.types.Panel):
 # - ratio of major axis length to mean of other 2 axis lengths
 # - volume
 class NEUROMORPH_OT_get_geometry(bpy.types.Operator):
-    """Get geometry of each distinct object of input object or its children"""
+    """Get bounding boxes of input object (can be several joined objects) or its childen"""
     bl_idname = "neuromorph.get_geometry"
-    bl_label = "Get geometry of each distinct object of input object or its childen"
+    bl_label = "Get bounding boxes of input object (can be several joined objects) or its childen"
 
     def execute(self, context):
         # # Separate into distinct objects if input is single joined object
         # ob_list = [ob for ob in bpy.data.objects if ob.select_get() == True]
         # if len(ob_list) == 1:
 
+        these_obs = [ob for ob in bpy.data.objects if ob.select_get() == True]
+        if len(these_obs) != 1:
+            infostr = "Please select exactly 1 object (with or without children)"
+            self.report({'INFO'}, infostr)
+            return {'FINISHED'}
+
         ob_orig = bpy.context.object
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
         name_orig = ob_orig.name
         if name_orig[-7:] == "_parent":
             name_orig = name_orig[0:-7]
 
         # Define material for bounding boxes
-        mat_bb = bpy.data.materials.new("transparent")
-        mat_bb.diffuse_color = (0.6,0.8,1.0,0.5)
+        if "transparent" in [mat.name for mat in bpy.data.materials]:
+            mat_bb = bpy.data.materials["transparent"]
+        else:
+            this_color = (0.6,0.8,1.0, 0.25)
+            this_alpha = 0.25
+            mat_bb = add_unified_material(this_color, this_alpha, this_mat_name = "transparent")
+
 
         # Separate into distinct child objects if input has no children
         if len(ob_orig.children) == 0:
@@ -106,9 +119,13 @@ class NEUROMORPH_OT_get_geometry(bpy.types.Operator):
             ob_list = ob_list_after
 
             # Make new separated objects children of an empty parent object
-            fullname = name_orig + "_parent"
-            ob_parent = bpy.data.objects.new(fullname, None)
+            fullname_ob = name_orig + "_parent"
+            # ob_parent = bpy.data.objects.new(fullname_ob, None)
+            # bpy.context.scene.collection.objects.link(ob_parent)
+
+            ob_parent = bpy.data.objects.new(fullname_ob, None)
             bpy.context.scene.collection.objects.link(ob_parent)
+            update_collection_of_new_obj(ob_parent, ob_orig)
 
             for ob in ob_list:
                 ob.parent = ob_parent
@@ -187,7 +204,6 @@ def update_collection_of_new_obj(obj, scene_obj):
 
 
 def get_geom_properties(ob, bbox_parent, mat_bb):
-    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
     # Process on convex hull?, fewer vertices
     # todo: is it better if keep the weighting of all the original vertices?
@@ -195,6 +211,7 @@ def get_geom_properties(ob, bbox_parent, mat_bb):
     bpy.ops.object.select_all(action='DESELECT')
     bpy.context.view_layer.objects.active = ob
     ob.select_set(True)
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
     # Find primary axis via SVD decomposition
     # First center coords to origin, and subsample if too many vertices
@@ -222,7 +239,7 @@ def get_geom_properties(ob, bbox_parent, mat_bb):
     if len(name_split) == 2:
         bbox.name = "BBox." + name_split[1]
     else:
-        bbox.name = "BBox"
+        bbox.name = "BBox " + name_split[0]
 
     # Rotate bbox back to object location
     rot_inv = Matrix(np.linalg.inv(rot_mat))
@@ -235,15 +252,18 @@ def get_geom_properties(ob, bbox_parent, mat_bb):
     zrng = bbox_minmax[5] - bbox_minmax[4]
     len_max = max(xrng, yrng, zrng)
     len_min = min(xrng, yrng, zrng)
+
+    # print(len_max, len_min, xrng, yrng, zrng)
+
     len_mid = [val for val in [xrng, yrng, zrng] if val != len_max and val != len_min][0]
 
     # Calculate length properties
-    max_length = len_max
     length_ratio = len_max / ((len_mid + len_min)/2)
-    volume = get_vol(ob)
+    volume = get_vol(ob)  # This assumes a manifold surface
+
     bpy.ops.object.mode_set(mode='OBJECT')
 
-    return([max_length, length_ratio, volume])
+    return([len_max, len_mid, len_min, length_ratio, volume])
 
 
 
@@ -283,7 +303,6 @@ def add_box(box_minmax, mat_bb):
         new_cube.data.vertices[ii].co = vv
     # Make transparent
     new_cube.active_material = mat_bb
-    new_cube.show_transparent = True
     return(new_cube)
 
 
@@ -355,6 +374,61 @@ def dot_product(v0,v1):
 
 
 
+# Create material whose diffufe color and alpha in Solid display and 
+# BSDF node color and alpha in Material Preview display are linked
+# This function and the following are direct copies from NeuroMorph_3D_Drawing
+def add_unified_material(this_color, this_alpha, this_mat = None, this_mat_name = "new material"):
+    # if this_mat is None:
+    if this_mat is None or this_mat.node_tree is None or "Principled BSDF" not in this_mat.node_tree.nodes:
+        this_mat = bpy.data.materials.new(this_mat_name)
+        this_mat.use_nodes = True
+        this_mat.name = this_mat_name
+
+    # For Solid display
+    this_color_transparent = list(this_color)
+    this_color_transparent[3] = this_alpha
+    this_mat.diffuse_color = this_color_transparent
+
+    # For Material Preview display (preferred, as image textures are visible here)
+    this_mat.use_nodes = True
+    BSDF_node = this_mat.node_tree.nodes["Principled BSDF"]
+    BSDF_node.inputs["Base Color"].default_value = this_color
+    BSDF_node.inputs["Alpha"].default_value = this_alpha
+    this_mat.blend_method = 'BLEND'
+
+    # Attach the BSDF node to the diffuse color, so they change together
+    # And so alpha progresses from invisible to opaque in all modes
+    attach_color_driver(this_mat, 0)
+    attach_color_driver(this_mat, 1)
+    attach_color_driver(this_mat, 2)
+    attach_color_driver(this_mat, 3)
+
+    return(this_mat)
+
+# Attach BSDF node to the viewport display (diffuse color) for smooth alpha slider 
+# and same color between display modes (ind is color channel: {0,1,2} for rbg, 3 for alpha)
+# from: https://blender.stackexchange.com/questions/185105/
+#       single-slider-for-transparency-in-material-preview-rendered-display/185117#185117
+def attach_color_driver(this_mat, ind):
+    if ind == 3:
+        alpha_input = this_mat.node_tree.nodes["Principled BSDF"].inputs["Alpha"]  # Store access to the alpha input
+        driver = alpha_input.driver_add("default_value").driver  # Create a new driver and store it
+    else:
+        color_input = this_mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"]
+        driver = color_input.driver_add("default_value", ind).driver
+
+    [driver.variables.remove(value) for value in reversed(driver.variables.values())]
+    var = driver.variables.new()
+    target = var.targets[0]
+    target.id_type = 'MATERIAL'
+    target.id = this_mat
+    target.data_path = "diffuse_color[" + str(ind) + "]"
+    driver.expression = "var"
+
+
+
+
+
 # Define file name and path for export
 class NEUROMORPH_OT_set_filename(bpy.types.Operator, ExportHelper):
     """Define file name and path for distance measurement export"""
@@ -375,18 +449,25 @@ def write_data(self, geom_props, ob_names):
     full_filename = bpy.context.scene.filename
 
     f = open(full_filename, 'w')
-    f.write("Object Name;Max Length of Bounding Box;Max-Min Length Ratio;Volume\n")
+    f.write("Object Name;Max Length of Bounding Box;Mid Length;Min Length;Ratio max/mean(mid+min);Volume of Contained Object\n")
 
-    max_lens = [v[0] for v in geom_props]
-    len_rats = [v[1] for v in geom_props]
-    vols = [v[2] for v in geom_props]
-
+    # Write data for each bounding box
     for ii, elt in enumerate(geom_props):
-        [max_len, len_rat, vol] = elt
-        f.write(ob_names[ii] + ";" + str(max_len) + ";" + str(len_rat) + ";" + str(vol) +"\n")
+        [max_len, mid_len, min_len, rat_len, vol] = elt
+        f.write(ob_names[ii] + ";" + str(max_len) + ";" + str(mid_len) + ";" + \
+            str(min_len) + ";" + str(rat_len) + ";" + str(vol) +"\n")
 
-    f.write("\nMean;" + str(np.mean(max_lens)) + ";" + str(np.mean(len_rats)) + ";" + str(np.mean(vols)) + "\n")
-    f.write("Median;" + str(np.median(max_lens)) + ";" + str(np.median(len_rats)) + ";" + str(np.median(vols)) + "\n")
+    # Also calculate summary statistics
+    max_lens = [v[0] for v in geom_props]
+    mid_lens = [v[1] for v in geom_props]
+    min_lens = [v[2] for v in geom_props]
+    rat_lens = [v[3] for v in geom_props]
+    vols = [v[4] for v in geom_props]
+
+    f.write("\nMean;" + str(np.mean(max_lens)) + ";" + str(np.mean(mid_lens)) + ";" + \
+        str(np.mean(min_lens)) + ";" + str(np.mean(rat_lens)) + ";" + str(np.mean(vols)) + "\n")
+    f.write("Median;" + str(np.median(max_lens)) + ";" + str(np.median(mid_lens)) + ";" + \
+        str(np.median(min_lens)) + ";" + str(np.median(rat_lens)) + ";" + str(np.median(vols)) + "\n")
     f.close()
     self.report({'INFO'}, "Finished exporting file.")
 
