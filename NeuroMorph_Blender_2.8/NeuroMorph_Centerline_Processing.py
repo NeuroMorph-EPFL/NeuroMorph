@@ -2228,13 +2228,15 @@ def get_dist(coord1, coord2):  # distance is monotonic, take square root at end 
 
 # Sometimes this is necessary before changing modes
 def activate_an_object(ob_0=[]):
-    tmp = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide_get() == False][0]
+    tmp = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and \
+        ob_0.hide_get() == False and ob_0.hide_viewport == False][0]
     bpy.context.view_layer.objects.active = tmp  # required before setting object mode
 
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
     if ob_0 == []:
-        ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide_get() == False][0]
+        ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and \
+            ob_0.hide_get() == False and ob_0.hide_viewport == False][0]
     bpy.context.view_layer.objects.active = ob_0
     ob_0.select_set(True)
 
