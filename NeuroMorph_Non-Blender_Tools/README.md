@@ -5,6 +5,7 @@ Script for Fiji to export TrakEM2 area lists as Wavefront (.obj) files and optio
 
 *Generate_3D_image_stacks.ijm*:  
 Macro for Fiji to creates image stacks in the X and Y dimensions, given an original image stack.  
+<br>
 
 **For IMOD:**  
 
