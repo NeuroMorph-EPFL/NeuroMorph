@@ -1,7 +1,5 @@
 # The NeuroMorph Analysis and Visualization Toolkit
 
-NeuroMorph is a toolset designed to import, analyze, and visualize mesh models in [Blender](https://www.blender.org/). It has been developed specifically for the morphological analysis of 3D objects derived from serial electron microscopy images of brain tissue, but much of its functionality can be applied to any 3D mesh.    
-
 This GitHub site provides all NeuroMorph software, datasets, and documentation.  
 
 For more information, please visit the [NeuroMorph project website](http://neuromorph.epfl.ch).
