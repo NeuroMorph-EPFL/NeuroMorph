@@ -245,7 +245,6 @@ class NEUROMORPH_OT_get_distances1(bpy.types.Operator):
             # print(ob_i.name)
             delete_extraneous_verts(ob_i)
             ob_i.hide_set(True)
-        bpy.ops.object.select_all(action='DESELECT')  # better for user
 
         # Export results to csv
         write_data(SAs, ob1.name, ob2.name, self)
@@ -460,7 +459,8 @@ def delete_object(ob_to_delete):
 
 # Sometimes this is necessary before changing modes
 def activate_an_object():
-    ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and ob_0.hide_get() == False][0]
+    ob_0 = [ob_0 for ob_0 in bpy.data.objects if ob_0.type == 'MESH' and \
+        ob_0.hide_get() == False and ob_0.hide_viewport == False][0]
     bpy.context.view_layer.objects.active = ob_0
     ob_0.select_set(True)
 
@@ -559,6 +559,7 @@ def join_obs(total_SA, ob):
 
 def get_nonoverlapping_area(total_SA):
     # Remove overlapping faces
+    activate_an_object()
     bpy.ops.object.mode_set(mode='OBJECT')
     bpy.ops.object.select_all(action='DESELECT')
     total_SA.select_set(True)
@@ -596,7 +597,7 @@ def write_data(SAs, name1, name2, self):
             "Total (non-overlapping) " + name2 + ";" + str(total_SA2) + ";\n")
     f.close()
     self.report({'INFO'}, "Finished exporting file.")
-
+    bpy.ops.object.select_all(action='DESELECT')  # better for user
 
 
 def get_dist_sq(coord1, coord2):  # distance is monotonic, take square root at end for efficiency
