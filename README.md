@@ -10,10 +10,7 @@ For more information, please visit the [NeuroMorph project website](http://neuro
 
 # Documentation
 
-[NeuroMorph Wiki](https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki)
-Detailed instructions for installation and use.
-
-[NeuroMorph Wiki](https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki) <b><span class="text-red mb-2">&larr; Start Here!</span></b>  
+[NeuroMorph Wiki](https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki) <b>&larr; &#x1F536; Start Here! &#x1F536;</b>  
 Detailed instructions for installation and use.
 
 [Video Tutorial](https://www.youtube.com/watch?v=CVkcYjWgceM&vq=hd720)  
