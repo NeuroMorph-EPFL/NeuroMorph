@@ -1,7 +1,5 @@
 <img src="proximity_after.png" width="200" align="right"><img src="proximity_before.png" width="200" align="right">
 
-[Full Documentation](https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki/Proximity-Analysis)<br><br>
-
 
 #### NeuroMorph Proximity Analysis   
 
