@@ -4,7 +4,6 @@
 
 
 #### NeuroMorph Proximity Analysis   
-[Download](http://raw.githubusercontent.com/NeuroMorph-EPFL/NeuroMorph/master/NeuroMorph_Proximity_Analysis/NeuroMorph_Proximity_Analysis.py)   
 
 This module calculates the surface regions of two surfaces that are within a given distance of each other.  
 <br><br><br><br><br>
