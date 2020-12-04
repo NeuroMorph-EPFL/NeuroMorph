@@ -1,5 +1,3 @@
-[Full Documentation](https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki/Other-Tools)<br><br>
-
 #### NeuroMorph Parent-Child Tools  
 
 Allows the user to easily to show/hide all children of an object, delete all children of an object, and assign the parent of all selected objects.  
