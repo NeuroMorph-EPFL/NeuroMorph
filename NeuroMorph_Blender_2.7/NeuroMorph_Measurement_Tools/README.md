@@ -3,7 +3,6 @@
 [Full Documentation](https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki/Measurement-Tools)<br><br>
 
 #### NeuroMorph Measurement Tools  
-[Download](https://raw.githubusercontent.com/NeuroMorph-EPFL/NeuroMorph/master/NeuroMorph_Measurement_Tools/NeuroMorph_Measurement_Tools.py)  
 
 Measure surface areas, volumes, and lengths of user-defined regions of meshes. Measurements can be exported for analysis.
 
