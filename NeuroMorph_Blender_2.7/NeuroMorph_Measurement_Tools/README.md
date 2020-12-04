@@ -1,7 +1,5 @@
 <img src="measurements.png" width="300" align="right">
 
-[Full Documentation](https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki/Measurement-Tools)<br><br>
-
 #### NeuroMorph Measurement Tools  
 
 Measure surface areas, volumes, and lengths of user-defined regions of meshes. Measurements can be exported for analysis.
