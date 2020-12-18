@@ -1,4 +1,4 @@
-#    NeuroMorph_Centerline_Procesing.py (C) 2019,  Anne Jorstad
+#    NeuroMorph_Centerline_Procesing.py (C) 2020,  Anne Jorstad
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,10 +16,10 @@
 bl_info = {  
     "name": "NeuroMorph Centerline Processing",
     "author": "Anne Jorstad",
-    "version": (1, 4, 0),
-    "blender": (2, 80, 0),
+    "version": (1, 5, 0),
+    "blender": (2, 83, 10),
     "location": "View3D > NeuroMorph > Centerline Processing",
-    "description": "Process centerlines", 
+    "description": "Create and perform analyses using centerlines of tubular structures", 
     "wiki_url": "https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki/Centerlines-and-Cross-Sections",  
     "category": "Tool"}  
   
@@ -888,6 +888,10 @@ class NEUROMORPH_OT_select_volume(bpy.types.Operator):
             return {'FINISHED'}
 
         axon = centerline.parent
+        select_obj(axon)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        select_obj(centerline)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
 
         # Make box around axon section
@@ -904,15 +908,11 @@ class NEUROMORPH_OT_select_volume(bpy.types.Operator):
         bpy.ops.object.join()  # now plane1 DNE
         box = bpy.context.object
 
-        # 2. Create faces to join planes into a box
-        for edge_ind in range(0,4):
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.select_all(action='DESELECT')
-            bpy.ops.object.mode_set(mode='OBJECT')
-            box.data.edges[edge_ind].select = True
-            box.data.edges[edge_ind+4].select = True
-            bpy.ops.object.mode_set(mode='EDIT')
-            bpy.ops.mesh.edge_face_add()
+        # Get convex hull of planes, to contain relevant part of mesh
+        # if some mesh sticks out, the code will crash, 
+        # make the planes bigger
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.convex_hull()
 
         # Intersect axon and box
         bpy.ops.object.mode_set(mode='OBJECT')
@@ -972,13 +972,9 @@ class NEUROMORPH_OT_detect_boutons(bpy.types.Operator):
         nverts = len(centerline.data.vertices)
 
         # Define materials for increasing and decreasing markers
-        mat_inc = bpy.data.materials.new("area_increase_material")
-        mat_inc.diffuse_color = (0.0,1.0,0.0,1.0)
-        mat_dec = bpy.data.materials.new("area_decrease_material")
-        mat_dec.diffuse_color = (1.0,0.0,0.0,1.0)
-
-        mat_rad = bpy.data.materials.new("max_rad_material")
-        mat_rad.diffuse_color = (0.0,0.0,1.0,0.33)
+        mat_inc = add_unified_material((0.0,1.0,0.0,1.0), 1.0, this_mat_name = "area_increase_material")
+        mat_dec = add_unified_material((1.0,0.0,0.0,1.0), 1.0, this_mat_name = "area_decrease_material")
+        mat_rad = add_unified_material((0.0,0.0,1.0,1.0), 0.33, this_mat_name = "max_rad_material")
 
         # Create empty child object of centerline, whose children will be the marker spheres
         sphere_parent = bpy.data.objects.new("SphereMarkers", None)
@@ -1280,7 +1276,7 @@ def assign_selected_objects(self):
     mesh_obj = mesh_obj[0]
     nverts_centerline = len(centerline.data.vertices)
     if nverts_centerline != bpy.context.scene.npts_centerline:
-        infostr = "Warning: centerline of " + str(bpy.context.scene.npts_centerline) + " points not selected"
+        infostr = "Warning: centerline of " + str(bpy.context.scene.npts_centerline) + " points not selected (" + str(nverts_centerline) + " points)"
         self.report({'INFO'}, infostr)
         # if nverts_centerline > bpy.context.scene.npts_centerline:
         #     return(-1, [])
@@ -1714,8 +1710,8 @@ def add_sphere_at_loc(loc, rad, mat, parent):
     bpy.ops.mesh.primitive_uv_sphere_add(location=loc, radius=rad)
     obj = bpy.context.object
     if mat == []:
-        mat = bpy.data.materials.new("sphere_material")
-        mat.diffuse_color = (1.0, 0.3, 0.0, 0.5)
+        mat = add_unified_material((1.0, 0.3, 0.0, 1.0), 0.5, this_mat_name = "sphere_material")
+
     obj.active_material = mat
     obj.show_transparent = True
     obj.name = "sphere"  # "marker"
@@ -2240,6 +2236,58 @@ def activate_an_object(ob_0=[]):
             ob_0.hide_get() == False and ob_0.hide_viewport == False][0]
     bpy.context.view_layer.objects.active = ob_0
     ob_0.select_set(True)
+
+
+# Create material whose diffufe color and alpha in Solid display and 
+# BSDF node color and alpha in Material Preview display are linked
+def add_unified_material(this_color, this_alpha, this_mat = None, this_mat_name = "new material"):
+    # if this_mat is None:
+    if this_mat is None or this_mat.node_tree is None or "Principled BSDF" not in this_mat.node_tree.nodes:
+        this_mat = bpy.data.materials.new(this_mat_name)
+        this_mat.use_nodes = True
+        this_mat.name = this_mat_name
+
+    # For Solid display
+    this_color_transparent = list(this_color)
+    this_color_transparent[3] = this_alpha
+    this_mat.diffuse_color = this_color_transparent
+
+    # For Material Preview display (preferred, as image textures are visible here)
+    this_mat.use_nodes = True
+    BSDF_node = this_mat.node_tree.nodes["Principled BSDF"]
+    BSDF_node.inputs["Base Color"].default_value = this_color
+    BSDF_node.inputs["Alpha"].default_value = this_alpha
+    this_mat.blend_method = 'BLEND'
+
+    # Attach the BSDF node to the diffuse color, so they change together
+    # And so alpha progresses from invisible to opaque in all modes
+    attach_color_driver(this_mat, 0)
+    attach_color_driver(this_mat, 1)
+    attach_color_driver(this_mat, 2)
+    attach_color_driver(this_mat, 3)
+
+    return(this_mat)
+
+# Attach BSDF node to the viewport display (diffuse color) for smooth alpha slider 
+# and same color between display modes (ind is color channel: {0,1,2} for rbg, 3 for alpha)
+# from: https://blender.stackexchange.com/questions/185105/
+#       single-slider-for-transparency-in-material-preview-rendered-display/185117#185117
+def attach_color_driver(this_mat, ind):
+    if ind == 3:
+        alpha_input = this_mat.node_tree.nodes["Principled BSDF"].inputs["Alpha"]  # Store access to the alpha input
+        driver = alpha_input.driver_add("default_value").driver  # Create a new driver and store it
+    else:
+        color_input = this_mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"]
+        driver = color_input.driver_add("default_value", ind).driver
+
+    [driver.variables.remove(value) for value in reversed(driver.variables.values())]
+    var = driver.variables.new()
+    target = var.targets[0]
+    target.id_type = 'MATERIAL'
+    target.id = this_mat
+    target.data_path = "diffuse_color[" + str(ind) + "]"
+    driver.expression = "var"
+
 
 
 
