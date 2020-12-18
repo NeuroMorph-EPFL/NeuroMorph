@@ -1204,6 +1204,7 @@ class NEUROMORPH_OT_redefine_centerline(bpy.types.Operator):
 
 
         # Remove any centerline points that are outside obj
+        # Assumes this will only be end points of the centerline
         inds_to_check = [nverts-1, nverts-2, nverts-3, 0, 1, 2]
         inds_to_delete = []
         for ind in inds_to_check:
@@ -1216,7 +1217,7 @@ class NEUROMORPH_OT_redefine_centerline(bpy.types.Operator):
         bpy.ops.mesh.select_all(action='DESELECT')
         bpy.ops.object.mode_set(mode='OBJECT')
         for ind in inds_to_delete:
-            centerline.data.vertices[ind].select_set(True)
+            centerline.data.vertices[ind].select = True
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.mesh.delete(type='VERT')
         bpy.ops.object.mode_set(mode='OBJECT')
