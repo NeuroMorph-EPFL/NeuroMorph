@@ -1,4 +1,4 @@
-#    NeuroMorph_Proximity_Analysis.py (C) 2019,  Anne Jorstad
+#    NeuroMorph_Proximity_Analysis.py (C) 2020,  Anne Jorstad
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,8 +16,8 @@
 bl_info = {  
     "name": "NeuroMorph Proximity Analysis",
     "author": "Anne Jorstad",
-    "version": (1, 1, 0),
-    "blender": (2, 80, 0),
+    "version": (1, 2, 0),
+    "blender": (2, 83, 10),
     "location": "View3D > NeuroMorph > Proximity Analysis",
     "description": "Calculate regions of surface within a given distance of each other",
     "wiki_url": "https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki/Proximity-Analysis",  
