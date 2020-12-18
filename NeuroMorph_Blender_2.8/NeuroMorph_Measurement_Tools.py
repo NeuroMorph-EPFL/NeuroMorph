@@ -1,4 +1,4 @@
-#    NeuroMorph_Measurements.py (C) 2019,  Anne Jorstad, Biagio Nigro, Diego Marcos
+#    NeuroMorph_Measurements.py (C) 2020,  Anne Jorstad, Biagio Nigro, Diego Marcos
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@ bl_info = {
     "name": "NeuroMorph Measurement Tools:  Submesh Volume, Surface Area, and Length",
     "description": "Calculates the surface area, volume, and length of user-determined subregions of meshes",
     "author": "Anne Jorstad, Biagio Nigro, Diego Marcos",
-    "version": (1, 2, 6),
-    "blender": (2, 80, 0),
+    "version": (1, 3, 0),
+    "blender": (2, 83, 10),
     "location": "View3D > NeuroMorph > Measurement Tools",
     "wiki_url": "https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki/Measurement-Tools",
     "category": "Tool"}
