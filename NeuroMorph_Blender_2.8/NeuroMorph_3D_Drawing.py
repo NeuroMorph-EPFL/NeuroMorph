@@ -16,8 +16,8 @@
 bl_info = {  
     "name": "NeuroMorph 3D Drawing",
     "author": "Anne Jorstad, Tom Boissonnet",
-    "version": (1, 1, 0),
-    "blender": (2, 81, 0),
+    "version": (1, 2, 0),
+    "blender": (2, 83, 10),
     "location": "View3D > NeuroMorph > 3D Drawing",
     "description": "Place markers on images and draw curves to construct surfaces in 3D",
     "wiki_url": "https://github.com/NeuroMorph-EPFL/NeuroMorph/wiki/3D-Drawing",  
@@ -1384,7 +1384,10 @@ def get_drawing_material():
         # Define brush settings, Blender 2.80
         # bpy.data.brushes["Draw Pencil"].size = 5  # Radius
         # Define brush settings, Blender 2.83
-        bpy.data.brushes["Pencil"].size = 5
+        # bpy.data.brushes["Pencil"].size = 5
+        bpy.context.scene.tool_settings.gpencil_paint.brush = bpy.data.brushes["Pen"]
+        bpy.data.brushes["Pen"].size = 5
+
     return(gp_mat)
 
 
