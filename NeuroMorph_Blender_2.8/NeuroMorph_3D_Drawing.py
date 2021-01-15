@@ -16,7 +16,7 @@
 bl_info = {  
     "name": "NeuroMorph 3D Drawing",
     "author": "Anne Jorstad, Tom Boissonnet",
-    "version": (1, 2, 0),
+    "version": (1, 3, 0),
     "blender": (2, 83, 10),
     "location": "View3D > NeuroMorph > 3D Drawing",
     "description": "Place markers on images and draw curves to construct surfaces in 3D",
@@ -25,7 +25,6 @@ bl_info = {
   
 import bpy
 from bpy.props import *
-from bpy.app.handlers import persistent
 from mathutils import Vector  
 import mathutils
 import math
@@ -41,8 +40,6 @@ from bpy_extras.view3d_utils import region_2d_to_vector_3d, region_2d_to_locatio
 from statistics import median
 from bpy.types import Operator, Macro
 from bpy_extras.io_utils import ExportHelper, ImportHelper
-
-from bpy.app.handlers import persistent
 
 
 # Define the panel
