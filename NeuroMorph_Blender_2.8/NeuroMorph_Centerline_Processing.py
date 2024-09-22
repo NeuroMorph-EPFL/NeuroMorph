@@ -207,6 +207,36 @@ class NEUROMORPH_OT_approx_centerline(bpy.types.Operator):
         # Reorder indices to be linear down curve
         order_verts(crv)
 
+        '''
+        Added lines to reorder the curve
+        make curve start pt close to selected #1 point:
+        '''
+
+        #############
+        ### Added lines to reorder centerline Begin #####
+
+        # Get start & end points(pt)
+        start_point = crv.data.vertices[0].co
+        end_point = crv.data.vertices[-1].co
+
+        # get #1 & #2 selected pt
+        s_v1 = mesh.data.vertices[pts[0].index].co #1 selected pt
+        s_v2 = mesh.data.vertices[pts[1].index].co #2 ..
+
+        # cal length from start pt to #1 & #2 selected pt 
+        L_start_to_v1 = (start_point - s_v1).length
+        L_start_to_v2 = (start_point - s_v2).length
+
+        # reverse if L#1 > L#2 (start from  #2)
+        if L_start_to_v1 > L_start_to_v2:
+            bpy.ops.object.mode_set(mode='EDIT')
+            bpy.ops.mesh.select_all(action='SELECT')
+            bpy.ops.mesh.flip_normals()  
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        ### End #####
+        #############
+
         # Predefine some variables
         small_step = .000001  # something small
         ninds_initial_bdry = round(bpy.context.scene.npts_centerline / 2)  # 2 or 4
